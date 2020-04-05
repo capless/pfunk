@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "pfaunk"
+version = "0.1.0"
+description = "Python library to make it easier to build FaunaDB GraphQL schemas and authentication code."
+authors = ["Brian Jinwright"]
+license = "Apache-2.0"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+faunadb = "^2.11.0"
+valley = "^1.5.4"
+jinja2 = "^2.11.1"
+
+[tool.poetry.dev-dependencies]
+jupyter = "^1.0.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

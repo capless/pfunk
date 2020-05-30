@@ -1,6 +1,6 @@
 from valley.properties import BaseProperty
 
-from pfaunk.mixins import CharVariableMixin, IntegerVariableMixin
+from pfunk.mixins import CharVariableMixin, IntegerVariableMixin
 
 
 class BaseField(BaseProperty):

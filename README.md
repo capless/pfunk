@@ -1,36 +1,52 @@
 # PFunk
-
-A Python library created make building [FaunaDB](https://fauna.com) GraphQL schemas and authentication code easier.
-
+A Python library to make writing applications with FaunaDB easier. Includes GraphQL integrations.
+## Github URL
+[https://github.com/capless/pfunk](https://github.com/capless/pfunk)
+ 
 ## Getting Started
 
+### Installation
+```pip install pfunk```
+
+### Example Usage
+Setup the Connection
 ```python
-from pfunk import Collection, Enum, Index, StringField, IntegerField
-from pfunk.db import Database, Index, TermValue, TermValueField, Binding
+from pfunk.loading import PFunkHandler
 
+pfunk_handler = PFunkHandler({
+    'default': {
+        'account_secret_key': 'your-account-secret-key',
+        'database_secret_key': 'your-database-secret-key'
+    }
+})
+```
 
-make_term_field = TermValueField(name='make')
-make_term = TermValue(fields=[make_term_field])
-make_index = Index(name='make-index', source='Car', terms=make_term)
+### Define your Models (collections.py) 
+```python
+from pfunk import Collection, EnumField, Index, StringField, IntegerField
 
-cars_index = Index(name='cars', source='Car')
+# The handler from the “Setup the Connection” section
+from .loading import pfunk_handler
 
+class Person(Collection):
+    name = StringField(required=True)
+    email = StringField(required=True)
+    gender = EnumField(choices=['female', 'male'])
+    
+    class Meta:
+        use_db = 'default'
+        handler = pfunk_handler
+        # This should create a simple index in the GraphQL template
+        default_all_index = True
 
-class Car(Collection):
-    make = StringField(required=True)
-    model = StringField(required=True)
-    year = IntegerField(required=True)
-    transmission = StringField(required=True)
-    title_status = StringField(required=True)
-    vin = StringField(required=True)
-    color = StringField()
+    def __str__(self):
+        return self.name
+```
 
-d = Database(name='capless-dev')
-# Create the database on Fauna
-d.create()
-# Add Car collection to the database so it will be created when we publish 
-d.add_resource(Car)
-# Publish GraphQL and Indexes
-d.publish()
+### Define your Indexes (indexes.py)
+```python
+from pfunk import Index
 
+class AgeIndex(Index):
+    
 ```

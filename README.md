@@ -5,16 +5,8 @@ A Python library created make building [FaunaDB](https://fauna.com) GraphQL sche
 ## Getting Started
 
 ```python
-from pfunk import Collection, Enum, Index, StringField, IntegerField
-from pfunk.db import Database, Index, TermValue, TermValueField, Binding
-
-
-make_term_field = TermValueField(name='make')
-make_term = TermValue(fields=[make_term_field])
-make_index = Index(name='make-index', source='Car', terms=make_term)
-
-cars_index = Index(name='cars', source='Car')
-
+from pfunk import Collection, StringField, IntegerField
+from pfunk.db import Database
 
 class Car(Collection):
     make = StringField(required=True)
@@ -34,3 +26,9 @@ d.add_resource(Car)
 d.publish()
 
 ```
+
+## Authentication
+
+## Indexes
+
+## Functions

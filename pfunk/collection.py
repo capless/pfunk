@@ -74,19 +74,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         client.query(q.delete(self.ref))
 
 
-class Enum(list):
-
-    def __init__(self, name:str, *args):
-        self.enum_name = name
-        super(Enum, self).__init__(*args)
-
-
-class Index(object):
-
-    def process_response(self):
-        pass
-
-
 class UDF(object):
 
     def update(self):

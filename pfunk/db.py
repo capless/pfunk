@@ -4,9 +4,12 @@ from envs import env
 from io import BytesIO
 from faunadb.errors import BadRequest
 from valley.contrib import Schema
-from valley.properties import CharProperty, BooleanProperty, ForeignProperty, ForeignListProperty
+
+from valley.properties import CharProperty
+
+from .indexes import Index
 from .loading import client, q
-from .collection import Collection, Enum, Index
+from .collection import Collection
 from .template import graphql_template
 
 logger = logging.getLogger('pfunk')
@@ -21,55 +24,6 @@ class BearerAuth(requests.auth.AuthBase):
         return r
 
 
-class TermValueField(Schema):
-    name = CharProperty(required=True)
-    reverse = BooleanProperty(default_value=True)
-
-
-class Binding(Schema):
-    name = CharProperty(required=True)
-
-
-class TermValue(Schema):
-    bindings = ForeignListProperty(Binding, required=False)
-    fields = ForeignListProperty(TermValueField, required=False)
-
-    def render(self):
-        obj_list = []
-        if self.bindings:
-            binding_list = [{"binding": i.name} for i in self.bindings]
-            obj_list.extend(binding_list)
-        if self.fields:
-            field_list = [{'field': ['data', i.name], 'reverse': i.reverse} for i in self.fields]
-            obj_list.extend(field_list)
-        return obj_list
-
-
-class Index(Schema):
-    name = CharProperty(required=True)
-    source = CharProperty(required=True)
-    terms = ForeignProperty(TermValue, required=False)
-    values = ForeignProperty(TermValue, required=False)
-    serialized = BooleanProperty(default_value=True)
-    unique = BooleanProperty(default_value=False)
-
-    def render(self):
-        pass
-
-    def get_kwargs(self):
-        self.validate()
-        kwargs = {'name': self.name, 'source': q.collection(self.source), 'serialized': self.serialized,
-                  'unique': self.unique}
-        if self.terms:
-            kwargs['terms'] = self.terms.render()
-        if self.values:
-            kwargs['values'] = self.values.render()
-        return kwargs
-
-    def publish(self):
-        return client.query(q.create_index(self.get_kwargs()))
-
-
 class Database(Schema):
     name = CharProperty(required=True)
     _collection_list = []
@@ -77,7 +31,7 @@ class Database(Schema):
     _index_list = []
 
     def add_resource(self, resource):
-        if not issubclass(resource, (Collection, Enum, Index)):
+        if not issubclass(resource, (Collection, Index)):
             raise ValueError('Resource has to be one of the following: Collection, Enum, or Index')
         if issubclass(resource, Collection) and resource not in self._collection_list:
             self._collection_list.append(resource)

@@ -23,7 +23,7 @@ pfunk_handler = PFunkHandler({
 
 ### Define your Models (collections.py) 
 ```python
-from pfunk import Collection, EnumField, Index, StringField, IntegerField
+from pfunk import Collection, EnumField, StringField
 
 # The handler from the “Setup the Connection” section
 from .loading import pfunk_handler
@@ -46,7 +46,14 @@ class Person(Collection):
 ### Define your Indexes (indexes.py)
 ```python
 from pfunk import Index
+from pfunk.db import 
 
 class AgeIndex(Index):
+    name = 'age-index'
+    source = 'person'
+    terms = []
+    values = []
+    unique = False
+    serialized = True
     
 ```

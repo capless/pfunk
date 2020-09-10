@@ -1,6 +1,7 @@
 from valley.properties import BaseProperty
 
-from pfunk.mixins import CharVariableMixin, IntegerVariableMixin
+from pfunk.mixins import (CharVariableMixin, IntegerVariableMixin, DateTimeMixin, FloatVariableMixin, DateMixin,
+                          BooleanMixin)
 
 
 class BaseField(BaseProperty):
@@ -38,3 +39,61 @@ class StringField(CharVariableMixin, BaseField):
 
 class IntegerField(IntegerVariableMixin, BaseField):
     GRAPHQL_FIELD_TYPE = 'Int'
+
+
+class DateTimeField(DateTimeMixin, BaseField):
+    GRAPHQL_FIELD_TYPE = 'Time'
+
+    def __init__(
+            self,
+            default_value=None,
+            required=True,
+            validators=[],
+            verbose_name=None,
+            auto_now=False,
+            auto_now_add=False,
+            **kwargs):
+
+        super(
+            DateTimeField,
+            self).__init__(
+            default_value=default_value,
+            required=required,
+            validators=validators,
+            verbose_name=verbose_name,
+            **kwargs)
+        self.auto_now = auto_now
+        self.auto_now_add = auto_now_add
+
+
+class FloatField(FloatVariableMixin, BaseField):
+    GRAPHQL_FIELD_TYPE = 'Float'
+
+
+class BooleanField(BooleanMixin, BaseField):
+    GRAPHQL_FIELD_TYPE = 'Boolean'
+
+
+class DateField(DateMixin, BaseField):
+    GRAPHQL_FIELD_TYPE = 'Date'
+
+    def __init__(
+            self,
+            default_value=None,
+            required=True,
+            validators=[],
+            verbose_name=None,
+            auto_now=False,
+            auto_now_add=False,
+            **kwargs):
+
+        super(
+            DateField,
+            self).__init__(
+            default_value=default_value,
+            required=required,
+            validators=validators,
+            verbose_name=verbose_name,
+            **kwargs)
+        self.auto_now = auto_now
+        self.auto_now_add = auto_now_add

@@ -186,6 +186,24 @@ class TestPfunk(unittest.TestCase):
         self.assertEqual(age_index.unique, UNIQUE)
         self.assertEqual(age_index.serialized, SERIALIZED)
 
+    def test_collection(self):
+        # Assemble
+        NAME = "Jefford"
+        EMAIL = "jefford@qwigo.com"
+        # Act
+
+        class Person(Collection):
+            name = StringField(required=True)
+            email = StringField(required=True)
+
+            def __str__(self):
+                return self.name
+        person = Person(name=NAME, email=EMAIL)
+        # Assert
+        self.assertEqual(person.name, NAME)
+        self.assertEqual(person.email, EMAIL)
+        self.assertEqual(str(person), NAME)
+
 
 if __name__ == '__main__':
     unittest.main()

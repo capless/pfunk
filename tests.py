@@ -2,6 +2,7 @@ import unittest
 from envs import env
 
 from pfunk import Collection, StringField, IntegerField, DateField, DateTimeField, BooleanField, FloatField
+from pfunk.indexes import Index
 from pfunk.db import Database
 
 
@@ -157,6 +158,33 @@ class TestPfunk(unittest.TestCase):
         self.assertEqual(float_field.index, INDEX)
         self.assertEqual(float_field.index_name, INDEX_NAME)
         self.assertEqual(float_field.verbose_name, VERBOSE_NAME)
+
+    def test_index(self):
+        # Assemble
+        NAME = "age-index"
+        SOURCE = 'person'
+        TERMS = []
+        VALUES = []
+        UNIQUE = False
+        SERIALIZED = True
+
+        # Act
+        class AgeIndex(Index):
+            name = NAME
+            source = SOURCE
+            terms = TERMS
+            values = VALUES
+            unique = UNIQUE
+            serialized = SERIALIZED
+        age_index = AgeIndex()
+
+        # Assert
+        self.assertEqual(age_index.name, NAME)
+        self.assertEqual(age_index.source, SOURCE)
+        self.assertEqual(age_index.terms, TERMS)
+        self.assertEqual(age_index.values, VALUES)
+        self.assertEqual(age_index.unique, UNIQUE)
+        self.assertEqual(age_index.serialized, SERIALIZED)
 
 
 if __name__ == '__main__':

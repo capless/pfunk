@@ -204,6 +204,14 @@ class TestPfunk(unittest.TestCase):
         self.assertEqual(person.email, EMAIL)
         self.assertEqual(str(person), NAME)
 
+    def test_database(self):
+        # Assemble
+        NAME = "capless-dev"
+        # Act
+        d = Database(name=NAME)
+        # Assert
+        self.assertEqual(d.name, NAME)
+
 
 if __name__ == '__main__':
     unittest.main()

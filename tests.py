@@ -5,6 +5,8 @@ from pfunk import Collection, StringField, IntegerField, DateField, DateTimeFiel
 from pfunk.indexes import Index
 from pfunk.db import Database
 
+from pfunk.loading import PFunkHandler
+
 
 class TestPfunk(unittest.TestCase):
     @classmethod
@@ -211,6 +213,31 @@ class TestPfunk(unittest.TestCase):
         d = Database(name=NAME)
         # Assert
         self.assertEqual(d.name, NAME)
+
+    def test_pfunkhandler(self):
+        # Assemble
+        # Act
+
+        pfunk_handler = PFunkHandler({
+            'default': {
+                'account_secret_key': 'fnAD9Fi535ACDGe8qq5Z6jHJRFKsQp6WVVQ63uq_',
+                'database_secret_key': 'fnAD9Fi535ACDGe8qq5Z6jHJRFKsQp6WVVQ63uq_'
+            }
+        })
+
+        class Person(Collection):
+            name = StringField(required=True)
+            email = StringField(required=True)
+
+            class Meta:
+                use_db = 'default'
+                handler = pfunk_handler
+                # This should create a simple index in the GraphQL template
+                default_all_index = True
+
+            def __str__(self):
+                return self.name
+        # Assert
 
 
 if __name__ == '__main__':

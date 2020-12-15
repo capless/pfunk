@@ -208,36 +208,49 @@ class TestPfunk(unittest.TestCase):
 
     def test_database(self):
         # Assemble
-        NAME = "capless-dev"
-        # Act
-        d = Database(name=NAME)
-        # Assert
-        self.assertEqual(d.name, NAME)
-
-    def test_pfunkhandler(self):
-        # Assemble
-        # Act
-
-        pfunk_handler = PFunkHandler({
-            'default': {
-                'account_secret_key': 'fnAD9Fi535ACDGe8qq5Z6jHJRFKsQp6WVVQ63uq_',
-                'database_secret_key': 'fnAD9Fi535ACDGe8qq5Z6jHJRFKsQp6WVVQ63uq_'
-            }
-        })
+        DATABASE_NAME = "capless-dev"
+        NAME = "Jefford"
+        EMAIL = "jefford@qwigo.com"
 
         class Person(Collection):
             name = StringField(required=True)
             email = StringField(required=True)
 
-            class Meta:
-                use_db = 'default'
-                handler = pfunk_handler
-                # This should create a simple index in the GraphQL template
-                default_all_index = True
-
             def __str__(self):
                 return self.name
+        # Act
+        d = Database(name=DATABASE_NAME)
+        d.create()
+        d.publish()
+        d.add_resource(Person)
         # Assert
+        self.assertEqual(d.name, DATABASE_NAME)
+        self.assertEqual(d._collection_list[0], Person)
+
+    # def test_pfunkhandler(self):
+    #     # Assemble
+    #     # Act
+
+    #     pfunk_handler = PFunkHandler({
+    #         'default': {
+    #             'account_secret_key': 'fnAD9Fi535ACDGe8qq5Z6jHJRFKsQp6WVVQ63uq_',
+    #             'database_secret_key': 'fnAD9Fi535ACDGe8qq5Z6jHJRFKsQp6WVVQ63uq_'
+    #         }
+    #     })
+
+    #     class Person(Collection):
+    #         name = StringField(required=True)
+    #         email = StringField(required=True)
+
+    #         class Meta:
+    #             use_db = 'default'
+    #             handler = pfunk_handler
+    #             # This should create a simple index in the GraphQL template
+    #             default_all_index = True
+
+    #         def __str__(self):
+    #             return self.name
+    #     # Assert
 
 
 if __name__ == '__main__':

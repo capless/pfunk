@@ -106,7 +106,8 @@ create_role_from_dict(fauna_client, SAMPLE_ROLE)
 
 ```python
 from pfunk.roles import create_role_from_kwargs
-create_role_from_kwargs(fauna_client,
+create_role_from_kwargs(
+            fauna_client,
             name="sample_role",
             privileges=[
                  {
@@ -121,4 +122,40 @@ create_role_from_kwargs(fauna_client,
 ```
 
 ## Functions
+
+```python
+SAMPLE_FUNCTION = {
+            "name": "sample_function",
+            "source": q.collection("Sample"),
+            "terms": [
+                {"field": ["data", "hello"]}
+            ],
+            "values": [
+                {"field": ["data", "world"]}
+            ]
+        }
+
+from pfunk.functions import create_function_from_dict
+create_function_from_dict(
+            fauna_client,
+            name="sample_function",
+            SAMPLE_FUNCTION
+        )
+```
+### OR
+
+```python
+from pfunk.functions import create_function_from_kwargs
+create_function_from_kwargs(
+            fauna_client,
+            name = "sample_function",
+            source = q.collection("Sample")
+            terms = [
+                {"field": ["data", "hello"]}
+            ],
+            values = [
+                {"field": ["data", "world"]}
+            ]
+        )
+```
 

@@ -86,4 +86,40 @@ authentication(
 
 ## Roles
 
+```python
+SAMPLE_ROLE = {
+            "name": "sample_role",
+            "privileges": [
+                {
+                    "resource": create_function("sample_function"),
+                    "actions": {
+                        "call": True
+                        }
+                },
+            ]
+        }
+
+
+from pfunk.roles import create_role_from_dict
+create_role_from_dict(fauna_client, SAMPLE_ROLE)
+```
+### OR
+
+```python
+from pfunk.roles import create_role_from_kwargs
+create_role_from_kwargs(fauna_client,
+            name="sample_role",
+            privileges=[
+                 {
+                    "resource": create_function("sample_function"),
+                    "actions": {
+                        "call": True
+                        }
+                },
+            ]
+        )
+
+```
+
 ## Functions
+

@@ -136,11 +136,7 @@ SAMPLE_FUNCTION = {
         }
 
 from pfunk.functions import create_function_from_dict
-create_function_from_dict(
-            fauna_client,
-            name="sample_function",
-            SAMPLE_FUNCTION
-        )
+create_function_from_dict(fauna_client,SAMPLE_FUNCTION)
 ```
 ### OR
 

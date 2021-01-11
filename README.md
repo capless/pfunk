@@ -43,21 +43,6 @@ class Person(Collection):
         return self.name
 ```
 
-### Define your Indexes (indexes.py)
-```python
-from pfunk import Index
-from pfunk.db import 
-
-class AgeIndex(Index):
-    name = 'age-index'
-    source = 'person'
-    terms = []
-    values = []
-    unique = False
-    serialized = True
-    
-```
-
 ## Authentication (authentication.py)
 
 ```python
@@ -83,6 +68,20 @@ authentication(
 ```
 
 ## Indexes
+
+```python
+from pfunk import Index
+from pfunk.db import 
+
+class AgeIndex(Index):
+    name = 'age-index'
+    source = 'person'
+    terms = []
+    values = []
+    unique = False
+    serialized = True
+    
+```
 
 ## Roles
 

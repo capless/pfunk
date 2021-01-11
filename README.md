@@ -58,8 +58,32 @@ class AgeIndex(Index):
     
 ```
 
-## Authentication
+## Authentication (authentication.py)
+
+```python
+#From Headers
+from pfunk.authentication import faunaclient_from_headers
+faunaclient_from_headers({'authorization':'YOUR_AUTH_KEY'})
+
+#From Cookies
+from pfunk.authentication import faunaclient_from_cookies
+faunaclient_from_cookies(headers = {'cookie':'YOUR_COOKIE'})
+```
+
+### OR
+
+```python
+from pfunk.auth import authentication
+
+authentication(
+            mode = "header" # Determines the source (ie. from headers/cookies)
+            source = {'authorization':'YOUR_AUTH_KEY'}
+            )
+
+```
 
 ## Indexes
+
+## Roles
 
 ## Functions

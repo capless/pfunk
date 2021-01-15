@@ -76,9 +76,9 @@ class TestPfunk(unittest.TestCase):
                 return self.name
         # Act
         d = Database(name=DATABASE_NAME)
+        d.add_resource(Person)
         d.create()
         d.publish()
-        d.add_resource(Person)
         # Assert
         self.assertEqual(d.name, DATABASE_NAME)
         self.assertEqual(d._collection_list[0], Person)

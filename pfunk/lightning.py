@@ -35,6 +35,11 @@ class Lightning:
 
                 super().__init__(key)
 
+            def my_custom_fcn(self, data: Person):
+                self.add(data).save()
+                # Do notify through email
+
+
         SAMPLE USAGE:
 
         SAMPLE_PERSON = Person(name = "John", email = "jdoe@gmail.com")
@@ -50,7 +55,6 @@ class Lightning:
 
         # Using Indexes
         test_DB.index("all_persons_index")
-
 
     """
 

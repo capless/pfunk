@@ -3,9 +3,9 @@ from faunadb import query as q
 from envs import env
 
 
-super_client = FaunaClient(secret=env('FAUNA_SUPER_SECRET'))
+# super_client = FaunaClient(secret=env('FAUNA_SUPER_SECRET'))
 
-client = FaunaClient(secret=env('FAUNA_SECRET'))
+# client = FaunaClient(secret=env('FAUNA_SECRET'))
 
 class PFunkHandler(object):
     """
@@ -25,39 +25,86 @@ class PFunkHandler(object):
             }
         }
     })
+
+    Better Example
+    handler = PFunkHandler({
+        'db1':{
+            'secret': '1234',
+            'config': {
+                'domain':"db.fauna.com",
+                'scheme':"https",
+                'port':None,
+                'timeout':60,
+                'observer':None,
+                'pool_connections':10,
+                'pool_maxsize':10,
+            }
+            'collections': [Person, Car],
+            'indexes': [get_all_persons],
+        }
+    })
     """
 
-    def __init__(self, config):
+    def __init__(self, config: dict) -> None:
         self.config = config
-        self.get_tables()
+        # self.get_tables()
+        self.get_clients()
 
-    def get_tables(self):
-        try:
-            return self._tables
-        except AttributeError:
-            self._tables = dict()
-            for db_label, conn in self.get_connections().items():
-                self._tables[db_label] = conn.Table(self.config[db_label]['connection']['table'])
-            return self._tables
+    def get_clients(self):
+        if not self._databases:
+            self._databases = {}
+        for db_key, db_value in self.config.items():
+            self._databases[db_key]["client"] = FaunaClient(
+                db_value["secret"], **db_value["config"])
+        return self._databases
 
-    def get_connections(self):
-        try:
-            return self._connections
-        except AttributeError:
-            self._connections = dict()
-            for db_label, db_info in self.config.items():
-                self._connections[db_label] = boto3.resource(
-                    'dynamodb', **db_info.get('config', {}))
-            return self._connections
+    def get_collections(self):
+        pass
 
-    def get_db(self, db_label):
-        return self.get_settings(db_label)
+    # def get_tables(self):
+    #     try:
+    #         return self._tables
+    #     except AttributeError:
+    #         self._tables = dict()
+    #         for db_label, conn in self.get_connections().items():
+    #             self._tables[db_label] = conn.Table(
+    #                 self.config[db_label]['connection']['table'])
+    #         return self._tables
 
-    def get_config(self, db_label):
-        return self.get_settings(db_label).get('table_config')
+    # def get_connections(self):
+    #     try:
+    #         return self._connections
+    #     except AttributeError:
+    #         self._connections = dict()
+    #         for db_label, db_info in self.config.items():
+    #             self._connections[db_label] = boto3.resource(
+    #                 'dynamodb', **db_info.get('config', {}))
+    #         return self._connections
 
-    def get_settings(self, db_label):
-        return self.config[db_label]
+    # def get_db(self, db_label):
+    #     return self.get_settings(db_label)
 
-    def get_connection_info(self, db_label):
-        return self.get_settings(db_label).get('connection_info')
+    # def get_config(self, db_label):
+    #     return self.get_settings(db_label).get('table_config')
+
+    # def get_settings(self, db_label):
+    #     return self.config[db_label]
+
+    # def get_connection_info(self, db_label):
+    #     return self.get_settings(db_label).get('connection_info')
+
+# For reference
+#  class KevHandler(object):
+
+#     def __init__(self, databases):
+#         # Created for get_db method
+#         self._databases = dict()
+#         self._connections = dict()
+#         self._labels = list()
+
+#         for db_label, db_info in databases.items():
+#             db_klass = valley.utils.import_util(db_info.get('backend'))
+#             self._databases[db_label] = db_klass(**db_info.get('connection'))
+
+#     def get_db(self, db_label):
+#         return self._databases.get(db_label)

@@ -39,8 +39,6 @@ class PFunkHandler(object):
                 'pool_connections':10,
                 'pool_maxsize':10,
             }
-            'collections': [Person, Car],
-            'indexes': [get_all_persons],
         }
     })
     """
@@ -58,8 +56,8 @@ class PFunkHandler(object):
                 db_value["secret"], **db_value["config"])
         return self._databases
 
-    def get_collections(self):
-        pass
+    def __getitem__(self,database):
+        return self._databases[database]
 
     # def get_tables(self):
     #     try:

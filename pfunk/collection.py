@@ -1,6 +1,6 @@
 from valley.schema import BaseSchema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
-from .loading import client, q
+from faunadb import query as q
 from .fields import BaseField
 
 
@@ -28,7 +28,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def create(cls, **kwargs):
         c = cls(**kwargs)
         c.validate()
-        resp = client.query(
+        resp = cls.Meta.client().query(
             q.create(
                 q.collection(c.get_collection_name()),
                 {
@@ -41,7 +41,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def save(self):
         self.validate()
         if not self.ref:
-            resp = client.query(
+            resp = self.Meta.client().query(
                 q.create(
                     q.collection(self.get_collection_name()),
                     {
@@ -50,7 +50,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 ))
             self.ref = resp['ref']
         else:
-            client.query(
+            self.Meta.client().query(
                 q.update(
                     self.ref,
                     {
@@ -62,7 +62,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     @classmethod
     def get(cls, ref):
         c = cls()
-        resp = client.query(q.get(q.ref(q.collection(c.get_collection_name()), ref)))
+        resp = cls.Meta.client().query(
+            q.get(q.ref(q.collection(c.get_collection_name()), ref)))
         ref = resp['ref']
         data = resp['data']
 
@@ -71,35 +72,41 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return obj
 
     def delete(self):
-        client.query(q.delete(self.ref))
+        self.Meta.client().query(q.delete(self.ref))
 
+    class Meta:
+        handler = None
 
-class UDF(object):
+        def client(self):
+            return handler["client"]
 
-    def update(self):
-        client.query(
-            q.update(q.function(self.name), {
-                "body": q.query(
-                    q.lambda_("input",
-                              self.get_input()
+# class UDF(object):
 
-                              )
-                )
-            })
-        )
+#     def update(self):
+#         client.query(
+#             q.update(q.function(self.name), {
+#                 "body": q.query(
+#                     q.lambda_("input",
+#                               self.get_input()
 
-    def get_input(self):
-        return q.count(
-            q.filter_(
-                q.lambda_("doc",
-                          q.equals(
-                              q.select(["data", "status"], q.get(q.var("doc"))),
-                              "repair"
-                          )
-                          ),
-                q.match(
-                    q.index("dealer_vehicles_by_dealer"),
-                    q.select(["data", "dealership"], q.get(q.identity()))
-                )
-            )
-        )
+#                               )
+#                 )
+#             })
+#         )
+
+#     def get_input(self):
+#         return q.count(
+#             q.filter_(
+#                 q.lambda_("doc",
+#                           q.equals(
+#                               q.select(["data", "status"],
+#                                        q.get(q.var("doc"))),
+#                               "repair"
+#                           )
+#                           ),
+#                 q.match(
+#                     q.index("dealer_vehicles_by_dealer"),
+#                     q.select(["data", "dealership"], q.get(q.identity()))
+#                 )
+#             )
+#         )

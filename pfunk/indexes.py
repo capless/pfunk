@@ -61,4 +61,7 @@ class Index(object):
         return kwargs
 
     def publish(self):
-        return client.query(q.create_index(self.get_kwargs()))
+        return self.Meta.handler["client"].query(q.create_index(self.get_kwargs()))
+
+    class Meta:
+        handler = None

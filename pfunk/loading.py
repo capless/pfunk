@@ -29,7 +29,7 @@ class PFunkHandler(object):
     Better Example
     handler = PFunkHandler({
         'db1':{
-            'secret': '1234',
+            'secret': 'env("MY_SECRET_KEY")',
             'config': {
                 'domain':"db.fauna.com",
                 'scheme':"https",

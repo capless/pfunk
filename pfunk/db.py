@@ -8,7 +8,7 @@ from valley.contrib import Schema
 from valley.properties import CharProperty
 
 from .indexes import Index
-from .loading import client, q
+from .loading import q
 from .collection import Collection
 from .template import graphql_template
 
@@ -67,6 +67,9 @@ class Database(Schema):
         self.validate()
         if self._is_valid:
             try:
-                client.query(q.create_database({"name": self.name}))
+                self.Meta.handler["client"].query(q.create_database({"name": self.name}))
             except BadRequest:
                 logger.warning(f'{self.name} database already exists.')
+
+    class Meta:
+        handler = None

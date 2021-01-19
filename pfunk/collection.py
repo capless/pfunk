@@ -28,7 +28,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def create(cls, **kwargs):
         c = cls(**kwargs)
         c.validate()
-        resp = cls.Meta.client().query(
+        resp = cls.Meta.handler["client"].query(
             q.create(
                 q.collection(c.get_collection_name()),
                 {
@@ -40,8 +40,14 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
     def save(self):
         self.validate()
+
+        # Create Collection if it does not exist
+        if not self.Meta.handler["client"].query(q.exists(q.collection(self.get_collection_name()))):
+            self.Meta.handler["client"].query(q.create_collection(
+                {"name": self.get_collection_name()}))
+
         if not self.ref:
-            resp = self.Meta.client().query(
+            resp = self.Meta.handler["client"].query(
                 q.create(
                     q.collection(self.get_collection_name()),
                     {
@@ -50,7 +56,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 ))
             self.ref = resp['ref']
         else:
-            self.Meta.client().query(
+            self.Meta.handler["client"].query(
                 q.update(
                     self.ref,
                     {
@@ -62,7 +68,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     @classmethod
     def get(cls, ref):
         c = cls()
-        resp = cls.Meta.client().query(
+        resp = cls.Meta.handler["client"].query(
             q.get(q.ref(q.collection(c.get_collection_name()), ref)))
         ref = resp['ref']
         data = resp['data']
@@ -72,13 +78,10 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return obj
 
     def delete(self):
-        self.Meta.client().query(q.delete(self.ref))
+        self.Meta.handler["client"].query(q.delete(self.ref))
 
     class Meta:
         handler = None
-
-        def client(self):
-            return handler["client"]
 
 # class UDF(object):
 

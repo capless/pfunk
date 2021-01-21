@@ -6,11 +6,14 @@ import string
 from pfunk import (Collection, StringField, IntegerField, DateField,
                    DateTimeField, BooleanField, FloatField, PFunkHandler, Database)
 from pfunk.indexes import Index
+from pfunk.roles import create_role_from_dict, create_role_from_kwargs
 
 
-def generate_random_string(k=8):
-    return ''.join(random.choices(
+def generate_random_string(init="", k=8):
+    random_string = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=k))
+    return f"{init}_{random_string}" 
+
 
 class TestPfunk(unittest.TestCase):
     @classmethod
@@ -65,10 +68,12 @@ class TestPfunk(unittest.TestCase):
         # Assemble
         NAME = "sample-db"
         # Act
+
         class MyDB(Database):
             name = NAME
+
             class Meta:
-                handler= self.pfunkhandler['db1']
+                handler = self.pfunkhandler['db1']
         mydb = MyDB.create()
         # Assert
         self.assertEqual(mydb.name, NAME)
@@ -76,7 +81,6 @@ class TestPfunk(unittest.TestCase):
     # def test_database_addresource(self):
     #     # Assemble
     #     NAME = generate_random_string()
-    #     # Act
     #     class MyDB(Database):
     #         name = NAME
     #         class Meta:
@@ -93,12 +97,12 @@ class TestPfunk(unittest.TestCase):
 
     #         class Meta:
     #             handler = self.pfunkhandler['db1']
-
+    #     # Act
     #     # Assert
 
     def test_index(self):
         # Assemble
-        NAME = "age-index"
+        NAME = generate_random_string(init="index")
         SOURCE = 'Person'
         TERMS = []
         VALUES = []
@@ -113,9 +117,9 @@ class TestPfunk(unittest.TestCase):
             values = VALUES
             unique = UNIQUE
             serialized = SERIALIZED
-            class Meta:
-                handler= self.pfunkhandler['db1']
 
+            class Meta:
+                handler = self.pfunkhandler['db1']
 
         age_index = AgeIndex()
         age_index.publish()
@@ -127,6 +131,21 @@ class TestPfunk(unittest.TestCase):
         self.assertEqual(age_index.unique, UNIQUE)
         self.assertEqual(age_index.serialized, SERIALIZED)
 
+    def test_create_role_fromdict(self):
+        from faunadb import query as q
+        # Assemble
+        SAMPLE_ROLE = {
+            "name": generate_random_string("role"),
+            "privileges": {
+                "resource": q.collections(),
+                "actions": {"read": True}
+            },
+            "membership": {},
+        }
+        # Act
+        create_role_from_dict(self.pfunkhandler.get_client('db1'), SAMPLE_ROLE)
+
+        # Assert
 
 
 if __name__ == '__main__':

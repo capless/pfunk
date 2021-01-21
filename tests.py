@@ -99,7 +99,7 @@ class TestPfunk(unittest.TestCase):
     def test_index(self):
         # Assemble
         NAME = "age-index"
-        SOURCE = 'person'
+        SOURCE = 'Person'
         TERMS = []
         VALUES = []
         UNIQUE = False
@@ -113,8 +113,12 @@ class TestPfunk(unittest.TestCase):
             values = VALUES
             unique = UNIQUE
             serialized = SERIALIZED
-        age_index = AgeIndex()
+            class Meta:
+                handler= self.pfunkhandler['db1']
 
+
+        age_index = AgeIndex()
+        age_index.publish()
         # Assert
         self.assertEqual(age_index.name, NAME)
         self.assertEqual(age_index.source, SOURCE)

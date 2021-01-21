@@ -52,6 +52,9 @@ class Index(object):
                         serialized=self.serialized, unique=self.unique)
         i.validate()
 
+        if self.Meta.handler == None:
+            raise AttributeError("Object is missing Meta handler")
+
     def get_kwargs(self):
         kwargs = {'name': self.name, 'source': q.collection(self.source), 'serialized': self.serialized,
                   'unique': self.unique}

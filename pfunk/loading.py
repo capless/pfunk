@@ -58,7 +58,10 @@ class PFunkHandler(object):
         return self._databases
 
     def __getitem__(self,database):
-        return self._databases[database]
+        try:
+            return self._databases[database]
+        except:
+            return self._databases[0]
 
     # def get_tables(self):
     #     try:

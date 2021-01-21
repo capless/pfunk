@@ -4,6 +4,8 @@ from envs import env
 from io import BytesIO
 from faunadb.errors import BadRequest
 from valley.contrib import Schema
+from valley.schema import BaseSchema
+from .collection import PFunkDeclarativeVariablesMetaclass
 
 from valley.properties import CharProperty
 
@@ -24,11 +26,14 @@ class BearerAuth(requests.auth.AuthBase):
         return r
 
 
-class Database(Schema):
+class Database(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     name = CharProperty(required=True)
     _collection_list = []
     _enum_list = []
     _index_list = []
+
+    BUILTIN_DOC_ATTRS = ('_id',)
+
 
     def add_resource(self, resource):
         if not issubclass(resource, (Collection, Index)):
@@ -63,13 +68,15 @@ class Database(Schema):
 
         return resp.content
 
-    def create(self):
-        self.validate()
-        if self._is_valid:
+    @classmethod
+    def create(cls):
+        db = cls()
+        db.validate()
+        if db._is_valid:
             try:
-                self.Meta.handler["client"].query(q.create_database({"name": self.name}))
+                db.Meta.handler["client"].query(q.create_database({"name": db.name}))
             except BadRequest:
-                logger.warning(f'{self.name} database already exists.')
+                logger.warning(f'{db.name} database already exists.')
 
     class Meta:
         handler = None

@@ -48,14 +48,17 @@ class PFunkHandler(object):
         # self.get_tables()
 
         self._databases = {}
-        self.get_clients()
+        self._set_clients()
 
-    def get_clients(self):
+    def _set_clients(self):
         for db_key, db_value in self.config.items():
             self._databases[db_key]= {}
             self._databases[db_key]["client"] = FaunaClient(
                 db_value["secret"], **db_value.get("config", {}))
         return self._databases
+
+    def get_client(self,db: str = "") -> FaunaClient:
+        return self._databases[db]["client"]
 
     def __getitem__(self,database):
         try:

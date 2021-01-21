@@ -77,6 +77,7 @@ class Database(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 db.Meta.handler["client"].query(q.create_database({"name": db.name}))
             except BadRequest:
                 logger.warning(f'{db.name} database already exists.')
+            return db
 
     class Meta:
         handler = None

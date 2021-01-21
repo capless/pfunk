@@ -5,6 +5,8 @@ import string
 
 from pfunk import (Collection, StringField, IntegerField, DateField,
                    DateTimeField, BooleanField, FloatField, PFunkHandler, Database)
+from pfunk.indexes import Index
+
 
 def generate_random_string(k=8):
     return ''.join(random.choices(
@@ -71,30 +73,55 @@ class TestPfunk(unittest.TestCase):
         # Assert
         self.assertEqual(mydb.name, NAME)
 
-    def test_database_addresource(self):
+    # def test_database_addresource(self):
+    #     # Assemble
+    #     NAME = generate_random_string()
+    #     # Act
+    #     class MyDB(Database):
+    #         name = NAME
+    #         class Meta:
+    #             handler= self.pfunkhandler['db1']
+
+    #     mydb = MyDB.create()
+
+    #     class Person(Collection):
+    #         name = StringField(required=True)
+    #         email = StringField(required=True)
+
+    #         def __str__(self):
+    #             return self.name
+
+    #         class Meta:
+    #             handler = self.pfunkhandler['db1']
+
+    #     # Assert
+
+    def test_index(self):
         # Assemble
-        NAME = generate_random_string()
+        NAME = "age-index"
+        SOURCE = 'person'
+        TERMS = []
+        VALUES = []
+        UNIQUE = False
+        SERIALIZED = True
+
         # Act
-        class MyDB(Database):
+        class AgeIndex(Index):
             name = NAME
-            class Meta:
-                handler= self.pfunkhandler['db1']
+            source = SOURCE
+            terms = TERMS
+            values = VALUES
+            unique = UNIQUE
+            serialized = SERIALIZED
+        age_index = AgeIndex()
 
-
-        mydb = MyDB.create()
         # Assert
-        self.assertEqual(mydb.name, NAME)
-
-        class Person(Collection):
-            name = StringField(required=True)
-            email = StringField(required=True)
-
-            def __str__(self):
-                return self.name
-
-            class Meta:
-                handler = self.pfunkhandler['db1']
-
+        self.assertEqual(age_index.name, NAME)
+        self.assertEqual(age_index.source, SOURCE)
+        self.assertEqual(age_index.terms, TERMS)
+        self.assertEqual(age_index.values, VALUES)
+        self.assertEqual(age_index.unique, UNIQUE)
+        self.assertEqual(age_index.serialized, SERIALIZED)
 
 
 

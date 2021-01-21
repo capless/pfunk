@@ -1,5 +1,6 @@
 from valley.contrib import Schema
 from valley.properties import CharProperty, BooleanProperty, ForeignProperty, ForeignListProperty
+from .loading import q
 
 
 class TermValueField(Schema):

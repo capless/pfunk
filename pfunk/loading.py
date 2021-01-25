@@ -1,6 +1,7 @@
 from faunadb.client import FaunaClient
 from faunadb import query as q
 from envs import env
+from cryptography.fernet import Fernet
 
 
 # super_client = FaunaClient(secret=env('FAUNA_SUPER_SECRET'))
@@ -52,15 +53,31 @@ class PFunkHandler(object):
 
     def _set_clients(self):
         for db_key, db_value in self.config.items():
-            self._databases[db_key]= {}
+            self._databases[db_key] = {}
             self._databases[db_key]["client"] = FaunaClient(
                 db_value["secret"], **db_value.get("config", {}))
         return self._databases
 
-    def get_client(self,db: str = "") -> FaunaClient:
+    def get_client(self, db: str = "") -> FaunaClient:
         return self._databases[db]["client"]
 
-    def __getitem__(self,database):
+    def set_fromcookie(self, headers, FERNET_KEY):
+        # Split cookie by its key
+        cookie = headers._dict['cookie'].split("key=")[1]
+
+        # Decrypt key in cookie
+        f = Fernet(FERNET_KEY)
+        decrypted_key = f.decrypt(cookie.encode())
+        header = decrypted_key.decode()
+
+        auth_key = header.split()[1]
+        fauna_client = FaunaClient(auth_key)
+        ref = fauna_client.query(q.key_from_secret(auth_key))["ref"]
+        self._databases[ref] = {
+            "client": fauna_client
+        }
+
+    def __getitem__(self, database):
         try:
             return self._databases[database]
         except:

@@ -7,12 +7,13 @@ from pfunk import (Collection, StringField, IntegerField, DateField,
                    DateTimeField, BooleanField, FloatField, PFunkHandler, Database)
 from pfunk.indexes import Index
 from pfunk.roles import create_role_from_dict, create_role_from_kwargs
+from pfunk.function import create_function_from_dict, create_function_from_kwargs
 
 
 def generate_random_string(init="", k=8):
     random_string = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=k))
-    return f"{init}_{random_string}" 
+    return f"{init}_{random_string}"
 
 
 class TestPfunk(unittest.TestCase):
@@ -135,7 +136,7 @@ class TestPfunk(unittest.TestCase):
         from faunadb import query as q
         # Assemble
         SAMPLE_ROLE = {
-            "name": generate_random_string("role"),
+            "name": generate_random_string("role_fromdict"),
             "privileges": {
                 "resource": q.collections(),
                 "actions": {"read": True}
@@ -144,6 +145,49 @@ class TestPfunk(unittest.TestCase):
         }
         # Act
         create_role_from_dict(self.pfunkhandler.get_client('db1'), SAMPLE_ROLE)
+
+        # Assert
+
+    def test_create_role_fromkwargs(self):
+        from faunadb import query as q
+        # Assemble
+        SAMPLE_ROLE = {
+            "name": generate_random_string("role_fromkwargs"),
+            "privileges": {
+                "resource": q.collections(),
+                "actions": {"read": True}
+            },
+            "membership": {},
+        }
+        # Act
+        create_role_from_kwargs(
+            self.pfunkhandler.get_client('db1'), **SAMPLE_ROLE)
+
+        # Assert
+
+    def test_create_function_fromdict(self):
+        from faunadb import query as q
+        # Assemble
+        SAMPLE_FUNCTION = {
+            "name": generate_random_string("function_fromdict"),
+            "body": q.query(lambda a, b: q.concat([a, b], "/"))
+        }
+        # Act
+        create_function_from_dict(
+            self.pfunkhandler.get_client('db1'), SAMPLE_FUNCTION)
+
+        # Assert
+
+    def test_create_function_fromkwargs(self):
+        from faunadb import query as q
+        # Assemble
+        SAMPLE_FUNCTION = {
+            "name": generate_random_string("function_fromkwargs"),
+            "body": q.query(lambda a, b: q.concat([a, b], "/"))
+        }
+        # Act
+        create_function_from_kwargs(
+            self.pfunkhandler.get_client('db1'), **SAMPLE_FUNCTION)
 
         # Assert
 

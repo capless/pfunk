@@ -8,6 +8,8 @@ from pfunk import (Collection, StringField, IntegerField, DateField,
 from pfunk.indexes import Index
 from pfunk.roles import create_role_from_dict, create_role_from_kwargs
 from pfunk.function import create_function_from_dict, create_function_from_kwargs
+from faunadb import query as q
+
 
 
 def generate_random_string(init="", k=8):
@@ -78,6 +80,7 @@ class TestPfunk(unittest.TestCase):
         mydb = MyDB.create()
         # Assert
         self.assertEqual(mydb.name, NAME)
+        self.assertTrue(self.pfunkhandler.get_client("db1").query(q.exists(q.database(NAME))))
 
     # def test_database_addresource(self):
     #     # Assemble
@@ -131,6 +134,8 @@ class TestPfunk(unittest.TestCase):
         self.assertEqual(age_index.values, VALUES)
         self.assertEqual(age_index.unique, UNIQUE)
         self.assertEqual(age_index.serialized, SERIALIZED)
+        self.assertTrue(self.pfunkhandler.get_client("db1").query(q.exists(q.index(NAME))))
+
 
     def test_create_role_fromdict(self):
         from faunadb import query as q
@@ -147,6 +152,8 @@ class TestPfunk(unittest.TestCase):
         create_role_from_dict(self.pfunkhandler.get_client('db1'), SAMPLE_ROLE)
 
         # Assert
+        self.assertTrue(self.pfunkhandler.get_client("db1").query(q.exists(q.role(SAMPLE_ROLE["name"]))))
+
 
     def test_create_role_fromkwargs(self):
         from faunadb import query as q
@@ -164,6 +171,7 @@ class TestPfunk(unittest.TestCase):
             self.pfunkhandler.get_client('db1'), **SAMPLE_ROLE)
 
         # Assert
+        self.assertTrue(self.pfunkhandler.get_client("db1").query(q.exists(q.role(SAMPLE_ROLE["name"]))))
 
     def test_create_function_fromdict(self):
         from faunadb import query as q
@@ -177,6 +185,8 @@ class TestPfunk(unittest.TestCase):
             self.pfunkhandler.get_client('db1'), SAMPLE_FUNCTION)
 
         # Assert
+        self.assertTrue(self.pfunkhandler.get_client("db1").query(q.exists(q.function(SAMPLE_FUNCTION["name"]))))
+
 
     def test_create_function_fromkwargs(self):
         from faunadb import query as q
@@ -190,6 +200,7 @@ class TestPfunk(unittest.TestCase):
             self.pfunkhandler.get_client('db1'), **SAMPLE_FUNCTION)
 
         # Assert
+        self.assertTrue(self.pfunkhandler.get_client("db1").query(q.exists(q.function(SAMPLE_FUNCTION["name"]))))
 
 
 if __name__ == '__main__':

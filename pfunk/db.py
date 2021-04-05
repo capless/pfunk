@@ -8,8 +8,8 @@ from valley.contrib import Schema
 from valley.properties import CharProperty
 
 from .indexes import Index
-from .loading import client, q
-from .collection import Collection
+from .loading import super_client, q
+from .collection import Collection, Enum
 from .template import graphql_template
 
 logger = logging.getLogger('pfunk')
@@ -31,12 +31,19 @@ class Database(Schema):
     _index_list = []
 
     def add_resource(self, resource):
-        if not issubclass(resource, (Collection, Index)):
+        if issubclass(resource, Collection):
+            resource_list = self._collection_list
+        elif issubclass(resource, Enum):
+            resource_list = self._enum_list
+        elif issubclass(resource, Index):
+            resource_list = self._index_list
+        else:
+            print(resource)
             raise ValueError('Resource has to be one of the following: Collection, Enum, or Index')
-        if issubclass(resource, Collection) and resource not in self._collection_list:
-            self._collection_list.append(resource)
-            cl = set(self._collection_list)
-            self._collection_list = list(cl)
+        if resource not in resource_list:
+            resource_list.append(resource)
+
+
 
     def render(self):
         return graphql_template.render(collection_list=self._collection_list, enum_list=self._enum_list,
@@ -49,11 +56,8 @@ class Database(Schema):
         }
         return default
 
-    def publish(self, override: bool = False):
+    def publish(self, mode='merge'):
         gql_io = BytesIO(self.render().encode())
-        mode = 'update'
-        if override:
-            mode = 'override'
         resp = requests.post(
             'https://graphql.fauna.com/import',
             params={'mode': mode},
@@ -67,6 +71,6 @@ class Database(Schema):
         self.validate()
         if self._is_valid:
             try:
-                client.query(q.create_database({"name": self.name}))
+                super_client.query(q.create_database({"name": self.name}))
             except BadRequest:
                 logger.warning(f'{self.name} database already exists.')

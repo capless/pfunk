@@ -1,3 +1,6 @@
+import datetime
+
+import pytz
 from valley.properties import BaseProperty
 
 from pfunk.mixins import (CharVariableMixin, IntegerVariableMixin, DateTimeMixin, FloatVariableMixin, DateMixin,
@@ -26,11 +29,19 @@ class BaseField(BaseProperty):
             verbose_name=verbose_name,
             **kwargs
         )
+        self.unique = unique
         self.index = index
         self.index_name = index_name
 
     def get_graphql_type(self):
-        return self.GRAPHQL_FIELD_TYPE
+        req = ''
+        unique = ''
+        if self.required:
+            req = '!'
+        if self.unique:
+            unique = '@unique'
+
+        return f"{self.GRAPHQL_FIELD_TYPE}{req} {unique}"
 
 
 class StringField(CharVariableMixin, BaseField):
@@ -65,6 +76,9 @@ class DateTimeField(DateTimeMixin, BaseField):
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
 
+    def now(self):
+        return datetime.datetime.now(tz=pytz.UTC)
+
 
 class FloatField(FloatVariableMixin, BaseField):
     GRAPHQL_FIELD_TYPE = 'Float'
@@ -97,3 +111,6 @@ class DateField(DateMixin, BaseField):
             **kwargs)
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
+
+    def now(self):
+        return datetime.datetime.now(tz=pytz.UTC).date()

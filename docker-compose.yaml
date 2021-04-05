@@ -7,9 +7,9 @@ services:
       dockerfile: Dockerfile
       context: .
     expose:
-      - "8020"
+      - "8010"
     ports:
-      - 8020:8888
+      - 8010:8888
     volumes:
       - ./pfunk/:/code/pfunk
     env_file: .env

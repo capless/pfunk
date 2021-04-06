@@ -38,7 +38,6 @@ class Database(Schema):
         elif issubclass(resource, Index):
             resource_list = self._index_list
         else:
-            print(resource)
             raise ValueError('Resource has to be one of the following: Collection, Enum, or Index')
         if resource not in resource_list:
             resource_list.append(resource)

@@ -1,7 +1,9 @@
+from faunadb.client import FaunaClient
 from valley.schema import BaseSchema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
 from .loading import q
 from .fields import BaseField
+from .utils.publishing import create_or_update_function, create_or_update_role
 
 
 class PFunkDeclaredVars(DeclaredVars):
@@ -21,6 +23,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     Base class for all pFunk Documents classes.
     """
     BUILTIN_DOC_ATTRS = ('_id',)
+    _functions = []
 
     def add_index(self, index):
         pass
@@ -30,6 +33,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
     @property
     def client(self):
+        if self._token:
+            return FaunaClient(secret=self._token)
         if self._client:
             return self._client
         self._client = self.Meta.handler.get_client(self.Meta.db_label)
@@ -51,6 +56,20 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             ))
         c.ref = resp['ref']
         return c
+
+    @classmethod
+    def publish_functions(cls):
+        c = cls()
+        for i in cls._functions:
+            i(c).publish()
+
+    @classmethod
+    def publish_roles(cls):
+        c = cls()
+        pf_list = filter(lambda x: x.startswith('role__'), dir(cls))
+        for i in pf_list:
+            if hasattr(c, i) and callable(getattr(c, i)):
+                c.create_or_update_role(getattr(c, i)())
 
     def save(self):
         self.validate()

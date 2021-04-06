@@ -1,5 +1,5 @@
-from pfunk.functions import Function
-from pfunk.loading import q
+from pfunk.resources import Function, Role
+from pfunk.client import q
 
 
 class LoginUser(Function):
@@ -70,3 +70,10 @@ class CreateUser(Function):
 
             )
             ))
+
+
+class BasicUser(Role):
+
+    def get_body(self):
+        pass
+

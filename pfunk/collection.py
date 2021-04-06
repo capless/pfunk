@@ -1,35 +1,40 @@
+from envs import env
 from faunadb.client import FaunaClient
 from valley.schema import BaseSchema
+from valley.contrib import Schema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
-from .loading import q
-from .fields import BaseField
-from .utils.publishing import create_or_update_function, create_or_update_role
+from valley.utils import import_util
+
+from .client import q
+from valley.properties import BaseProperty, CharProperty, ListProperty
 
 
 class PFunkDeclaredVars(DeclaredVars):
-    base_field_class = BaseField
+    base_field_class = BaseProperty
 
 
 class PFunkDeclarativeVariablesMetaclass(DeclarativeVariablesMetaclass):
     declared_vars_class = PFunkDeclaredVars
 
 
-class Enum(list):
-    name = None
+class Enum(Schema):
+    name = CharProperty(required=True)
+    choices = ListProperty(required=True)
     
     
 class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     """
     Base class for all pFunk Documents classes.
     """
-    BUILTIN_DOC_ATTRS = ('_id',)
+    BUILTIN_DOC_ATTRS = ('ref', "ts")
     _functions = []
-
-    def add_index(self, index):
-        pass
+    _indexes = []
 
     def get_collection_name(self):
         return self.get_class_name().capitalize()
+
+    def get_enums(self):
+        return [i.enum for i in self._base_properties.values() if isinstance(i, import_util('pfunk.EnumField'))]
 
     @property
     def client(self):
@@ -37,7 +42,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             return FaunaClient(secret=self._token)
         if self._client:
             return self._client
-        self._client = self.Meta.handler.get_client(self.Meta.db_label)
+        self._client = FaunaClient(secret=env('FAUNA_SECRET'))
         return self._client
 
     @classmethod
@@ -83,7 +88,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 ))
             self.ref = resp['ref']
         else:
-            self.client.query(
+            resp = self.client.query(
                 q.update(
                     self.ref,
                     {
@@ -103,36 +108,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         obj.ref = ref
         return obj
 
+    @classmethod
+    def filter(cls, **kwargs):
+        pass
+
     def delete(self):
         self.client.query(q.delete(self.ref))
-
-
-class UDF(object):
-
-    def update(self):
-        self.client.query(
-            q.update(q.function(self.name), {
-                "body": q.query(
-                    q.lambda_("input",
-                              self.get_input()
-
-                              )
-                )
-            })
-        )
-
-    def get_input(self):
-        return q.count(
-            q.filter_(
-                q.lambda_("doc",
-                          q.equals(
-                              q.select(["data", "status"], q.get(q.var("doc"))),
-                              "repair"
-                          )
-                          ),
-                q.match(
-                    q.index("dealer_vehicles_by_dealer"),
-                    q.select(["data", "dealership"], q.get(q.identity()))
-                )
-            )
-        )

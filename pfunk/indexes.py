@@ -1,5 +1,6 @@
 from valley.contrib import Schema
 from valley.properties import CharProperty, BooleanProperty, ForeignProperty, ForeignListProperty
+from .client import q
 
 
 class TermValueField(Schema):
@@ -43,13 +44,11 @@ class Index(object):
     terms = None
     values = None
 
-    def render(self):
-        pass
-
-    def __init__(self):
+    def __init__(self, collection):
         i = IndexSchema(name=self.name, source=self.source, terms=self.terms, values=self.values,
                         serialized=self.serialized, unique=self.unique)
         i.validate()
+        self.collection = collection
 
     def get_kwargs(self):
         kwargs = {'name': self.name, 'source': q.collection(self.source), 'serialized': self.serialized,
@@ -61,4 +60,4 @@ class Index(object):
         return kwargs
 
     def publish(self):
-        return client.query(q.create_index(self.get_kwargs()))
+        return self.collection.client.query(q.create_index(self.get_kwargs()))

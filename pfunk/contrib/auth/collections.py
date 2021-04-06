@@ -2,17 +2,21 @@ import datetime
 
 import pytz
 
-from pfunk import StringField, Collection, DateTimeField
-from pfunk.contrib.auth.functions import CreateUser, LoginUser, UpdatePassword
-from pfunk.loading import q, Ref
-from pfunk.utils.publishing import create_or_update_function
+from pfunk import StringField, Collection, DateTimeField, Enum, EnumField
+from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword
+from pfunk.fields import EmailField
+from pfunk.client import q
+
+
+AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
 
 class User(Collection):
     _credential_field = 'password'
     _functions = [LoginUser, UpdatePassword, CreateUser]
     username = StringField(required=True, unique=True)
-    account_status = StringField(required=True, default_value="INACTIVE", choices=["ACTIVE", "INACTIVE"])
+    email = EmailField(required=True, unique=True)
+    account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
     last_login = DateTimeField(auto_now=True)
 
     @classmethod

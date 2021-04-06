@@ -2,8 +2,8 @@ from jinja2 import Template
 
 graphql_template = Template("""
 {% for e in enum_list %}
-enum e.name {
-    {% for p in e %}
+enum {{e.name}} {
+    {% for p in e.choices %}
         {{p}}
     {% endfor %}
 }

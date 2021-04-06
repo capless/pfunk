@@ -1,39 +1,18 @@
 import datetime
 
 import pytz
-from valley.properties import BaseProperty
+from valley.properties import CharProperty, IntegerProperty, DateTimeProperty, DateProperty, FloatProperty, \
+    BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty
 
-from pfunk.mixins import (CharVariableMixin, IntegerVariableMixin, DateTimeMixin, FloatVariableMixin, DateMixin,
-                          BooleanMixin)
+from pfunk.collection import Enum
 
 
-class BaseField(BaseProperty):
+class GraphQLMixin(object):
     GRAPHQL_FIELD_TYPE = 'String'
 
-    def __init__(self, default_value=None,
-                 required=False,
-                 index=False,
-                 index_name=None,
-                 unique=False,
-                 validators=[],
-                 verbose_name=None,
-                 **kwargs
-                 ):
-        super(BaseField, self).__init__(
-            default_value=default_value,
-            required=required,
-            index=index,
-            index_name=index_name,
-            unique=unique,
-            validators=validators,
-            verbose_name=verbose_name,
-            **kwargs
-        )
-        self.unique = unique
-        self.index = index
-        self.index_name = index_name
-
     def get_graphql_type(self):
+        self.unique = self.kwargs.get('unique')
+        self.index_name = self.kwargs.get('index_name')
         req = ''
         unique = ''
         if self.required:
@@ -44,73 +23,76 @@ class BaseField(BaseProperty):
         return f"{self.GRAPHQL_FIELD_TYPE}{req} {unique}"
 
 
-class StringField(CharVariableMixin, BaseField):
+class StringField(GraphQLMixin, CharProperty):
     pass
 
 
-class IntegerField(IntegerVariableMixin, BaseField):
+class IntegerField(GraphQLMixin, IntegerProperty):
     GRAPHQL_FIELD_TYPE = 'Int'
 
 
-class DateTimeField(DateTimeMixin, BaseField):
+class DateTimeField(GraphQLMixin, DateTimeProperty):
     GRAPHQL_FIELD_TYPE = 'Time'
-
-    def __init__(
-            self,
-            default_value=None,
-            required=True,
-            validators=[],
-            verbose_name=None,
-            auto_now=False,
-            auto_now_add=False,
-            **kwargs):
-
-        super(
-            DateTimeField,
-            self).__init__(
-            default_value=default_value,
-            required=required,
-            validators=validators,
-            verbose_name=verbose_name,
-            **kwargs)
-        self.auto_now = auto_now
-        self.auto_now_add = auto_now_add
 
     def now(self):
         return datetime.datetime.now(tz=pytz.UTC)
 
 
-class FloatField(FloatVariableMixin, BaseField):
+class FloatField(GraphQLMixin, FloatProperty):
     GRAPHQL_FIELD_TYPE = 'Float'
 
 
-class BooleanField(BooleanMixin, BaseField):
+class BooleanField(GraphQLMixin, BooleanProperty):
     GRAPHQL_FIELD_TYPE = 'Boolean'
 
 
-class DateField(DateMixin, BaseField):
-    GRAPHQL_FIELD_TYPE = 'Date'
+class EmailField(GraphQLMixin, EmailProperty):
+    pass
+
+
+class SlugField(GraphQLMixin, SlugProperty):
+    pass
+
+
+class EnumField(GraphQLMixin, BaseProperty):
 
     def __init__(
             self,
+            enum,
             default_value=None,
-            required=True,
+            required=False,
             validators=[],
+            choices=None,
             verbose_name=None,
-            auto_now=False,
-            auto_now_add=False,
-            **kwargs):
+            **kwargs
+    ):
+        super(EnumField, self).__init__(default_value, required, validators, choices, verbose_name, **kwargs)
+        self.enum = enum
 
-        super(
-            DateField,
-            self).__init__(
-            default_value=default_value,
-            required=required,
-            validators=validators,
-            verbose_name=verbose_name,
-            **kwargs)
-        self.auto_now = auto_now
-        self.auto_now_add = auto_now_add
+        if not isinstance(self.enum, Enum):
+            raise ValueError('The first argument of an EnumField should be an Enum')
+        self.choices = self.enum.choices
+
+    def get_graphql_type(self):
+        self.unique = self.kwargs.get('unique')
+        self.index_name = self.kwargs.get('index_name')
+        req = ''
+        unique = ''
+        if self.required:
+            req = '!'
+        if self.unique:
+            unique = '@unique'
+        return f"{self.enum.name}{req} {unique}"
+
+
+class ReferenceField(GraphQLMixin, ForeignProperty):
+
+    def get_db_value(self, value):
+        return value._ref
+
+
+class DateField(GraphQLMixin, DateProperty):
+    GRAPHQL_FIELD_TYPE = 'Date'
 
     def now(self):
         return datetime.datetime.now(tz=pytz.UTC).date()

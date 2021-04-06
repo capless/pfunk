@@ -10,23 +10,23 @@ A Python library to make writing applications with FaunaDB easier. Includes Grap
 
 ### Example Usage
 Setup the Connection
-```python
-from pfunk.loading import PFunkHandler
 
-pfunk_handler = PFunkHandler({
+```python
+from pfunk.client import Handler
+
+handler = Handler({
     'default': {
-        'account_secret_key': 'your-account-secret-key',
-        'database_secret_key': 'your-database-secret-key'
+        'secret': 'your-account-secret-key',
     }
 })
 ```
 
-### Define your Models (collections.py) 
+### Define your Collections (collections.py) 
 ```python
 from pfunk import Collection, EnumField, StringField
 
 # The handler from the “Setup the Connection” section
-from .loading import pfunk_handler
+from .loading import handler
 
 class Person(Collection):
     name = StringField(required=True)
@@ -35,7 +35,7 @@ class Person(Collection):
     
     class Meta:
         use_db = 'default'
-        handler = pfunk_handler
+        handler = handler
         # This should create a simple index in the GraphQL template
         default_all_index = True
 

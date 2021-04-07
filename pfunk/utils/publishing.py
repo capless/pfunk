@@ -8,6 +8,7 @@ def create_or_update_role(client, payload={}):
             q.create_role(payload)
         )
     except BadRequest as err:
+
         if str(err) == 'Role already exists.':
             role_name = payload.pop("name")
             response = client.query(
@@ -16,6 +17,8 @@ def create_or_update_role(client, payload={}):
                     payload
                 )
             )
+        else:
+            raise BadRequest(str(err))
     return response
 
 

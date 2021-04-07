@@ -31,6 +31,7 @@ class Database(Schema):
     _collection_list = []
     _enum_list = []
     _index_list = []
+    _role_list = []
 
     def add_resource(self, resource):
         if isinstance(resource, Enum):

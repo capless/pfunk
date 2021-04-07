@@ -29,6 +29,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     BUILTIN_DOC_ATTRS = []
     _functions = []
     _indexes = []
+    _roles = []
     _lazied = False
     _all_index = True
 
@@ -95,10 +96,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     @classmethod
     def publish_roles(cls):
         c = cls()
-        pf_list = filter(lambda x: x.startswith('role__'), dir(cls))
-        for i in pf_list:
-            if hasattr(c, i) and callable(getattr(c, i)):
-                c.create_or_update_role(getattr(c, i)())
+        for i in cls._roles:
+            i(c).publish()
 
     def get_db_valules(self):
         return {k:self._base_properties.get(k).get_db_value(value=v) for k,v in self._data.items()}

@@ -72,8 +72,12 @@ class CreateUser(Function):
             ))
 
 
-class BasicUser(Role):
+class Public(Role):
 
-    def get_body(self):
-        pass
-
+    def get_privileges(self):
+        return [{
+                    "resource": q.function("create_user"),
+                    "actions": {
+                        "call": True
+                    }
+                }]

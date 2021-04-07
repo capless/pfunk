@@ -30,6 +30,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     _functions = []
     _indexes = []
     _lazied = False
+    _all_index = True
+
+    def __init__(self, _ref=None, _lazied=False, **kwargs):
+        super(Collection, self).__init__(**kwargs)
+        if _ref:
+            self.ref = _ref
+        self._lazied = _lazied
 
     def get_collection_name(self):
         return self.get_class_name().capitalize()
@@ -45,6 +52,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             prop = self._base_properties[name]
             return prop.get_python_value(self._data.get(name))
 
+    @classmethod
+    def _verbose_plural_name(cls):
+        return f"{cls.get_class_name()}s"
+
+    def all_index_name(self):
+        return f"all_{self._verbose_plural_name()}"
+
     @property
     def client(self):
         if self._token:
@@ -57,12 +71,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     @classmethod
     def create(cls, _credentials=None, **kwargs):
         c = cls(**kwargs)
+        c.validate()
         data_dict = {
             "data": c.get_db_valules()
         }
         if _credentials and isinstance(_credentials, dict):
             data_dict['credentials'] = _credentials
-        c.validate()
+
         resp = c.client.query(
             q.create(
                 q.collection(c.get_collection_name()),
@@ -100,7 +115,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 ))
             self.ref = resp['ref']
         else:
-            resp = self.client.query(
+            self.client.query(
                 q.update(
                     self.ref,
                     {
@@ -128,6 +143,16 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         obj = c.__class__(**data)
         obj.ref = ref
         return obj
+
+    def process_qs(self, data):
+        return [self.__class__(_ref=i, _lazied=True) for i in data]
+
+    @classmethod
+    def all(cls, paginate_by=100, after=None, before=None):
+        c = cls()
+        raw_qs = c.client.query(q.paginate(q.match(q.index(c.all_index_name())), paginate_by, after=after, before=before))
+        return c.process_qs(raw_qs.get('data'))
+
 
     @classmethod
     def filter(cls, **kwargs):

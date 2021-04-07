@@ -4,13 +4,13 @@ import pytz
 from valley.exceptions import ValidationException
 from valley.properties import CharProperty, IntegerProperty, DateTimeProperty, DateProperty, FloatProperty, \
     BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty
-from valley.validators import Validator
+from valley.validators import Validator, ChoiceValidator
 
 from pfunk.collection import Enum
 from pfunk.client import Ref
 
 
-class ChoiceListValidator(Validator):
+class ChoiceListValidator(ChoiceValidator):
 
     def validate(self, value, key):
         if value:
@@ -80,7 +80,7 @@ class EnumField(GraphQLMixin, BaseProperty):
         self.enum = enum
         if not isinstance(self.enum, Enum):
             raise ValueError('The first argument of an EnumField should be an Enum')
-        validators = [ChoiceListValidator]
+        validators = [ChoiceListValidator(self.enum.choices)]
         super(EnumField, self).__init__(default_value, required, validators, choices, verbose_name, **kwargs)
         self.choices = self.enum.choices
 
@@ -112,12 +112,13 @@ class ReferenceField(GraphQLMixin, ForeignProperty):
             i = self.foreign_class()
             i.ref = value
             i._lazied = True
-
             return i
         return value
 
     def get_db_value(self, value):
-        return value.ref
+        if value:
+            return value.ref
+        return value
 
 
 class DateField(GraphQLMixin, DateProperty):

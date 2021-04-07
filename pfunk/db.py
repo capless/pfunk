@@ -1,8 +1,7 @@
 import logging
 import requests
-from envs import env
 from io import BytesIO
-from faunadb.errors import BadRequest
+
 from faunadb.client import FaunaClient
 from valley.contrib import Schema
 
@@ -56,13 +55,6 @@ class Database(Schema):
         return graphql_template.render(collection_list=self._collection_list, enum_list=self._enum_list,
                                        index_list=self._index_list)
 
-    def get_meta(self):
-        default = {
-            'all_index': True,
-            'all_index_name': self.get_class_name()
-        }
-        return default
-
     def publish(self, mode='merge'):
         gql_io = BytesIO(self.render().encode())
         resp = requests.post(
@@ -71,13 +63,4 @@ class Database(Schema):
             auth=BearerAuth(self.client.secret),
             data=gql_io
         )
-
         return resp.content
-
-    def create(self):
-        self.validate()
-        if self._is_valid:
-            try:
-                super_client.query(q.create_database({"name": self.name}))
-            except BadRequest:
-                logger.warning(f'{self.name} database already exists.')

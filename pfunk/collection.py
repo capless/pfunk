@@ -26,15 +26,24 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     """
     Base class for all pFunk Documents classes.
     """
-    BUILTIN_DOC_ATTRS = ('ref', "ts")
+    BUILTIN_DOC_ATTRS = []
     _functions = []
     _indexes = []
+    _lazied = False
 
     def get_collection_name(self):
         return self.get_class_name().capitalize()
 
     def get_enums(self):
         return [i.enum for i in self._base_properties.values() if isinstance(i, import_util('pfunk.EnumField'))]
+
+    def __getattr__(self, name):
+        if name in list(self._base_properties.keys()):
+            if self._lazied:
+                self._get(self.ref.id())
+                self._lazied = False
+            prop = self._base_properties[name]
+            return prop.get_python_value(self._data.get(name))
 
     @property
     def client(self):
@@ -49,7 +58,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def create(cls, _credentials=None, **kwargs):
         c = cls(**kwargs)
         data_dict = {
-            "data": c._data
+            "data": c.get_db_valules()
         }
         if _credentials and isinstance(_credentials, dict):
             data_dict['credentials'] = _credentials
@@ -76,6 +85,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             if hasattr(c, i) and callable(getattr(c, i)):
                 c.create_or_update_role(getattr(c, i)())
 
+    def get_db_valules(self):
+        return {k:self._base_properties.get(k).get_db_value(value=v) for k,v in self._data.items()}
+
     def save(self):
         self.validate()
         if not self.ref:
@@ -83,7 +95,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 q.create(
                     q.collection(self.get_collection_name()),
                     {
-                        "data": self._data
+                        "data": self.get_db_valules()
                     }
                 ))
             self.ref = resp['ref']
@@ -92,10 +104,19 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 q.update(
                     self.ref,
                     {
-                        "data": self._data
+                        "data": self.get_db_valules()
                     }
                 )
             )
+
+    def _get(self, ref):
+        resp = self.client.query(q.get(q.ref(q.collection(self.get_collection_name()), ref)))
+        ref = resp['ref']
+        data = resp['data']
+
+        self._data = data
+        self.ref = ref
+        return self
 
     @classmethod
     def get(cls, ref):

@@ -19,6 +19,9 @@ class User(Collection):
     account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
     last_login = DateTimeField(auto_now=True)
 
+    def __unicode__(self):
+        return self.username
+
     @classmethod
     def login(cls, username, password):
         c = cls()

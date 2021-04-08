@@ -1,7 +1,10 @@
 import logging
+from collections import OrderedDict
+
 import requests
 from io import BytesIO
 
+from envs import env
 from faunadb.client import FaunaClient
 from valley.contrib import Schema
 
@@ -42,8 +45,12 @@ class Database(Schema):
             resource_list = self._index_list
         else:
             raise ValueError('Resource has to be one of the following: Collection, Enum, or Index')
-        if resource not in resource_list:
+        if not resource in resource_list:
             resource_list.append(resource)
+
+    def add_resources(self, resource_list):
+        for i in resource_list:
+            self.add_resource(i)
 
     def add_enums(self):
         for i in self._collection_list:
@@ -58,10 +65,16 @@ class Database(Schema):
 
     def publish(self, mode='merge'):
         gql_io = BytesIO(self.render().encode())
+        if self.client:
+            secret = self.client.secret
+        else:
+            secret = env('FAUNA_SECRET')
         resp = requests.post(
             'https://graphql.fauna.com/import',
             params={'mode': mode},
-            auth=BearerAuth(self.client.secret),
+            auth=BearerAuth(secret),
             data=gql_io
         )
+        for i in self._collection_list:
+            i.publish()
         return resp.content

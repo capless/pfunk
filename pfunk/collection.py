@@ -8,6 +8,8 @@ from valley.utils import import_util
 from .client import q
 from valley.properties import BaseProperty, CharProperty, ListProperty
 
+from .contrib.crud import GenericCreate, GenericDelete, GenericUpdate
+
 
 class PFunkDeclaredVars(DeclaredVars):
     base_field_class = BaseProperty
@@ -32,12 +34,18 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     _roles = []
     _lazied = False
     _all_index = True
+    _use_crud_functions = True
+    _crud_functions = [GenericCreate, GenericDelete, GenericUpdate]
+    _non_public_fields = []
 
     def __init__(self, _ref=None, _lazied=False, **kwargs):
         super(Collection, self).__init__(**kwargs)
         if _ref:
             self.ref = _ref
         self._lazied = _lazied
+
+    def get_fields(self):
+        return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k not in self._non_public_fields}
 
     def get_collection_name(self):
         return self.get_class_name().capitalize()
@@ -59,6 +67,14 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
     def all_index_name(self):
         return f"all_{self._verbose_plural_name()}"
+
+    def call_function(self, func_name, _validate=False, **kwargs):
+        if _validate:
+            self._data.update(kwargs)
+            self.validate()
+        return self.client.query(
+            q.call(func_name, kwargs)
+        )
 
     @property
     def client(self):
@@ -88,9 +104,18 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return c
 
     @classmethod
+    def publish(cls):
+        cls.publish_functions()
+        print(f'Published {cls.get_class_name()} functions successfully!')
+        cls.publish_roles()
+        print(f'Published {cls.get_class_name()} roles successfully!')
+
+    @classmethod
     def publish_functions(cls):
         c = cls()
-        for i in cls._functions:
+        if c._use_crud_functions:
+            c._functions.extend(c._crud_functions)
+        for i in c._functions:
             i(c).publish()
 
     @classmethod

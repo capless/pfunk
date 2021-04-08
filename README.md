@@ -1,5 +1,5 @@
 # PFunk
-A Python library to make writing applications with FaunaDB easier. Includes GraphQL integrations.
+A Python library to make writing applications with FaunaDB easier. Includes GraphQL and generic ABAC auth workflow integrations.
 ## Github URL
 [https://github.com/capless/pfunk](https://github.com/capless/pfunk)
  
@@ -8,38 +8,51 @@ A Python library to make writing applications with FaunaDB easier. Includes Grap
 ### Installation
 ```pip install pfunk```
 
-### Example Usage
-Setup the Connection
+### Setup the Connection
 
+#### Hard Coding Client
 ```python
-from pfunk.client import Handler
+from pfunk.client import FaunaClient
 
-handler = Handler({
-    'default': {
-        'secret': 'your-account-secret-key',
-    }
-})
+client = FaunaClient(secret='your-secret-key')
 ```
+#### Using Environment Variables (Preferred Method)
 
+If you can easily set environment variables just set the ```FAUNA_SECRET``` environment variable to your key.
+### Define your Functions and Roles
+```python
+from pfunk import Function, Role
+from pfunk.client import q
+
+class CreatePerson(Function):
+    
+    def get_body(self):
+        return q.query(
+                    q.lambda_(["input"],
+                    q.create(
+                        q.collection(self.collection.get_collection_name()),
+                        
+
+            )
+            ))
+```
 ### Define your Collections (collections.py) 
 ```python
-from pfunk import Collection, EnumField, StringField
+from pfunk import Collection, EnumField, StringField, Enum
 
-# The handler from the “Setup the Connection” section
-from .loading import handler
+# The client from the “Setup the Connection” section
+from .client import client
+
+PERSON_ROLE = Enum(name='PersonRole', choices=['teacher', 'student', 'principal'])
 
 class Person(Collection):
+    _client = client #IMPORTANT: This is only necessary if you don't set the ```FAUNA_SECRET``` environment variable.
+    
     name = StringField(required=True)
     email = StringField(required=True)
-    gender = EnumField(choices=['female', 'male'])
-    
-    class Meta:
-        use_db = 'default'
-        handler = handler
-        # This should create a simple index in the GraphQL template
-        default_all_index = True
+    role = EnumField(PERSON_ROLE, required=True)
 
-    def __str__(self):
+    def __unicode__(self):
         return self.name
 ```
 

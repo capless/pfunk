@@ -1,24 +1,30 @@
-import datetime
-
-import pytz
-
 from pfunk import StringField, Collection, DateTimeField, Enum, EnumField
 from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword, Public
-from pfunk.fields import EmailField
+from pfunk.contrib.crud import GenericDelete
+from pfunk.fields import EmailField, SlugField, ReferenceListField
 from pfunk.client import q
 
 
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
 
-class User(Collection):
+class Group(Collection):
+    name = StringField(required=True)
+    slug = SlugField(unique=True, required=False)
+
+
+class BaseUser(Collection):
     _credential_field = 'password'
-    _functions = [LoginUser, UpdatePassword, CreateUser]
+    _functions = [LoginUser, UpdatePassword]
+    _crud_functions = [CreateUser, GenericDelete]
     _roles = [Public]
     username = StringField(required=True, unique=True)
+    first_name = StringField(required=True)
+    last_name = StringField(required=True)
     email = EmailField(required=True, unique=True)
     account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
-    last_login = DateTimeField(auto_now=True)
+
+
 
     def __unicode__(self):
         return self.username
@@ -32,8 +38,8 @@ class User(Collection):
 
     @classmethod
     def create_user(cls, **kwargs):
-        c = cls()
-        kwargs['last_login'] = datetime.datetime.now(tz=pytz.UTC)
+        c = cls(**kwargs)
+        c.validate()
         return c.client.query(
             q.call("create_user", kwargs)
         )
@@ -55,9 +61,6 @@ class User(Collection):
               q.abort("Wrong current password.")
               ))
 
-    def get_user_fields(self):
-        return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k != 'last_login'}
-
     def get_identity(self):
         return self.client.query(
             q.current_identity()
@@ -65,5 +68,9 @@ class User(Collection):
 
     def __unicode__(self):
         return self.username
+
+
+class User(BaseUser):
+    groups = ReferenceListField(Group)
 
 

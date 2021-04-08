@@ -3,7 +3,7 @@ import datetime
 import pytz
 from valley.exceptions import ValidationException
 from valley.properties import CharProperty, IntegerProperty, DateTimeProperty, DateProperty, FloatProperty, \
-    BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty
+    BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty, ForeignListProperty
 from valley.validators import Validator, ChoiceValidator
 
 from pfunk.collection import Enum
@@ -120,6 +120,26 @@ class ReferenceField(GraphQLMixin, ForeignProperty):
             return value.ref
         return value
 
+
+class ReferenceListField(GraphQLMixin, ForeignListProperty):
+
+    def get_python_value(self, value):
+        ref_list = []
+        ra = ref_list.append
+        if isinstance(value, list):
+            for i in value:
+                if isinstance(i, Ref):
+                    c = self.foreign_class()
+                    c.ref = i
+                    c._lazied = True
+                    ra(c)
+        return ref_list
+
+    def get_db_value(self, value):
+        if isinstance(value, list):
+            return [i.ref for i in value if hasattr(i, 'ref')]
+        else:
+            return None
 
 class DateField(GraphQLMixin, DateProperty):
     GRAPHQL_FIELD_TYPE = 'Date'

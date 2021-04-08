@@ -18,7 +18,7 @@ def create_or_update_role(client, payload={}):
                 )
             )
         else:
-            raise BadRequest(str(err))
+            raise err
     return response
 
 
@@ -38,4 +38,6 @@ def create_or_update_function(client, payload):
                     payload
                 )
             )
+        else:
+            raise e
     return response

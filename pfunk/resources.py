@@ -8,15 +8,18 @@ class Resource(object):
     def __init__(self, collection):
         self.collection = collection
 
-    @classmethod
-    def get_name(cls):
-        return cls.name or re.sub('(?!^)([A-Z]+)', r'_\1', cls.__name__).lower()
+    def get_name(self):
+        return self.name or re.sub('(?!^)([A-Z]+)', r'_\1', self.__class__.__name__).lower()
 
     def get_payload(self):
-        return {
+        payload_dict =  {
             'name': self.get_name(),
             'body': self.get_body()
         }
+        role = self.get_role()
+        if role:
+            payload_dict['role'] = role
+        return payload_dict
 
     def publish(self):
         raise NotImplementedError
@@ -27,6 +30,9 @@ class Resource(object):
 
 class Function(Resource):
 
+    def get_role(self):
+        return None
+
     def publish(self):
         return create_or_update_function(self.collection.client, self.get_payload())
 
@@ -34,12 +40,15 @@ class Function(Resource):
 class Role(Resource):
 
     def get_payload(self):
-        return {
+        payload_dict = {
             "name": self.get_name(),
             "membership": self.get_membership(),
             "privileges": self.get_privileges(),
-            # "data": self.get_data()
         }
+        data = self.get_data()
+        if data:
+            payload_dict['data'] = data
+        return payload_dict
 
     def get_data(self):
         return None

@@ -2,7 +2,13 @@ from pfunk.resources import Function, Role
 from pfunk.client import q
 
 
-class LoginUser(Function):
+class AuthFunction(Function):
+
+    def get_role(self):
+        return "admin"
+
+
+class LoginUser(AuthFunction):
 
     def get_body(self):
         return q.query(
@@ -36,7 +42,7 @@ class LoginUser(Function):
         )
 
 
-class UpdatePassword(Function):
+class UpdatePassword(AuthFunction):
 
     def get_body(self):
         return q.query(q.lambda_(["input"],
@@ -52,12 +58,12 @@ class UpdatePassword(Function):
         )
 
 
-class CreateUser(Function):
+class CreateUser(AuthFunction):
 
     def get_body(self):
 
         data_dict = {
-            "data": self.collection.get_user_fields(),
+            "data": self.collection.get_fields(),
             "credentials": {
                 self.collection._credential_field: q.select(self.collection._credential_field, q.var("input"))
             }
@@ -75,9 +81,25 @@ class CreateUser(Function):
 class Public(Role):
 
     def get_privileges(self):
-        return [{
+        return [
+                {
                     "resource": q.function("create_user"),
                     "actions": {
                         "call": True
+                        }
+                },
+                {
+                    "resource": q.function("login_user"),
+                    "actions": {
+                        "call": True
+                        }
+                },
+                {
+                    "resource": q.function("update_password"),
+                    "actions": {
+                        "call": True
                     }
-                }]
+                }
+
+
+            ]

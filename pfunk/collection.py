@@ -127,6 +127,12 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         for i in cls._roles:
             i(c).publish()
 
+    @classmethod
+    def publish_indexes(cls):
+        c = cls()
+        for i in cls._indexes:
+            i(c).publish()
+
     def get_db_values(self):
         data = dict()
         relational_data = dict()

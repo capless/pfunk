@@ -4,7 +4,9 @@ import pytz
 from valley.exceptions import ValidationException
 from valley.properties import CharProperty, IntegerProperty, DateTimeProperty, DateProperty, FloatProperty, \
     BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty, ForeignListProperty
-from valley.validators import Validator, ChoiceValidator
+from valley.utils import import_util
+
+from valley.validators import Validator, ChoiceValidator, ForeignValidator
 
 from pfunk.collection import Enum
 from pfunk.client import Ref
@@ -20,6 +22,12 @@ class ChoiceListValidator(ChoiceValidator):
 
 class GraphQLMixin(object):
     GRAPHQL_FIELD_TYPE = 'String'
+    relation_field = False
+
+    def get_foreign_class(self):
+        if isinstance(self.foreign_class, str):
+            return import_util(self.foreign_class)
+        return self.foreign_class
 
     def get_graphql_type(self):
         self.unique = self.kwargs.get('unique')
@@ -105,7 +113,7 @@ class ReferenceField(GraphQLMixin, ForeignProperty):
             req = '!'
         if self.unique:
             unique = '@unique'
-        return f"{self.foreign_class.__name__}{req} {unique}"
+        return f"{self.get_foreign_class().__name__}{req} {unique}"
 
     def get_python_value(self, value):
         if value and isinstance(value, Ref):
@@ -121,7 +129,37 @@ class ReferenceField(GraphQLMixin, ForeignProperty):
         return value
 
 
-class ReferenceListField(GraphQLMixin, ForeignListProperty):
+class ManyToManyValidators(ForeignValidator):
+
+    def validate(self, value, key):
+        if isinstance(self.foreign_class, str):
+            self.foreign_class = import_util(self.foreign_class)
+        if value:
+            for obj in value:
+                if not isinstance(obj,self.foreign_class):
+                    raise ValidationException(
+                        '{0}: This value ({1}) should be an instance of {2}.'.format(
+                            key, obj, self.foreign_class.__name__))
+
+
+class ManyToManyField(GraphQLMixin, ForeignListProperty):
+    relation_field = True
+
+    def __init__(self,foreign_class, relation_name, return_type=None,return_prop=None,**kwargs):
+        self.foreign_class = foreign_class
+        self.relation_name = relation_name
+        super(ManyToManyField, self).__init__(foreign_class, return_type=return_type, return_prop=return_prop, **kwargs)
+
+    def get_validators(self):
+        return [ManyToManyValidators(self.foreign_class)]
+
+    def get_graphql_type(self):
+        super(ManyToManyField, self).get_graphql_type()
+        req = ''
+        if self.required:
+            req = '!'
+
+        return f'[{self.get_foreign_class().__name__}{req}] @relation(name: "{self.relation_name}")'
 
     def get_python_value(self, value):
         ref_list = []
@@ -140,6 +178,7 @@ class ReferenceListField(GraphQLMixin, ForeignListProperty):
             return [i.ref for i in value if hasattr(i, 'ref')]
         else:
             return None
+
 
 class DateField(GraphQLMixin, DateProperty):
     GRAPHQL_FIELD_TYPE = 'Date'

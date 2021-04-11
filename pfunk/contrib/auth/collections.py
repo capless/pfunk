@@ -1,7 +1,7 @@
 from pfunk import StringField, Collection, DateTimeField, Enum, EnumField
 from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword, Public
-from pfunk.contrib.crud import GenericDelete
-from pfunk.fields import EmailField, SlugField, ReferenceListField
+from pfunk.contrib.generic import GenericDelete
+from pfunk.fields import EmailField, SlugField, ManyToManyField
 from pfunk.client import q
 
 
@@ -11,6 +11,7 @@ AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 class Group(Collection):
     name = StringField(required=True)
     slug = SlugField(unique=True, required=False)
+    users = ManyToManyField('pfunk.contrib.auth.collections.User', relation_name='users_groups')
 
 
 class BaseUser(Collection):
@@ -23,8 +24,6 @@ class BaseUser(Collection):
     last_name = StringField(required=True)
     email = EmailField(required=True, unique=True)
     account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
-
-
 
     def __unicode__(self):
         return self.username
@@ -40,9 +39,11 @@ class BaseUser(Collection):
     def create_user(cls, **kwargs):
         c = cls(**kwargs)
         c.validate()
-        return c.client.query(
+        u = c.client.query(
             q.call("create_user", kwargs)
         )
+        c.ref = u.get('data').get('ref')
+        return c
 
     @classmethod
     def update_password(cls, current_password, new_password):
@@ -71,6 +72,6 @@ class BaseUser(Collection):
 
 
 class User(BaseUser):
-    groups = ReferenceListField(Group)
+    groups = ManyToManyField(Group, 'users_groups')
 
 

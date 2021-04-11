@@ -8,7 +8,7 @@ from valley.utils import import_util
 from .client import q
 from valley.properties import BaseProperty, CharProperty, ListProperty
 
-from .contrib.crud import GenericCreate, GenericDelete, GenericUpdate
+from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate
 
 
 class PFunkDeclaredVars(DeclaredVars):
@@ -89,8 +89,10 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def create(cls, _credentials=None, **kwargs):
         c = cls(**kwargs)
         c.validate()
+        data, relational_data = c.get_db_values()
+
         data_dict = {
-            "data": c.get_db_valules()
+            "data": data
         }
         if _credentials and isinstance(_credentials, dict):
             data_dict['credentials'] = _credentials
@@ -101,6 +103,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 data_dict
             ))
         c.ref = resp['ref']
+        c._save_related(relational_data)
         return c
 
     @classmethod
@@ -124,17 +127,42 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         for i in cls._roles:
             i(c).publish()
 
-    def get_db_valules(self):
-        return {k:self._base_properties.get(k).get_db_value(value=v) for k,v in self._data.items()}
+    def get_db_values(self):
+        data = dict()
+        relational_data = dict()
+        for k, v in self._data.items():
+            prop = self._base_properties.get(k)
+            if not prop.relation_field:
+                data[k] = prop.get_db_value(value=v)
+            else:
+                relational_data[prop.relation_name] = v
+        return data, relational_data
+
+    def _save_related(self, relational_data):
+        for k, v in relational_data.items():
+            for i in v:
+                resp = self.client.query(
+                    q.create(
+                        q.collection(k),
+                        {
+                           "data": {
+                               f"{self.get_class_name()}ID": self.ref,
+                               f"{i.get_class_name()}ID": i.ref
+                           }
+                        }
+                    )
+                )
 
     def save(self):
         self.validate()
+        data, relational_data = self.get_db_values()
+
         if not self.ref:
             resp = self.client.query(
                 q.create(
                     q.collection(self.get_collection_name()),
                     {
-                        "data": self.get_db_valules()
+                        "data": data
                     }
                 ))
             self.ref = resp['ref']
@@ -143,10 +171,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 q.update(
                     self.ref,
                     {
-                        "data": self.get_db_valules()
+                        "data": data
                     }
                 )
             )
+        self._save_related(relational_data)
 
     def _get(self, ref):
         resp = self.client.query(q.get(q.ref(q.collection(self.get_collection_name()), ref)))

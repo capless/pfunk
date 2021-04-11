@@ -2,7 +2,7 @@ from pfunk.resources import Function
 from pfunk.client import q
 
 
-class Generic(Function):
+class GenericFunction(Function):
     action = 'create'
 
     def get_role(self):
@@ -12,7 +12,7 @@ class Generic(Function):
         return f"{self.action}_{self.collection.get_class_name()}"
 
 
-class GenericCreate(Function):
+class GenericCreate(GenericFunction):
 
     def get_body(self):
         data_dict = {
@@ -27,7 +27,7 @@ class GenericCreate(Function):
                       ))
 
 
-class GenericUpdate(Generic):
+class GenericUpdate(GenericFunction):
     action = 'update'
 
     def get_body(self):
@@ -44,7 +44,7 @@ class GenericUpdate(Generic):
 
 
 
-class GenericDelete(Generic):
+class GenericDelete(GenericFunction):
     action = 'delete'
 
     def get_body(self):

@@ -38,7 +38,7 @@ class Function(Resource):
 
 
 class Role(Resource):
-
+    user_table = None
     def get_payload(self):
         payload_dict = {
             "name": self.get_name(),
@@ -58,7 +58,7 @@ class Role(Resource):
 
     def get_membership(self):
         return {
-            'resource': q.collection(self.collection.get_collection_name())
+            'resource': q.collection(self.user_table or self.collection.get_collection_name())
         }
 
 

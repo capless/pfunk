@@ -10,7 +10,7 @@ from valley.contrib import Schema
 
 from valley.properties import CharProperty, ForeignProperty
 
-from .indexes import Index
+from .resources import Index
 from .client import q
 from .collection import Collection, Enum
 from .template import graphql_template

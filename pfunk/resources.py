@@ -42,6 +42,10 @@ class Function(Resource):
 
 class Role(Resource):
     user_table = None
+
+    def get_lambda(self, resource_type):
+        return
+
     def get_payload(self):
         payload_dict = {
             "name": self.get_name(),
@@ -63,7 +67,7 @@ class Role(Resource):
         return q.query(
             q.lambda_(['object_ref'],
                 q.equals(
-                    q.select('account_status', q.get(q.var('object_ref'))),
+                    q.select('account_status', q.select('data', q.get(q.var('object_ref')))),
                     "ACTIVE"
                 )
                       ))

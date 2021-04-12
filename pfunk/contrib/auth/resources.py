@@ -119,41 +119,13 @@ class Public(Role):
             ]
 
 
-class GenericGroupBasedRole(Role):
-    relation_index_name = 'users_groups_by_group_and_user'
-    through_user_field = 'userID'
-    current_group_field = 'group'
+class GenericAuthorizationRole(Role):
     user_table = 'User'
+    current_user_field = 'user'
+    name_suffix = 'user_based_crud_role'
 
     def get_name(self):
-        return f"{self.collection.get_class_name()}_crud_role"
-
-    def get_lambda(self, resource_type):
-        if resource_type == 'write':
-            group_ref = q.select(self.current_group_field,
-                     q.select('data', q.get(q.var('new_object_ref'))))
-            lambda_args = ["old_object_ref", "new_object_ref"]
-        elif resource_type == 'read':
-            group_ref = q.select(self.current_group_field,
-                     q.select('data', q.get(q.var('object_ref'))))
-            lambda_args = ["object_ref"]
-        return q.query(
-                            q.lambda_(lambda_args,
-                                q.exists(
-                                    #User ID from index
-                                    q.select(self.through_user_field,
-                                        q.select("data",
-                                            q.get(
-                                                q.match(
-                                                    q.index(self.relation_index_name),
-                                                    group_ref,
-                                                    q.current_identity()
-                                                )
-                                            )))
-
-                                )
-                            )
-                        )
+        return f"{self.collection.get_class_name()}_{self.name_suffix}"
 
     def get_privileges(self):
         return [
@@ -162,7 +134,7 @@ class GenericGroupBasedRole(Role):
               "actions": {
                   'read': self.get_lambda('read'),
                   'write': self.get_lambda('write'),
-                  'create': self.get_lambda('write'),
+                  'create': self.get_lambda('create'),
                   'delete': self.get_lambda('read'),
               }
             },
@@ -197,3 +169,108 @@ class GenericGroupBasedRole(Role):
                 }
             }
         ]
+
+
+class GenericUserBasedRole(GenericAuthorizationRole):
+
+    def get_lambda(self, resource_type):
+        if resource_type == 'write':
+            lambda_args = ["old_object", "new_object", "object_ref"]
+            user_ref = q.select(self.current_user_field,
+                     q.select('data', q.var('old_object')))
+            return q.query(
+                    q.lambda_(lambda_args,
+                        q.and_(
+                            q.equals(
+                                user_ref,
+                                q.current_identity()
+                            ),
+                            q.equals(
+                                q.select(self.current_user_field, q.select('data', q.var('new_object'))),
+                                q.current_identity()
+                            )
+                        )
+
+                    )
+                        )
+        elif resource_type == 'create':
+            lambda_args = ["new_object"]
+            user_ref = q.select(self.current_user_field,
+                     q.select('data', q.var('new_object')))
+        elif resource_type == 'read':
+            lambda_args = ["object_ref"]
+            user_ref = q.select(self.current_user_field,
+                     q.select('data', q.get(q.var('object_ref'))))
+
+        return q.query(
+                            q.lambda_(lambda_args,
+                                q.equals(
+                                    user_ref,
+                                    q.current_identity()
+                                )
+                            )
+                        )
+
+
+class GenericGroupBasedRole(GenericAuthorizationRole):
+    relation_index_name = 'users_groups_by_group_and_user'
+    through_user_field = 'userID'
+    current_group_field = 'group'
+    user_table = 'User'
+    name_suffix = 'group_based_crud_role'
+
+    def get_lambda(self, resource_type):
+        if resource_type == 'write':
+            group_ref = q.select(self.current_group_field,
+                            q.select('data', q.var('old_object')))
+            lambda_args = ["old_object", "new_object", "object_ref"]
+            return q.query(
+                q.lambda_(lambda_args,
+                          q.and_(
+                              q.exists(
+                                  # User ID from index
+                                  q.select(self.through_user_field,
+                                           q.select("data",
+                                                    q.get(
+                                                        q.match(
+                                                            q.index(self.relation_index_name),
+                                                            group_ref,
+                                                            q.current_identity()
+                                                        )
+                                                    )))
+
+                              ),
+                              q.equals(
+                                  q.select(self.current_group_field, q.var('old_object')),
+                                  q.select(self.current_group_field, q.var('new_object')),
+                              )
+                          )
+
+                )
+            )
+        elif resource_type == 'create':
+            group_ref = q.select(self.current_group_field,
+                            q.select('data', q.var('new_object')))
+            lambda_args = ["new_object"]
+        elif resource_type == 'read':
+            group_ref = q.select(self.current_group_field,
+                     q.select('data', q.get(q.var('object_ref'))))
+            lambda_args = ["object_ref"]
+        return q.query(
+                            q.lambda_(lambda_args,
+                                q.exists(
+                                    #User ID from index
+                                    q.select(self.through_user_field,
+                                        q.select("data",
+                                            q.get(
+                                                q.match(
+                                                    q.index(self.relation_index_name),
+                                                    group_ref,
+                                                    q.current_identity()
+                                                )
+                                            )))
+
+                                )
+                            )
+                        )
+

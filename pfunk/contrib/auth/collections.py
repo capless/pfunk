@@ -13,6 +13,9 @@ class Group(Collection):
     slug = SlugField(unique=True, required=False)
     users = ManyToManyField('pfunk.contrib.auth.collections.User', relation_name='users_groups')
 
+    def __unicode__(self):
+        return self.name
+
 
 class BaseUser(Collection):
     _credential_field = 'password'
@@ -64,7 +67,7 @@ class BaseUser(Collection):
 
     def get_identity(self):
         return self.client.query(
-            q.current_identity()
+            q.get(q.current_identity())
         )
 
     def __unicode__(self):

@@ -11,12 +11,15 @@ class GenericFunction(Function):
     def get_name(self):
         return f"{self.action}_{self.collection.get_class_name()}"
 
+    def get_fields(self):
+        return self.collection.get_fields()
+
 
 class GenericCreate(GenericFunction):
 
     def get_body(self):
         data_dict = {
-            "data": self.collection.get_fields(),
+            "data": self.get_fields(),
         }
         return q.query(
             q.lambda_(["input"],
@@ -32,7 +35,7 @@ class GenericUpdate(GenericFunction):
 
     def get_body(self):
         data_dict = {
-            "data": self.collection.get_fields(),
+            "data": self.get_fields(),
         }
         return q.query(
             q.lambda_(["input"],

@@ -112,6 +112,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         print(f'Published {cls.get_class_name()} functions successfully!')
         cls.publish_roles()
         print(f'Published {cls.get_class_name()} roles successfully!')
+        cls.publish_indexes()
+        print(f'Published {cls.get_class_name()} indexes successfully!')
 
     @classmethod
     def publish_functions(cls):

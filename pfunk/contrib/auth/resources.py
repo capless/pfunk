@@ -241,8 +241,8 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
 
                               ),
                               q.equals(
-                                  q.select(self.current_group_field, q.var('old_object')),
-                                  q.select(self.current_group_field, q.var('new_object')),
+                                  q.select(self.current_group_field, q.select('data', q.var('old_object'))),
+                                  q.select(self.current_group_field, q.select('data', q.var('new_object'))),
                               )
                           )
 

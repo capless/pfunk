@@ -1,11 +1,35 @@
 # PFunk
 A Python library to make writing applications with FaunaDB easier. Includes GraphQL and generic ABAC auth workflow integrations.
+
 ## Table of Contents
 
-[Getting Started](#Getting Started)
+- [Getting Started](#Getting-Started)
+    - [Installation](#Installation)
+    - [Setup the Connection](#setup-the-connection)
+        - [Environment Variables Method](#using-environment-variables-preferred-method)
+        - [Hard Coding Key](#hard-coding-client)
+    - [Define your Collections](#define-your-collections-collectionspy)
+    - [Choose an Auth Workflow](#choose-an-auth-workflow)
+    - [Publish](#publish)
+    - [Save Some Data](#save-some-data)
+    - [Query Your Data](#query-your-data)
+    - [Delete a Record](#delete-a-record)
+- [API Reference](#api-reference)
+    - [Collections](#collections)
+    - [Resources](#resources)
+        - [Functions](#functions)
+        - [Indexes](#indexes)
+        - [Roles](#-roles)
+    - [Contrib](#contrib)
+        - [Auth](#auth)
+            - [User Collection](#user-collection-pfunkcontribauthcollectionsuser)
+            - [Group Collection](#group-collection-pfunkcontribauthcollectionsgroup)
+            - [Auth Functions](#auth-functions)
+            - [Auth Roles](#auth-roles)
+        
 
-[Auth](#Auth)
-### Getting Started
+
+### Getting Started {#Getting-Started}
 
 ### Installation
 ```pip install pfunk```
@@ -48,44 +72,46 @@ class Person(Collection):
     
 db.add_resource(Person)
 ```
+### Choose an Auth Workflow
 
-### Define your Functions and Roles
-```python
-from pfunk.resources import Function
-from pfunk.client import q
+Currently, you can choose a **group based** workflow, **user based**, or a **mix** of the two.  
 
-class CreatePerson(Function):
-    
-    def get_body(self):
-        return q.query(
-                    q.lambda_(["input"],
-                    q.create(
-                        q.collection(self.collection.get_collection_name()),
-                        
+### Publish
 
-            )
-            ))
-```
+### Save Some Data
 
-### Define your Indexes (indexes.py)
-```python
-from pfunk.resources import Index
+### Query your Data
 
-class AgeIndex(Index):
-    name = 'age-index'
-    source = 'person'
-    terms = []
-    values = []
-    unique = False
-    serialized = True
-    
-```
+### Delete a Record
 
-## Auth
-### Models
+## API Reference
 
-#### User Collection (pfunk.contrib.auth.collections.User)
+### Collections
 
-## Indexes
+### Fields
 
-## Functions
+### DB
+
+### Client
+
+### Resources
+
+#### Functions
+
+#### Indexes 
+
+#### Roles
+
+### Contrib
+
+#### Auth
+
+##### Collections
+
+##### User Collection (pfunk.contrib.auth.collections.User)
+
+##### Group Collection (pfunk.contrib.auth.collections.Group)
+
+##### Auth Functions
+
+##### Auth Roles

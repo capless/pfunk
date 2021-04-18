@@ -1,17 +1,19 @@
 [tool.poetry]
 name = "pfunk"
-version = "0.1.0"
+version = "0.1.0-alpha"
 description = "A Python library created make building FaunaDB GraphQL schemas and authentication code easier."
 authors = ["Brian Jinwright"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-faunadb = "^2.11.0"
+faunadb = "^4.0.1"
 valley = "^1.5.5"
 jinja2 = "^2.11.1"
 envs = "^1.3"
 requests = "^2.23.0"
+pip = "^21.0.1"
+pytz = "^2021.1"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

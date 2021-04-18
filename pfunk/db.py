@@ -1,12 +1,18 @@
 import logging
+from collections import OrderedDict
+
 import requests
-from envs import env
 from io import BytesIO
-from faunadb.errors import BadRequest
+
+from envs import env
+from faunadb.client import FaunaClient
 from valley.contrib import Schema
-from valley.properties import CharProperty, BooleanProperty, ForeignProperty, ForeignListProperty
-from .loading import client, q
-from .collection import Collection, Enum, Index
+
+from valley.properties import CharProperty, ForeignProperty
+
+from .resources import Index
+from .client import q
+from .collection import Collection, Enum
 from .template import graphql_template
 
 logger = logging.getLogger('pfunk')
@@ -21,98 +27,54 @@ class BearerAuth(requests.auth.AuthBase):
         return r
 
 
-class TermValueField(Schema):
-    name = CharProperty(required=True)
-    reverse = BooleanProperty(default_value=True)
-
-
-class Binding(Schema):
-    name = CharProperty(required=True)
-
-
-class TermValue(Schema):
-    bindings = ForeignListProperty(Binding, required=False)
-    fields = ForeignListProperty(TermValueField, required=False)
-
-    def render(self):
-        obj_list = []
-        if self.bindings:
-            binding_list = [{"binding": i.name} for i in self.bindings]
-            obj_list.extend(binding_list)
-        if self.fields:
-            field_list = [{'field': ['data', i.name], 'reverse': i.reverse} for i in self.fields]
-            obj_list.extend(field_list)
-        return obj_list
-
-
-class Index(Schema):
-    name = CharProperty(required=True)
-    source = CharProperty(required=True)
-    terms = ForeignProperty(TermValue, required=False)
-    values = ForeignProperty(TermValue, required=False)
-    serialized = BooleanProperty(default_value=True)
-    unique = BooleanProperty(default_value=False)
-
-    def render(self):
-        pass
-
-    def get_kwargs(self):
-        self.validate()
-        kwargs = {'name': self.name, 'source': q.collection(self.source), 'serialized': self.serialized,
-                  'unique': self.unique}
-        if self.terms:
-            kwargs['terms'] = self.terms.render()
-        if self.values:
-            kwargs['values'] = self.values.render()
-        return kwargs
-
-    def publish(self):
-        return client.query(q.create_index(self.get_kwargs()))
-
-
 class Database(Schema):
     name = CharProperty(required=True)
+    client = ForeignProperty(FaunaClient)
+
     _collection_list = []
     _enum_list = []
     _index_list = []
+    _role_list = []
 
     def add_resource(self, resource):
-        if not issubclass(resource, (Collection, Enum, Index)):
+        if isinstance(resource, Enum):
+            resource_list = self._enum_list
+        elif issubclass(resource, Collection):
+            resource_list = self._collection_list
+        elif issubclass(resource, Index):
+            resource_list = self._index_list
+        else:
             raise ValueError('Resource has to be one of the following: Collection, Enum, or Index')
-        if issubclass(resource, Collection) and resource not in self._collection_list:
-            self._collection_list.append(resource)
-            cl = set(self._collection_list)
-            self._collection_list = list(cl)
+        if not resource in resource_list:
+            resource_list.append(resource)
+
+    def add_resources(self, resource_list):
+        for i in resource_list:
+            self.add_resource(i)
+
+    def add_enums(self):
+        for i in self._collection_list:
+            enums = i().get_enums()
+            for e in enums:
+                self.add_resource(e)
 
     def render(self):
+        self.add_enums()
         return graphql_template.render(collection_list=self._collection_list, enum_list=self._enum_list,
                                        index_list=self._index_list)
 
-    def get_meta(self):
-        default = {
-            'all_index': True,
-            'all_index_name': self.get_class_name()
-        }
-        return default
-
-    def publish(self, override: bool = False):
+    def publish(self, mode='merge'):
         gql_io = BytesIO(self.render().encode())
-        mode = 'update'
-        if override:
-            mode = 'override'
+        if self.client:
+            secret = self.client.secret
+        else:
+            secret = env('FAUNA_SECRET')
         resp = requests.post(
             'https://graphql.fauna.com/import',
             params={'mode': mode},
-            auth=BearerAuth(env('FAUNA_SECRET')),
+            auth=BearerAuth(secret),
             data=gql_io
         )
-
+        for i in self._collection_list:
+            i.publish()
         return resp.content
-
-    def create(self):
-        self.validate()
-        if self._is_valid:
-            try:
-                client.query(q.create_database({"name": self.name}))
-            except BadRequest:
-                logger.warning(f'{self.name} database already exists.')

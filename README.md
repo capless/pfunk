@@ -287,15 +287,47 @@ enrollment_population = IntegerField(required=True)
 ```
 
 #### ManyToManyField
+This field validates a list of instances of foreign classes.
 
+##### Field Specific Arguments
+- **foreign_class** (positional argument) - The foreign collection non-instantiated class
+
+##### Example
+```python
+students = ManyToManyField(Student)
+```
 #### ReferenceField
 
+This field validates a single instance of a foreign classes.
+
+##### Field Specific Arguments
+- **foreign_class** (positional argument) - The foreign collection non-instantiated class
+
+##### Example
+```python
+district = ReferenceField(District)
+```
 #### SlugField
 
+This field validates a ```slug``` value. An example of a slug value is ```pfunk-is-a-cool-value
+
+##### Example
+
+```python
+
+slug = SlugField(unique=True, required=True)
+```
+
 #### StringField
+This is the most common field in ```pfunk```, it validates a string value.
+
+##### Example
+
+```python
+name = StringField(required=True)
+```
 
 ### DB
-
 
 ### Client
 

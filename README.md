@@ -330,6 +330,34 @@ name = StringField(required=True)
 
 ### DB
 
+```python
+from pfunk import Database
+
+db = Database(name='yourdb')
+```
+
+#### Methods
+
+##### add_resource
+Add a single collection to the database.
+```python
+db.add_resource(SomeCollection)
+```
+
+##### add_resources
+Add multiple collections to the database at one time.
+```python
+db.add_resources([SomeCollection, AnotherCollection])
+```
+
+##### publish
+Publishes the collections, indexes, user-defined functions, GraphQL schema, and roles at time.
+```python
+db.publish()
+```
+
+#### Properties
+
 ### Client
 
 ### Resources

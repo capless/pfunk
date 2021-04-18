@@ -1,5 +1,14 @@
 # PFunk
-A Python library to make writing applications with FaunaDB easier. Includes GraphQL and generic ABAC auth workflow integrations.
+A Python library to make writing applications with FaunaDB easier. 
+Includes GraphQL and generic ABAC auth workflow integrations.
+
+## Key Features
+- DRY (Don't Repeat Yourself) code to help you create multiple collections, indexes, roles, and user-defined functions 
+  quickly. This helps you create more functionality with less code. 
+- Mix and match authorization workflows (Group and user based)
+- Create a GraphQL endpoint and a schema validating ORM with the same code.
+- Authentication collections, indexes, user-defined functions, and roles included.
+- Generic CRUD user-defined functions included
 
 ## Table of Contents
 
@@ -163,7 +172,7 @@ If you're not familiar with Fauna, collections are equivalent to tables in a rel
 #### Examples
 
 Let's create the collections for a school application. Below we are using subclasses to reduce code.
-For each of the 
+Some of the most powerful features of ```pfunk``` are displayed in the following code.
 
 ```python
 from pfunk import (Collection, StringField, EmailField, BooleanField, EnumField,

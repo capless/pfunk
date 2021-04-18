@@ -158,7 +158,6 @@ class ManyToManyField(GraphQLMixin, ForeignListProperty):
         req = ''
         if self.required:
             req = '!'
-
         return f'[{self.get_foreign_class().__name__}{req}] @relation(name: "{self.relation_name}")'
 
     def get_python_value(self, value):
@@ -171,6 +170,8 @@ class ManyToManyField(GraphQLMixin, ForeignListProperty):
                     c.ref = i
                     c._lazied = True
                     ra(c)
+                if isinstance(i, self.foreign_class):
+                    ra(i)
         return ref_list
 
     def get_db_value(self, value):

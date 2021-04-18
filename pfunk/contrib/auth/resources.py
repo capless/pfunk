@@ -70,11 +70,33 @@ class CreateUser(AuthFunction):
         }
         return q.query(
                     q.lambda_(["input"],
-                    q.create(
-                        q.collection(self.collection.get_collection_name()),
-                        data_dict
-
-            )
+                    q.let(
+                        {
+                            'result': q.create(
+                            q.collection(self.collection.get_collection_name()),
+                            data_dict),
+                            'input': q.var('input')
+                        },
+                        # If 'groups' key is an array
+                        q.if_(
+                            q.is_array(q.select('groups', q.var('input'))),
+                            q.foreach(
+                                q.lambda_(
+                                    'group',
+                                    q.create(
+                                        q.collection(self.collection._base_properties.get('groups').relation_name),
+                                        {'data': {
+                                            'userID': q.select('ref', q.var('result')),
+                                            'groupID': q.var('group')
+                                        }}
+                                    )
+                                )
+                                ,
+                                q.select('groups', q.var('input'))
+                            ),
+                            q.abort('Groups not defined.')
+                        )
+                    )
             ))
 
 
@@ -118,6 +140,29 @@ class Public(Role):
 
             ]
 
+
+class UserRole(Role):
+
+    def get_privileges(self):
+        return [
+            {
+                "resource": q.collection(self.collection.get_collection_name()),
+                "actions": {
+                    'read': self.get_lambda('read')
+                }
+            }
+        ]
+
+    def get_lambda(self, resource_type):
+        lambda_args = ["object_ref"]
+        return q.query(
+            q.lambda_(lambda_args,
+                      q.equals(
+                          q.var('object_ref'),
+                          q.current_identity()
+                      )
+                      )
+        )
 
 class GenericAuthorizationRole(Role):
     user_table = 'User'

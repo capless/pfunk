@@ -26,6 +26,7 @@ Includes GraphQL and generic ABAC auth workflow integrations.
 - [API Reference](#api-reference)
     - [Collections](#collections)
       - [Hard Coded Client]()
+    - [Fields](#fields)
     - [Resources](#resources)
         - [Functions](#functions)
         - [Indexes](#indexes)

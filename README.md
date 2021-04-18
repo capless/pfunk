@@ -231,14 +231,60 @@ db.add_resources([District, Student, School, User, Group])
 db.publish()
 ```
 ### Fields
+If you are familiar with Django models you will understand this section quickly. Fields are probably the smallest building block in ```pfunk```. There are different types of that have different validation.
+#### Base Arguments
+
+##### required
+This argument signals whether the field needs a value in order for the collection to pass the validation check.
+This argument needs to be a boolean (True or False).
+
+##### unique
+This argument creates a unique index that makes Fauna throw a validation error if you try to save a new record with the same value for this field.
+This argument needs to be a boolean (True or False).
+
+##### default_value
+This argument gives the field a default value.
 
 #### BooleanField
+This field checks for True or False values.
+
+##### Example
+
+```python
+magnet_school = BooleanField(default_value=False)
+```
 
 #### EmailField
+This field makes sure the value is a valid email address format.
+
+```python
+email = EmailField(required=True, unique=True)
+```
 
 #### EnumField
+This field validates against a given list of values defined in a Enum class. 
+That Enum, and it's relationship is translated in the GraphQL on publish.
 
+##### Field Specific Arguments
+
+- **enum** (positional argument) - The Enum instance that contains the name of the ```Enum``` and the choices
+##### Example
+```python
+from pfunk import Enum, EnumField
+
+MAGNET_SCHOOL_TYPES = Enum(name='MagnetSchoolTypes', choices=['art', 'math-science'])
+# This should be part of a Collection class but for documentation 
+# purposes it's just out in the wild.
+magnet_school_type = EnumField(MAGNET_SCHOOL_TYPES, required=False)
+```
 #### IntegerField
+This field validates that the value is an integer.
+
+##### Example
+
+```python
+enrollment_population = IntegerField(required=True)
+```
 
 #### ManyToManyField
 
@@ -311,3 +357,13 @@ db.add_resource(Person)
 ##### Auth Functions
 
 ##### Auth Roles
+
+
+## Project Short Term Roadmap
+
+### ManyToManyField helper methods
+
+### URLField
+
+### StreetAddressField
+

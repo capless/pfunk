@@ -87,23 +87,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
     @classmethod
     def create(cls, _credentials=None, **kwargs):
+
         c = cls(**kwargs)
-        c.validate()
-        data, relational_data = c.get_db_values()
-
-        data_dict = {
-            "data": data
-        }
-        if _credentials and isinstance(_credentials, dict):
-            data_dict['credentials'] = _credentials
-
-        resp = c.client.query(
-            q.create(
-                q.collection(c.get_collection_name()),
-                data_dict
-            ))
-        c.ref = resp['ref']
-        c._save_related(relational_data)
+        c.save(_credentials=_credentials)
         return c
 
     @classmethod
@@ -161,26 +147,25 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                     )
                 )
 
-    def save(self):
+    def save(self, _credentials=None):
         self.validate()
         data, relational_data = self.get_db_values()
-
+        data_dict = dict()
+        data_dict['data'] = data
+        if _credentials:
+            data_dict['credentials'] = _credentials
         if not self.ref:
             resp = self.client.query(
                 q.create(
                     q.collection(self.get_collection_name()),
-                    {
-                        "data": data
-                    }
+                    data_dict
                 ))
             self.ref = resp['ref']
         else:
             self.client.query(
                 q.update(
                     self.ref,
-                    {
-                        "data": data
-                    }
+                    data_dict
                 )
             )
         self._save_related(relational_data)

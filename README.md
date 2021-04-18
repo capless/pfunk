@@ -162,18 +162,85 @@ If you're not familiar with Fauna, collections are equivalent to tables in a rel
 
 #### Examples
 
-Let's create the collections for a school application.
+Let's create the collections for a school application. Below we are using subclasses to reduce code.
+For each of the 
+
 ```python
 from pfunk import (Collection, StringField, EmailField, BooleanField, EnumField,
-                   IntegerField, SlugField, ReferenceField, ManyToManyField)
-from pfunk.contrib.auth.collections import User
+                   IntegerField, SlugField, ReferenceField, ManyToManyField, Enum,
+                   Database)
+from pfunk.contrib.auth.collections import User, Group
+from pfunk.contrib.auth.resources import GenericUserBasedRole, GenericGroupBasedRole
 
+MAGNET_SCHOOL_TYPES = Enum(name='MagnetSchoolTypes', choices=['art', 'math-science'])
 
-class School(Collection):
+# Create a database instance. Ideally you would do this in a separate module (ex. db.py)
+db = Database(name='education')
+
+class UtilCollection(Collection):
+    _roles = [GenericGroupBasedRole, GenericUserBasedRole] # We don't have to choose one authorization workflow so let's choose both user and group based.
+    created_by = ReferenceField(User)
+    group = ReferenceField(Group, required=False)
+    
+    
+class NameSlugCollection(UtilCollection):
+    name = StringField(required=True)
+    slug = SlugField(required=True, unique=True)
+    
+    def __unicode__(self):
+        return self.name
+    
+    
+class District(NameSlugCollection):
+    county = StringField(required=True)
+    state = StringField(required=True)
+    
+    
+class Student(UtilCollection):
+    first_name = StringField(required=True)
+    last_name = StringField(required=True)
+    email = EmailField(required=True)
+    
+    def __unicode__(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    
+class School(NameSlugCollection):
+    school_email = EmailField(required=False)
+    magnet_school = BooleanField(default_value=False)
+    magnet_school_type = EnumField(MAGNET_SCHOOL_TYPES, required=False)
+    enrollment_population = IntegerField(required=True)
+    district = ReferenceField(District)
+    students = ManyToManyField(Student)
+
+# Let's add the non-abstract collections to the Database class and publish. 
+# Ideally this would be done in another module (ex. db.py). 
+# It would probably be a good idea to do this in the same module that the Database instance is created. 
+db.add_resources([District, Student, School, User, Group])
+
+# Publish the GraphQL schema, indexes, roles, user defined functions, and the collections.
+db.publish()
 ```
 ### Fields
 
+#### BooleanField
+
+#### EmailField
+
+#### EnumField
+
+#### IntegerField
+
+#### ManyToManyField
+
+#### ReferenceField
+
+#### SlugField
+
+#### StringField
+
 ### DB
+
 
 ### Client
 

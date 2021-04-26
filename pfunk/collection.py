@@ -35,7 +35,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     _lazied = False
     _all_index = True
     _use_crud_functions = True
-    _crud_functions = [GenericCreate, GenericDelete, GenericUpdate]
+    _crud_functions = [GenericCreate, GenericDelete, GenericUpdate, AllFunction]
     _non_public_fields = []
 
     def __init__(self, _ref=None, _lazied=False, **kwargs):
@@ -190,14 +190,21 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         obj.ref = ref
         return obj
 
+    @classmethod
+    def get_by(cls, name, *args):
+        c = cls()
+        raw_qs = c.client.query(
+            q.paginate(q.match(q.index(name), *args)))
+        return c.process_qs(raw_qs.get('data'))[0]
+
     def process_qs(self, data):
         return [self.__class__(_ref=i, _lazied=True) for i in data]
 
     @classmethod
-    def all(cls, paginate_by=100, after=None, before=None):
+    def all(cls, paginate_by=100, after=None, ts=None):
         c = cls()
-        raw_qs = c.client.query(q.paginate(q.match(q.index(c.all_index_name())), paginate_by, after=after, before=before))
-        return c.process_qs(raw_qs.get('data'))
+        return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.call_function(
+            c.all_index_name(), size=paginate_by, after=after, ts=ts).get('data')]
 
 
     @classmethod

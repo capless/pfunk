@@ -170,6 +170,45 @@ video.delete()
 
 If you're not familiar with Fauna, collections are equivalent to tables in a relational database. 
 
+#### Methods
+
+##### all
+
+Returns all of the documents that the current token has access to.
+
+##### create
+
+Creates a new record in the collection.
+
+
+##### get
+
+Gets a record using a string ID.
+
+##### save
+
+Saves a record
+
+##### delete
+
+Deletes a record
+##### validate
+
+Validates the data attached to an instance of a Collection class.
+
+#### Properties
+
+##### _roles
+
+##### _client
+
+##### _token
+
+##### _indexes
+
+##### _functions
+
+
 #### Examples
 
 Let's create the collections for a school application. Below we are using subclasses to reduce code.

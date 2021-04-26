@@ -15,6 +15,27 @@ class GenericFunction(Function):
         return self.collection.get_fields()
 
 
+class AllFunction(GenericFunction):
+
+    def get_name(self):
+        return self.collection.all_index_name()
+
+    def get_body(self):
+        return q.query(
+            q.lambda_(["input"],
+                q.map_(
+                    q.lambda_(['ref'],
+                        q.get(q.var('ref'))
+                    ),
+                    q.paginate(
+                        q.match(q.index('all_vehicles')),
+                        q.select('size', q.var('input'))
+                    )
+                )
+            )
+        )
+    
+    
 class GenericCreate(GenericFunction):
 
     def get_body(self):

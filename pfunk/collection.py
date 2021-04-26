@@ -8,7 +8,7 @@ from valley.utils import import_util
 from .client import q
 from valley.properties import BaseProperty, CharProperty, ListProperty
 
-from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate
+from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate, AllFunction
 
 
 class PFunkDeclaredVars(DeclaredVars):

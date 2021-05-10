@@ -82,39 +82,6 @@ class Role(Resource):
         return create_or_update_role(self.collection.client, self.get_payload())
 
 
-class TermValueField(Schema):
-    name = CharProperty(required=True)
-    reverse = BooleanProperty(default_value=True)
-
-
-class Binding(Schema):
-    name = CharProperty(required=True)
-
-
-class TermValue(Schema):
-    bindings = ForeignListProperty(Binding, required=False)
-    fields = ForeignListProperty(TermValueField, required=False)
-
-    def render(self):
-        obj_list = []
-        if self.bindings:
-            binding_list = [{"binding": i.name} for i in self.bindings]
-            obj_list.extend(binding_list)
-        if self.fields:
-            field_list = [{'field': ['data', i.name], 'reverse': i.reverse} for i in self.fields]
-            obj_list.extend(field_list)
-        return obj_list
-
-
-class IndexSchema(Schema):
-    name = CharProperty(required=True)
-    source = CharProperty(required=True)
-    terms = ForeignProperty(TermValue, required=False)
-    values = ForeignProperty(TermValue, required=False)
-    serialized = BooleanProperty(default_value=True)
-    unique = BooleanProperty(default_value=False)
-
-
 class Index(object):
     name = None
     source = None
@@ -122,21 +89,21 @@ class Index(object):
     serialized = True
     terms = None
     values = None
+    _accept_kwargs = ['name', 'source', 'unique', 'serialized', 'terms', 'values']
 
-    def __init__(self, collection):
-        i = IndexSchema(name=self.name, source=self.source, terms=self.terms, values=self.values,
-                        serialized=self.serialized, unique=self.unique)
-        i.validate()
-        self.collection = collection
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            if k in self._accept_kwargs:
+                setattr(self, k, v)
 
     def get_kwargs(self):
         kwargs = {'name': self.name, 'source': q.collection(self.source), 'serialized': self.serialized,
                   'unique': self.unique}
         if self.terms:
-            kwargs['terms'] = self.terms.render()
+            kwargs['terms'] = self.terms
         if self.values:
-            kwargs['values'] = self.values.render()
+            kwargs['values'] = self.values
         return kwargs
 
-    def publish(self):
-        return self.collection.client.query(q.create_index(self.get_kwargs()))
+    def publish(self, client):
+        return client.query(q.create_index(self.get_kwargs()))

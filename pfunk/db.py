@@ -63,6 +63,13 @@ class Database(Schema):
         return graphql_template.render(collection_list=self._collection_list, enum_list=self._enum_list,
                                        index_list=self._index_list)
 
+    @property
+    def _client(self):
+        if self.client:
+            return self.client
+        self.client = FaunaClient(secret=env('FAUNA_SECRET'))
+        return self.client
+
     def publish(self, mode='merge'):
         gql_io = BytesIO(self.render().encode())
         if self.client:
@@ -75,6 +82,8 @@ class Database(Schema):
             auth=BearerAuth(secret),
             data=gql_io
         )
-        for i in self._collection_list:
-            i.publish()
+        for ind in set(self._index_list):
+            ind().publish(self._client)
+        for col in set(self._collection_list):
+            col.publish()
         return resp.content

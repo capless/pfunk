@@ -1,5 +1,6 @@
 from envs import env
 from faunadb.client import FaunaClient
+from faunadb.errors import BadRequest
 from valley.schema import BaseSchema
 from valley.contrib import Schema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
@@ -9,6 +10,7 @@ from .client import q
 from valley.properties import BaseProperty, CharProperty, ListProperty
 
 from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate, AllFunction
+from .resources import Index
 
 
 class PFunkDeclaredVars(DeclaredVars):
@@ -101,6 +103,30 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         cls.publish_indexes()
         print(f'Published {cls.get_class_name()} indexes successfully!')
 
+    def get_unique_together(self):
+        try:
+            meta_unique_together = self.Meta.unique_together
+        except AttributeError:
+            return
+        unique_together = []
+
+        for i in meta_unique_together:
+            fields = '_'.join(i)
+            name = f'{self.get_class_name()}_unique_{fields}'
+            terms = [{'binding': f, 'field': ['data', f]} for f in i]
+            unique = True
+            source = self.get_collection_name()
+            Indy = type(''.join([f.capitalize() for f in i])+'Index', (Index, ), {
+                'name': name,
+                'terms': terms,
+                'unique': unique,
+                'source': source
+            })
+            unique_together.append(Indy)
+        return unique_together
+
+
+
     @classmethod
     def publish_functions(cls):
         c = cls()
@@ -118,8 +144,15 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     @classmethod
     def publish_indexes(cls):
         c = cls()
+        ut = c.get_unique_together()
+        if ut:
+            cls._indexes.extend(ut)
         for i in cls._indexes:
-            i(c).publish()
+            try:
+                i().publish(c.client)
+            except BadRequest as e:
+                for err in e.errors:
+                    print(f'Error ({i.__name__.lower()}): ', err.description)
 
     def get_db_values(self):
         data = dict()
@@ -206,6 +239,20 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.call_function(
             c.all_index_name(), size=paginate_by, after=after, ts=ts).get('data')]
 
+    @classmethod
+    def get_index(cls, index_name, page_size=100):
+        c = cls()
+        return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.client.query(
+            q.map_(
+                q.lambda_(['ref'],
+                          q.get(q.var('ref'))
+                          ),
+                q.paginate(
+                    q.match(q.index(index_name)),
+                    page_size
+                )
+            )
+        ).get('data')]
 
     @classmethod
     def filter(cls, **kwargs):

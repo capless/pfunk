@@ -24,6 +24,9 @@ class PFunkDeclarativeVariablesMetaclass(DeclarativeVariablesMetaclass):
 class Enum(Schema):
     name = CharProperty(required=True)
     choices = ListProperty(required=True)
+
+    def __unicode__(self):
+        return self.name
     
     
 class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
@@ -39,6 +42,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     _use_crud_functions = True
     _crud_functions = [GenericCreate, GenericDelete, GenericUpdate, AllFunction]
     _non_public_fields = []
+    _verbose_plural_name = None
 
     def __init__(self, _ref=None, _lazied=False, **kwargs):
         super(Collection, self).__init__(**kwargs)
@@ -64,11 +68,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             return prop.get_python_value(self._data.get(name))
 
     @classmethod
-    def _verbose_plural_name(cls):
+    def get_verbose_plural_name(cls):
+        if cls._verbose_plural_name:
+            return cls._verbose_plural_name
         return f"{cls.get_class_name()}s"
 
     def all_index_name(self):
-        return f"all_{self._verbose_plural_name()}"
+        return f"all_{self.get_verbose_plural_name()}"
 
     def call_function(self, func_name, _validate=False, **kwargs):
         if _validate:

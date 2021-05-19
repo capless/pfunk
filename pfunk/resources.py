@@ -1,8 +1,7 @@
 import re
+
 from pfunk.utils.publishing import create_or_update_function, create_or_update_role
 from pfunk.client import q
-from valley.contrib import Schema
-from valley.properties import CharProperty, BooleanProperty, ForeignProperty, ForeignListProperty
 
 
 class Resource(object):

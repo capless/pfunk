@@ -79,7 +79,7 @@ class BaseUser(Collection):
 
     def update_password_b(self, current_password, new_password):
         self.client.query(
-        q.if_(q.identify(self.get_identity(),
+        q.if_(q.identify(self._get_identity(),
                          current_password),
               q.update(q.current_identity(), {
                   "credentials": {"password": new_password}
@@ -87,8 +87,12 @@ class BaseUser(Collection):
               q.abort("Wrong current password.")
               ))
 
-    def get_identity(self):
+    @classmethod
+    def get_current_user(cls):
+        c = cls()
+        return cls.get(c.client.query(q.current_identity()).id())
 
+    def _get_identity(self):
         return self.client.query(
             q.get(q.current_identity())
         )

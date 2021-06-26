@@ -1,6 +1,9 @@
+from faunadb.errors import BadRequest
+
 from pfunk import StringField, Collection, DateTimeField, Enum, EnumField
 from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword, Public, UserRole
 from pfunk.contrib.generic import GenericDelete
+from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField
 from pfunk.client import q
 
@@ -33,22 +36,25 @@ class BaseUser(Collection):
         return self.username
 
     @classmethod
-    def login(cls, username, password):
+    def login(cls, username, password, _token=None):
         c = cls()
-        return c.client.query(
-            q.call("login_user", {"username": username, "password": password})
-        )
+        try:
+            return c.client(_token=_token).query(
+                q.call("login_user", {"username": username, "password": password})
+            )
+        except BadRequest:
+            raise LoginFailed('The login credentials you entered are incorrect.')
 
     @classmethod
-    def get_from_id(cls):
+    def get_from_id(cls, _token=None):
         c = cls()
-        ref = c.client.query(
+        ref = c.client(_token=_token).query(
             q.current_identity()
         )
         return cls(_ref=ref, _lazied=True)
 
     @classmethod
-    def create_user(cls, **kwargs):
+    def create_user(cls, _token=None, **kwargs):
 
         c = cls(**kwargs)
 
@@ -57,7 +63,7 @@ class BaseUser(Collection):
         data = c.get_create_user_values()
         data['password'] = password
 
-        u = c.client.query(
+        u = c.client(_token=_token).query(
             q.call("create_user", data)
         )
 
@@ -71,14 +77,14 @@ class BaseUser(Collection):
         return data
 
     @classmethod
-    def update_password(cls, current_password, new_password):
+    def update_password(cls, current_password, new_password, _token=None):
         c = cls()
-        return c.client.query(
+        return c.client(_token=_token).query(
             q.call("update_password", {'current_password': current_password, 'new_password': new_password})
         )
 
-    def update_password_b(self, current_password, new_password):
-        self.client.query(
+    def update_password_b(self, current_password, new_password, _token=None):
+        self.client(token=_token).query(
         q.if_(q.identify(self._get_identity(),
                          current_password),
               q.update(q.current_identity(), {
@@ -88,14 +94,15 @@ class BaseUser(Collection):
               ))
 
     @classmethod
-    def get_current_user(cls):
+    def get_current_user(cls, _token=None):
         c = cls()
-        return cls.get(c.client.query(q.current_identity()).id())
+        return cls.get(c.client(_token=_token).query(q.current_identity()).id())
 
-    def _get_identity(self):
-        return self.client.query(
+    def _get_identity(self, _token=None):
+        return self.client(token=_token).query(
             q.get(q.current_identity())
         )
+
 
     def __unicode__(self):
         return self.username

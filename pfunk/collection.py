@@ -27,8 +27,8 @@ class Enum(Schema):
 
     def __unicode__(self):
         return self.name
-    
-    
+
+
 class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     """
     Base class for all pFunk Documents classes.
@@ -76,26 +76,24 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def all_index_name(self):
         return f"all_{self.get_verbose_plural_name()}"
 
-    def call_function(self, func_name, _validate=False, **kwargs):
+    def all_function_name(self):
+        return f"all_{self.get_verbose_plural_name()}_function"
+
+    def call_function(self, func_name, _validate=False, _token=None, **kwargs):
         if _validate:
             self._data.update(kwargs)
             self.validate()
-        return self.client.query(
+        return self.client(_token=_token).query(
             q.call(func_name, kwargs)
         )
 
-    @property
-    def client(self):
-        if self._token:
-            return FaunaClient(secret=self._token)
-        if self._client:
-            return self._client
-        self._client = FaunaClient(secret=env('FAUNA_SECRET'))
-        return self._client
+    def client(self, _token=None):
+        if _token:
+            return FaunaClient(secret=_token)
+        return FaunaClient(secret=env('FAUNA_SECRET'))
 
     @classmethod
-    def create(cls, _credentials=None, **kwargs):
-
+    def create(cls, _credentials=None, _token=None, **kwargs):
         c = cls(**kwargs)
         c.save(_credentials=_credentials)
         return c
@@ -108,6 +106,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         print(f'Published {cls.get_class_name()} roles successfully!')
         cls.publish_indexes()
         print(f'Published {cls.get_class_name()} indexes successfully!')
+
 
     def get_unique_together(self):
         try:
@@ -155,10 +154,31 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             cls._indexes.extend(ut)
         for i in cls._indexes:
             try:
-                i().publish(c.client)
+                i().publish(c.client())
             except BadRequest as e:
                 for err in e.errors:
                     print(f'Error ({i.__name__.lower()}): ', err.description)
+
+    @classmethod
+    def publish_indexes(cls):
+        c = cls()
+        ut = c.get_unique_together()
+        if ut:
+            cls._indexes.extend(ut)
+        for i in cls._indexes:
+            try:
+                i().publish(c.client())
+            except BadRequest as e:
+                for err in e.errors:
+                    print(f'Error ({i.__name__.lower()}): ', err.description)
+
+    @classmethod
+    def unpublish(cls):
+        c = cls()
+        print(f'Unpublishing: {c.get_collection_name()}')
+        result = c.client().query(
+            q.delete(q.collection(c.get_collection_name()))
+        )
 
     def get_db_values(self):
         data = dict()
@@ -171,10 +191,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 relational_data[prop.relation_name] = v
         return data, relational_data
 
-    def _save_related(self, relational_data):
+    def _save_related(self, relational_data, _token=None):
+        client = self.client(_token=_token)
         for k, v in relational_data.items():
             for i in v:
-                resp = self.client.query(
+                resp = client.query(
                     q.create(
                         q.collection(k),
                         {
@@ -186,31 +207,36 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                     )
                 )
 
-    def save(self, _credentials=None):
+    def save(self, _credentials=None, _token=None):
         self.validate()
         data, relational_data = self.get_db_values()
+
         data_dict = dict()
         data_dict['data'] = data
+
         if _credentials:
-            data_dict['credentials'] = _credentials
+            data_dict['credentials'] = {
+                'password': _credentials
+            }
+
         if not self.ref:
-            resp = self.client.query(
+            resp = self.client(_token=_token).query(
                 q.create(
                     q.collection(self.get_collection_name()),
                     data_dict
                 ))
             self.ref = resp['ref']
         else:
-            self.client.query(
+            self.client(token=_token).query(
                 q.update(
                     self.ref,
                     data_dict
                 )
             )
-        self._save_related(relational_data)
+        self._save_related(relational_data, _token=_token)
 
-    def _get(self, ref):
-        resp = self.client.query(q.get(q.ref(q.collection(self.get_collection_name()), ref)))
+    def _get(self, ref, _token=None):
+        resp = self.client(_token=_token).query(q.get(q.ref(q.collection(self.get_collection_name()), ref)))
         ref = resp['ref']
         data = resp['data']
 
@@ -219,9 +245,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return self
 
     @classmethod
-    def get(cls, ref):
+    def get(cls, ref, _token=None):
         c = cls()
-        resp = c.client.query(q.get(q.ref(q.collection(c.get_collection_name()), ref)))
+        resp = c.client(_token=_token).query(q.get(q.ref(q.collection(c.get_collection_name()), ref)))
         ref = resp['ref']
         data = resp['data']
 
@@ -230,9 +256,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return obj
 
     @classmethod
-    def get_by(cls, name, *args):
+    def get_by(cls, name, *args, _token=None):
         c = cls()
-        raw_qs = c.client.query(
+        raw_qs = c.client(_token=_token).query(
             q.paginate(q.match(q.index(name), *args)))
         return c.process_qs(raw_qs.get('data'))[0]
 
@@ -240,15 +266,15 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return [self.__class__(_ref=i, _lazied=True) for i in data]
 
     @classmethod
-    def all(cls, paginate_by=100, after=None, ts=None):
+    def all(cls, paginate_by=100, after=None, ts=None, _token=None):
         c = cls()
         return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.call_function(
-            c.all_index_name(), size=paginate_by, after=after, ts=ts).get('data')]
+            c.all_function_name(), _token=_token, size=paginate_by, after=after, ts=ts).get('data')]
 
     @classmethod
-    def get_index(cls, index_name, page_size=100):
+    def get_index(cls, index_name, page_size=100, _token=None):
         c = cls()
-        return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.client.query(
+        return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.client(_token=_token).query(
             q.map_(
                 q.lambda_(['ref'],
                           q.get(q.var('ref'))
@@ -260,9 +286,5 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             )
         ).get('data')]
 
-    @classmethod
-    def filter(cls, **kwargs):
-        pass
-
-    def delete(self):
-        self.client.query(q.delete(self.ref))
+    def delete(self, _token=None):
+        self.client(token=_token).query(q.delete(self.ref))

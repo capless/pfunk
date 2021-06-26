@@ -14,16 +14,18 @@ class Resource(object):
         return self.name or re.sub('(?!^)([A-Z]+)', r'_\1', self.__class__.__name__).lower()
 
     def get_payload(self):
-        payload_dict =  {
+        payload_dict = {
             'name': self.get_name(),
-            'body': self.get_body()
+            'body': self.get_body(),
+            'role': self.get_role()
         }
-        role = self.get_role()
-        if role:
-            payload_dict['role'] = role
+
         return payload_dict
 
     def publish(self):
+        raise NotImplementedError
+
+    def unpublish(self):
         raise NotImplementedError
 
     def get_body(self):
@@ -36,7 +38,10 @@ class Function(Resource):
         return None
 
     def publish(self):
-        return create_or_update_function(self.collection.client, self.get_payload())
+        return create_or_update_function(self.collection.client(), self.get_payload())
+
+    def unpublish(self):
+        return self.collection.client().query(q.delete(q.function(self.name)))
 
 
 class Role(Resource):
@@ -78,7 +83,10 @@ class Role(Resource):
         }
 
     def publish(self):
-        return create_or_update_role(self.collection.client, self.get_payload())
+        return create_or_update_role(self.collection.client(), self.get_payload())
+
+    def unpublish(self):
+        return self.collection.client().query(q.delete(q.role(self.name)))
 
 
 class Index(object):
@@ -106,3 +114,6 @@ class Index(object):
 
     def publish(self, client):
         return client.query(q.create_index(self.get_kwargs()))
+
+    def unpublish(self):
+        return self.collection.client().query(q.delete(q.index(self.name)))

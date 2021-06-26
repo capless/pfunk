@@ -1,12 +1,13 @@
-from pfunk.resources import Function
+from pfunk.resources import Function, Index
 from pfunk.client import q
+
 
 
 class GenericFunction(Function):
     action = 'create'
 
     def get_role(self):
-        return 'admin'
+        return None
 
     def get_name(self):
         return f"{self.action}_{self.collection.get_class_name()}"
@@ -18,7 +19,7 @@ class GenericFunction(Function):
 class AllFunction(GenericFunction):
 
     def get_name(self):
-        return self.collection.all_index_name()
+        return self.collection.all_function_name()
 
     def get_body(self):
         return q.query(
@@ -28,7 +29,7 @@ class AllFunction(GenericFunction):
                         q.get(q.var('ref'))
                     ),
                     q.paginate(
-                        q.match(q.index('all_vehicles')),
+                        q.match(q.index(self.collection.all_index_name())),
                         q.select('size', q.var('input'))
                     )
                 )

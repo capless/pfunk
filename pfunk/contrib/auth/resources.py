@@ -164,13 +164,14 @@ class UserRole(Role):
                       )
         )
 
+
 class GenericAuthorizationRole(Role):
     user_table = 'User'
     current_user_field = 'user'
     name_suffix = 'user_based_crud_role'
 
     def get_name(self):
-        return f"{self.collection.get_class_name()}_{self.name_suffix}"
+        return self.name or f"{self.collection.get_class_name()}_{self.name_suffix}"
 
     def get_privileges(self):
         return [
@@ -196,6 +197,12 @@ class GenericAuthorizationRole(Role):
                 }
             },
             {
+                "resource": q.function(self.collection.all_function_name()),
+                "actions": {
+                    "call": True
+                }
+            },
+            {
                 "resource": q.function(f'create_{self.collection.get_class_name()}'),
                 "actions": {
                     "call": True
@@ -217,6 +224,7 @@ class GenericAuthorizationRole(Role):
 
 
 class GenericUserBasedRole(GenericAuthorizationRole):
+    relation_index_name = 'users_groups_by_user'
 
     def get_lambda(self, resource_type):
         if resource_type == 'write':
@@ -318,4 +326,3 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                 )
                             )
                         )
-

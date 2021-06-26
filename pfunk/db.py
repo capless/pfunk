@@ -87,3 +87,9 @@ class Database(Schema):
         for col in set(self._collection_list):
             col.publish()
         return resp.content
+
+    def unpublish(self):
+        for ind in set(self._index_list):
+            ind().unpublish(self._client)
+        for col in set(self._collection_list):
+            col.unpublish_collection()

@@ -123,14 +123,13 @@ Let's use the Video collection, and the authenticated token we created above to 
 
 ```python
 # Use the token from above so the current users permissions are used.
-User._token = token
-Video._token = token
 
 
 video = Video.create(
     name='Demo Video',
     url='https://somevideosite.com/v/aasfsdfdsaffddsf',
-    user=User.get_from_id() # Get the currently logged in user
+    user=User.get_from_id(_token=token), # Get the currently logged in user
+    _t0ken=token
 ) 
 
 ```
@@ -139,7 +138,7 @@ video = Video.create(
 Let's get the video you just created.
 
 ```python
-video = Video.get('the-key-for-the-previous-video')
+video = Video.get('the-key-for-the-previous-video', _token=token)
 ```
 
 Let's query for all videos using the server key.
@@ -151,9 +150,8 @@ videos = Video.all()
 Let's query for all videos that the logged in user has access to.
 
 ```python
-Video._token = token # Use the token we created earlier
 
-videos = Video.all()
+videos = Video.all(_token=token)
 ```
 
 ### Delete a Record

@@ -268,7 +268,7 @@ class GenericUserBasedRole(GenericAuthorizationRole):
 class GenericGroupBasedRole(GenericAuthorizationRole):
     relation_index_name = 'users_groups_by_group_and_user'
     through_user_field = 'userID'
-    current_group_field = 'groupID'
+    current_group_field = 'group'
     user_table = 'User'
     name_suffix = 'group_based_crud_role'
 

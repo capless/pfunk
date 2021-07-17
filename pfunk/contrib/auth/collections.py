@@ -3,8 +3,8 @@ from faunadb.errors import BadRequest
 from pfunk import StringField, Collection, DateTimeField, Enum, EnumField
 from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword, Public, UserRole
 from pfunk.contrib.generic import GenericDelete
-from pfunk.exceptions import LoginFailed
-from pfunk.fields import EmailField, SlugField, ManyToManyField
+from pfunk.exceptions import LoginFailed, DocNotFound
+from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField
 from pfunk.client import q
 
 
@@ -111,4 +111,36 @@ class BaseUser(Collection):
 class User(BaseUser):
     groups = ManyToManyField(Group, 'users_groups')
 
+    @classmethod
+    def get_permissions(cls, ref, _token=None):
+        return cls.get(ref, _token).permissions(_token=_token)
 
+    def permissions(self, _token=None):
+        return [i for i in self.client(token=_token).query(
+            q.paginate(q.match('users_groups_by_user', self.ref))
+        ).get('data')]
+
+    def add_permissions(self, group, permissions, _token=None):
+        try:
+            user_group = self.client(
+                q.paginate(
+                    q.match(
+                        q.index('users_groups_by_group_and_user'),
+                        group.ref,
+                        self.ref
+                    )
+                )
+            ).get('data')[0]
+        except IndexError:
+            raise DocNotFound(f"User/Group for not found for group: {group} and user: {self}")
+
+        return self.client(_token=_token).query(
+            q.update(
+                user_group,
+                {
+                    'userID': self.ref,
+                    'groupID': group.ref,
+                    'permissions': permissions
+                }
+            )
+        )

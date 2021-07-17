@@ -3,7 +3,7 @@ import datetime
 import pytz
 from valley.exceptions import ValidationException
 from valley.properties import CharProperty, IntegerProperty, DateTimeProperty, DateProperty, FloatProperty, \
-    BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty, ForeignListProperty
+    BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty, ForeignListProperty, ListProperty
 from valley.utils import import_util
 
 from valley.validators import Validator, ChoiceValidator, ForeignValidator
@@ -186,3 +186,7 @@ class DateField(GraphQLMixin, DateProperty):
 
     def now(self):
         return datetime.datetime.now(tz=pytz.UTC).date()
+
+
+class ListField(GraphQLMixin, ListProperty):
+    GRAPHQL_FIELD_TYPE = '[String]'

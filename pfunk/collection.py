@@ -95,7 +95,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     @classmethod
     def create(cls, _credentials=None, _token=None, **kwargs):
         c = cls(**kwargs)
-        c.save(_credentials=_credentials)
+        c.save(_credentials=_credentials, _token=_token)
         return c
 
     @classmethod
@@ -287,4 +287,4 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         ).get('data')]
 
     def delete(self, _token=None):
-        self.client(token=_token).query(q.delete(self.ref))
+        self.client(_token=_token).query(q.delete(self.ref))

@@ -4,7 +4,7 @@ from pfunk import StringField, Collection, DateTimeField, Enum, EnumField
 from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword, Public, UserRole
 from pfunk.contrib.generic import GenericDelete
 from pfunk.exceptions import LoginFailed, DocNotFound
-from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField
+from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField
 from pfunk.client import q
 
 
@@ -108,6 +108,13 @@ class BaseUser(Collection):
         return self.username
 
 
+class UserGroups(Collection):
+    _collection_name = 'user_groups'
+    userID = ReferenceField('pfunk.contrib.auth.collections.User')
+    groupID = ReferenceField(Group)
+    permissions = ListField()
+
+
 class User(BaseUser):
     groups = ManyToManyField(Group, 'users_groups')
 
@@ -115,14 +122,25 @@ class User(BaseUser):
     def get_permissions(cls, ref, _token=None):
         return cls.get(ref, _token).permissions(_token=_token)
 
-    def permissions(self, _token=None):
-        return [i for i in self.client(token=_token).query(
+    def get_groups(self, _token=None):
+        return [Group.get(i.id(), _token=_token) for i in self.client(_token=_token).query(
             q.paginate(q.match('users_groups_by_user', self.ref))
         ).get('data')]
 
+    def permissions(self, _token=None):
+        perm_list = []
+        for i in self.get_groups(_token=_token):
+            ug = UserGroups.get_index('users_groups_by_group_and_user', [i.ref, self.ref], _token=_token)
+            for user_group in ug:
+                p = []
+                if isinstance(user_group.permissions, list):
+                    p = [f'{user_group.groupID.slug}-{i}' for i in user_group.permissions]
+                perm_list.extend(p)
+        return perm_list
+
     def add_permissions(self, group, permissions, _token=None):
         try:
-            user_group = self.client(
+            user_group = self.client(_token=_token).query(
                 q.paginate(
                     q.match(
                         q.index('users_groups_by_group_and_user'),
@@ -134,13 +152,7 @@ class User(BaseUser):
         except IndexError:
             raise DocNotFound(f"User/Group for not found for group: {group} and user: {self}")
 
-        return self.client(_token=_token).query(
-            q.update(
-                user_group,
-                {
-                    'userID': self.ref,
-                    'groupID': group.ref,
-                    'permissions': permissions
-                }
-            )
-        )
+        ug = UserGroups(userID=self, groupID=group, permissions=permissions)
+        ug.ref = user_group
+        ug.save()
+        return ug

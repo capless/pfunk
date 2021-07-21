@@ -43,6 +43,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     _crud_functions = [GenericCreate, GenericDelete, GenericUpdate, AllFunction]
     _non_public_fields = []
     _verbose_plural_name = None
+    _collection_name = None
 
     def __init__(self, _ref=None, _lazied=False, **kwargs):
         super(Collection, self).__init__(**kwargs)
@@ -54,7 +55,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k not in self._non_public_fields}
 
     def get_collection_name(self):
-        return self.get_class_name().capitalize()
+        return self._collection_name or self.get_class_name().capitalize()
 
     def get_enums(self):
         return [i.enum for i in self._base_properties.values() if isinstance(i, import_util('pfunk.EnumField'))]
@@ -106,7 +107,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         print(f'Published {cls.get_class_name()} roles successfully!')
         cls.publish_indexes()
         print(f'Published {cls.get_class_name()} indexes successfully!')
-
 
     def get_unique_together(self):
         try:
@@ -227,7 +227,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 ))
             self.ref = resp['ref']
         else:
-            self.client(token=_token).query(
+            self.client(_token=_token).query(
                 q.update(
                     self.ref,
                     data_dict
@@ -272,7 +272,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             c.all_function_name(), _token=_token, size=paginate_by, after=after, ts=ts).get('data')]
 
     @classmethod
-    def get_index(cls, index_name, page_size=100, _token=None):
+    def get_index(cls, index_name, terms=[], page_size=100, _token=None):
         c = cls()
         return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.client(_token=_token).query(
             q.map_(
@@ -280,7 +280,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                           q.get(q.var('ref'))
                           ),
                 q.paginate(
-                    q.match(q.index(index_name)),
+                    q.match(q.index(index_name), terms),
                     page_size
                 )
             )

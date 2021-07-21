@@ -103,7 +103,21 @@ class EnumField(GraphQLMixin, BaseProperty):
         return f"{self.enum.name}{req} {unique}"
 
 
+class ReferenceValidator(ForeignValidator):
+
+    def validate(self, value, key):
+        if isinstance(self.foreign_class, str):
+            self.foreign_class = import_util(self.foreign_class)
+        if value:
+            if not isinstance(value, self.foreign_class):
+                raise ValidationException('{0}: This value ({1}) should be an instance of {2}.'.format(
+                    key, value, self.foreign_class.__name__))
+
 class ReferenceField(GraphQLMixin, ForeignProperty):
+
+    def get_validators(self):
+        super(BaseProperty, self).get_validators()
+        self.validators.insert(0, ReferenceValidator(self.foreign_class))
 
     def get_graphql_type(self):
         super(ReferenceField, self).get_graphql_type()
@@ -117,7 +131,10 @@ class ReferenceField(GraphQLMixin, ForeignProperty):
 
     def get_python_value(self, value):
         if value and isinstance(value, Ref):
-            i = self.foreign_class()
+            try:
+                i = self.foreign_class()
+            except TypeError:
+                i = import_util(self.foreign_class)()
             i.ref = value
             i._lazied = True
             return i

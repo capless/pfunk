@@ -283,15 +283,14 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                               q.exists(
                                   # User ID from index
                                   q.select(self.through_user_field,
-                                           q.select("data",
+                                           q.take(1, q.select("data",
                                                     q.get(
                                                         q.match(
                                                             q.index(self.relation_index_name),
                                                             group_ref,
                                                             q.current_identity()
                                                         )
-                                                    )))
-
+                                                    ))))
                               ),
                               q.equals(
                                   q.select(self.current_group_field, q.select('data', q.var('old_object'))),

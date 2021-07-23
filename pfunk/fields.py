@@ -207,3 +207,6 @@ class DateField(GraphQLMixin, DateProperty):
 
 class ListField(GraphQLMixin, ListProperty):
     GRAPHQL_FIELD_TYPE = '[String]'
+
+    def get_db_value(self, value):
+        return value

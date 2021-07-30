@@ -1,5 +1,4 @@
 import logging
-from collections import OrderedDict
 
 import requests
 from io import BytesIO
@@ -27,7 +26,7 @@ class BearerAuth(requests.auth.AuthBase):
         return r
 
 
-class Database(Schema):
+class Project(Schema):
     name = CharProperty(required=True)
     client = ForeignProperty(FaunaClient)
 
@@ -62,7 +61,7 @@ class Database(Schema):
     def render(self):
         self.add_enums()
         return graphql_template.render(collection_list=self._collection_list, enum_list=self._enum_list,
-                                       index_list=self._index_list)
+                                       index_list=self._index_list, function_list=self._func)
 
     @property
     def _client(self):

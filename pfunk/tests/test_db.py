@@ -1,12 +1,12 @@
 import unittest
-from pfunk.db import Database
+from pfunk.project import Project
 from pfunk.tests import Person, Sport, GENDER_PRONOUN
 
 
 class DBTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.db = Database(name='test')
+        self.db = Project(name='test')
 
     def test_add_resource(self):
         self.db.add_resource(Person)

@@ -51,11 +51,12 @@ Includes GraphQL and generic ABAC auth workflow integrations.
 
 If you can easily set environment variables just set the ```FAUNA_SECRET``` environment variable to your key.
 
-### Define your Collections (collections.py) 
+### Define your Collections (collections.py)
+
 ```python
-from pfunk.db import Database
+from pfunk.project import Database
 from pfunk import Collection, EnumField, StringField, Enum, ReferenceField, ManyToManyField
-from pfunk.contrib.auth.collections import User, Group # Base user and group collections for authentication
+from pfunk.contrib.auth.collections import User, Group  # Base user and group collections for authentication
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
 
 db = Database(name='demo')
@@ -65,11 +66,11 @@ class Category(Collection):
     _roles = [GenericUserBasedRole]
     name = StringField(required=True)
     user = ReferenceField(User)
-    
+
     def __unicode__(self):
         return self.name
-    
-    
+
+
 class Video(Collection):
     _roles = [GenericGroupBasedRole, GenericUserBasedRole]
     name = StringField(required=True)
@@ -80,7 +81,7 @@ class Video(Collection):
     def __unicode__(self):
         return self.name
 
-    
+
 db.add_resource(Video)
 ```
 ### Auth Workflows
@@ -423,8 +424,9 @@ from pfunk.client import FaunaClient
 client = FaunaClient(secret='your-secret-key')
 ```
 In your **collections.py** import the **client** from the previous step.
+
 ```python
-from pfunk.db import Database
+from pfunk.project import Database
 from pfunk import Collection, EnumField, StringField, Enum
 
 # The client from the “Setup the Connection” section
@@ -432,11 +434,13 @@ from .client import client
 
 PERSON_ROLE = Enum(name='PersonRole', choices=['teacher', 'student', 'principal'])
 
-db = Database(name='first-database', client=client) #IMPORTANT: This is only necessary if you don't set the ```FAUNA_SECRET``` environment variable.
+db = Database(name='first-database',
+              client=client)  # IMPORTANT: This is only necessary if you don't set the ```FAUNA_SECRET``` environment variable.
+
 
 class Person(Collection):
-    _client = client #IMPORTANT: This is only necessary if you don't set the ```FAUNA_SECRET``` environment variable.
-    
+    _client = client  # IMPORTANT: This is only necessary if you don't set the ```FAUNA_SECRET``` environment variable.
+
     name = StringField(required=True)
     email = StringField(required=True)
     role = EnumField(PERSON_ROLE, required=True)
@@ -444,7 +448,7 @@ class Person(Collection):
     def __unicode__(self):
         return self.name
 
-    
+
 db.add_resource(Person)
 ```
 

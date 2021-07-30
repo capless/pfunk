@@ -1,5 +1,5 @@
-from pfunk.resources import Function, Role
 from pfunk.client import q
+from pfunk.resources import Function, Role
 
 
 class AuthFunction(Function):
@@ -9,7 +9,6 @@ class AuthFunction(Function):
 
 
 class LoginUser(AuthFunction):
-
     def get_body(self):
         return q.query(
             q.lambda_(["input"],
@@ -43,25 +42,22 @@ class LoginUser(AuthFunction):
 
 
 class UpdatePassword(AuthFunction):
-
     def get_body(self):
         return q.query(q.lambda_(["input"],
-                  q.if_(
-                      q.identify(q.current_identity(),
-                                 q.select("current_password", q.var("input"))),
-                      q.update(q.current_identity(), {
-                          "credentials": {"password": q.select("new_password", q.var("input"))}
-                      }),
-                      q.abort("Wrong current password.")
-                  )
-                  )
-        )
+                                 q.if_(
+                                     q.identify(q.current_identity(),
+                                                q.select("current_password", q.var("input"))),
+                                     q.update(q.current_identity(), {
+                                         "credentials": {"password": q.select("new_password", q.var("input"))}
+                                     }),
+                                     q.abort("Wrong current password.")
+                                 )
+                                 )
+                       )
 
 
 class CreateUser(AuthFunction):
-
     def get_body(self):
-
         data_dict = {
             "data": self.collection.get_fields(),
             "credentials": {
@@ -69,35 +65,35 @@ class CreateUser(AuthFunction):
             }
         }
         return q.query(
-                    q.lambda_(["input"],
-                    q.let(
-                        {
-                            'result': q.create(
-                            q.collection(self.collection.get_collection_name()),
-                            data_dict),
-                            'input': q.var('input')
-                        },
-                        # If 'groups' key is an array
-                        q.if_(
-                            q.is_array(q.select('groups', q.var('input'))),
-                            q.foreach(
-                                q.lambda_(
-                                    'group',
-                                    q.create(
-                                        q.collection(self.collection._base_properties.get('groups').relation_name),
-                                        {'data': {
-                                            'userID': q.select('ref', q.var('result')),
-                                            'groupID': q.var('group')
-                                        }}
-                                    )
-                                )
-                                ,
-                                q.select('groups', q.var('input'))
-                            ),
-                            q.abort('Groups not defined.')
-                        )
-                    )
-            ))
+            q.lambda_(["input"],
+                      q.let(
+                          {
+                              'result': q.create(
+                                  q.collection(self.collection.get_collection_name()),
+                                  data_dict),
+                              'input': q.var('input')
+                          },
+                          # If 'groups' key is an array
+                          q.if_(
+                              q.is_array(q.select('groups', q.var('input'))),
+                              q.foreach(
+                                  q.lambda_(
+                                      'group',
+                                      q.create(
+                                          q.collection(self.collection._base_properties.get('groups').relation_name),
+                                          {'data': {
+                                              'userID': q.select('ref', q.var('result')),
+                                              'groupID': q.var('group')
+                                          }}
+                                      )
+                                  )
+                                  ,
+                                  q.select('groups', q.var('input'))
+                              ),
+                              q.abort('Groups not defined.')
+                          )
+                      )
+                      ))
 
 
 class Public(Role):
@@ -108,37 +104,36 @@ class Public(Role):
     def get_function_lambda(self):
         return q.query(
             q.lambda_(['data'],
-                q.equals(
-                    q.select('account_status', q.select('data',
-                            q.match(q.index('unique_User_username',
-                                            q.select('username', q.var('data')))))),
-                    "ACTIVE"
-                )
+                      q.equals(
+                          q.select('account_status', q.select('data',
+                                                              q.match(q.index('unique_User_username',
+                                                                              q.select('username', q.var('data')))))),
+                          "ACTIVE"
+                      )
                       ))
 
     def get_privileges(self):
         return [
-                {
-                    "resource": q.function("create_user"),
-                    "actions": {
-                        "call": True
-                        }
-                },
-                {
-                    "resource": q.function("login_user"),
-                    "actions": {
-                        "call": self.get_function_lambda()
-                        }
-                },
-                {
-                    "resource": q.function("update_password"),
-                    "actions": {
-                        "call": True
-                    }
+            {
+                "resource": q.function("create_user"),
+                "actions": {
+                    "call": True
                 }
+            },
+            {
+                "resource": q.function("login_user"),
+                "actions": {
+                    "call": self.get_function_lambda()
+                }
+            },
+            {
+                "resource": q.function("update_password"),
+                "actions": {
+                    "call": True
+                }
+            }
 
-
-            ]
+        ]
 
 
 class UserRole(Role):
@@ -174,15 +169,15 @@ class GenericAuthorizationRole(Role):
         return self.name or f"{self.collection.get_class_name()}_{self.name_suffix}"
 
     def get_privileges(self):
-        return [
+        priv_list = [
             {
-              "resource": q.collection(self.collection.get_collection_name()),
-              "actions": {
-                  'read': self.get_lambda('read'),
-                  'write': self.get_lambda('write'),
-                  'create': self.get_lambda('create'),
-                  'delete': self.get_lambda('read'),
-              }
+                "resource": q.collection(self.collection.get_collection_name()),
+                "actions": {
+                    'read': self.get_lambda('read'),
+                    'write': self.get_lambda('write'),
+                    'create': self.get_lambda('create'),
+                    'delete': self.get_lambda('delete'),
+                }
             },
             {
                 "resource": q.index(self.relation_index_name),
@@ -196,31 +191,26 @@ class GenericAuthorizationRole(Role):
                     "read": True
                 }
             },
+        ]
+        priv_list.extend([
             {
-                "resource": q.function(self.collection.all_function_name()),
+                "resource": q.function(i.get_name()),
                 "actions": {
-                    "call": True
+                    "read": True
                 }
-            },
+            }
+            for i in self.collection._indexes
+        ])
+        priv_list.extend([
             {
-                "resource": q.function(f'create_{self.collection.get_class_name()}'),
-                "actions": {
-                    "call": True
-                }
-            },
-            {
-                "resource": q.function(f'update_{self.collection.get_class_name()}'),
-                "actions": {
-                    "call": True
-                }
-            },
-            {
-                "resource": q.function(f'delete_{self.collection.get_class_name()}'),
+                "resource": q.function(i.get_name()),
                 "actions": {
                     "call": True
                 }
             }
-        ]
+            for i in self.collection._functions
+        ])
+        return priv_list
 
 
 class GenericUserBasedRole(GenericAuthorizationRole):
@@ -230,98 +220,99 @@ class GenericUserBasedRole(GenericAuthorizationRole):
         if resource_type == 'write':
             lambda_args = ["old_object", "new_object", "object_ref"]
             user_ref = q.select(self.current_user_field,
-                     q.select('data', q.var('old_object')))
+                                q.select('data', q.var('old_object')))
             return q.query(
-                    q.lambda_(lambda_args,
-                        q.and_(
-                            q.equals(
-                                user_ref,
-                                q.current_identity()
-                            ),
-                            q.equals(
-                                q.select(self.current_user_field, q.select('data', q.var('new_object'))),
-                                q.current_identity()
-                            )
-                        )
+                q.lambda_(lambda_args,
+                          q.and_(
+                              q.equals(
+                                  user_ref,
+                                  q.current_identity()
+                              ),
+                              q.equals(
+                                  q.select(self.current_user_field, q.select('data', q.var('new_object'))),
+                                  q.current_identity()
+                              )
+                          )
 
-                    )
-                        )
+                          )
+            )
         elif resource_type == 'create':
             lambda_args = ["new_object"]
             user_ref = q.select(self.current_user_field,
-                     q.select('data', q.var('new_object')))
-        elif resource_type == 'read':
+                                q.select('data', q.var('new_object')))
+        elif resource_type == 'read' or resource_type == 'delete':
             lambda_args = ["object_ref"]
             user_ref = q.select(self.current_user_field,
-                     q.select('data', q.get(q.var('object_ref'))))
+                                q.select('data', q.get(q.var('object_ref'))))
 
         return q.query(
-                            q.lambda_(lambda_args,
-                                q.equals(
-                                    user_ref,
-                                    q.current_identity()
-                                )
-                            )
-                        )
+            q.lambda_(lambda_args,
+                      q.equals(
+                          user_ref,
+                          q.current_identity()
+                      )
+                      )
+        )
 
 
 class GenericGroupBasedRole(GenericAuthorizationRole):
     relation_index_name = 'users_groups_by_group_and_user'
     through_user_field = 'userID'
     current_group_field = 'group'
+    permissions_field = 'permissions'
     user_table = 'User'
     name_suffix = 'group_based_crud_role'
 
     def get_lambda(self, resource_type):
         if resource_type == 'write':
             group_ref = q.select(self.current_group_field,
-                            q.select('data', q.var('old_object')))
+                                 q.select('data', q.var('old_object')))
             lambda_args = ["old_object", "new_object", "object_ref"]
             return q.query(
                 q.lambda_(lambda_args,
                           q.and_(
-                              q.exists(
+                              q.equals(
                                   # User ID from index
-                                  q.select(self.through_user_field,
-                                           q.take(1, q.select("data",
-                                                    q.get(
-                                                        q.match(
-                                                            q.index(self.relation_index_name),
-                                                            group_ref,
-                                                            q.current_identity()
-                                                        )
-                                                    ))))
+                                  q.select(0, q.filter_(lambda i: q.equals(resource_type, i),
+                                                        q.select(self.permissions_field,
+                                                                 q.get(
+                                                                     q.match(
+                                                                         q.index(self.relation_index_name),
+                                                                         group_ref,
+                                                                         q.current_identity()
+                                                                     )
+                                                                 )))),
+                                  resource_type
                               ),
                               q.equals(
                                   q.select(self.current_group_field, q.select('data', q.var('old_object'))),
                                   q.select(self.current_group_field, q.select('data', q.var('new_object'))),
                               )
                           )
-
-                )
+                          )
             )
         elif resource_type == 'create':
             group_ref = q.select(self.current_group_field,
-                            q.select('data', q.var('new_object')))
+                                 q.select('data', q.var('new_object')))
             lambda_args = ["new_object"]
-        elif resource_type == 'read':
+        elif resource_type == 'read' or resource_type == 'delete':
             group_ref = q.select(self.current_group_field,
-                     q.select('data', q.get(q.var('object_ref'))))
+                                 q.select('data', q.get(q.var('object_ref'))))
             lambda_args = ["object_ref"]
-        return q.query(
-                            q.lambda_(lambda_args,
-                                q.exists(
-                                    #User ID from index
-                                    q.select(self.through_user_field,
-                                        q.select("data",
-                                            q.get(
-                                                q.match(
-                                                    q.index(self.relation_index_name),
-                                                    group_ref,
-                                                    q.current_identity()
-                                                )
-                                            )))
 
-                                )
-                            )
-                        )
+        return q.query(
+            q.lambda_(
+                lambda_args,
+                q.equals(
+                    q.select(0, q.filter_(lambda i: q.equals(resource_type, i),
+                                          q.select(self.permissions_field,
+                                                   q.select("data",
+                                                            q.get(q.match(
+                                                                q.index(self.relation_index_name),
+                                                                group_ref,
+                                                                q.current_identity()
+                                                            )))))),
+                    resource_type
+                )
+            )
+        )

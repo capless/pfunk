@@ -1,9 +1,9 @@
 from faunadb.errors import BadRequest
 
-from pfunk import StringField, Collection, DateTimeField, Enum, EnumField
+from pfunk import StringField, Collection, Enum, EnumField
 from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword, Public, UserRole
 from pfunk.contrib.generic import GenericDelete
-from pfunk.exceptions import LoginFailed, DocNotFound
+from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField
 from pfunk.client import q
 
@@ -21,11 +21,12 @@ class Group(Collection):
 
 
 class BaseUser(Collection):
+    #Settings
     _credential_field = 'password'
     _functions = [LoginUser, UpdatePassword]
-    _crud_functions = [CreateUser, GenericDelete]
     _roles = [Public, UserRole]
     _non_public_fields = ['groups']
+    #Fields
     username = StringField(required=True, unique=True)
     first_name = StringField(required=True)
     last_name = StringField(required=True)
@@ -109,7 +110,7 @@ class BaseUser(Collection):
 
 
 class UserGroups(Collection):
-    _collection_name = 'user_groups'
+    _collection_name = 'users_groups'
     userID = ReferenceField('pfunk.contrib.auth.collections.User')
     groupID = ReferenceField(Group)
     permissions = ListField()
@@ -150,9 +151,10 @@ class User(BaseUser):
                 )
             ).get('data')[0]
         except IndexError:
-            raise DocNotFound(f"User/Group for not found for group: {group} and user: {self}")
+            user_group = None
 
         ug = UserGroups(userID=self, groupID=group, permissions=permissions)
-        ug.ref = user_group
+        if user_group:
+            ug.ref = user_group
         ug.save()
         return ug

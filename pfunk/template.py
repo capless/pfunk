@@ -23,4 +23,6 @@ type Query {
     {% endif %}
 {% endfor %}
 }
+
+{{extra_graphql}}
 """)

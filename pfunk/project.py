@@ -5,6 +5,7 @@ from io import BytesIO
 
 from envs import env
 from faunadb.client import FaunaClient
+from jinja2 import Template
 from valley.contrib import Schema
 
 from valley.properties import CharProperty, ForeignProperty
@@ -34,6 +35,7 @@ class Project(Schema):
     _enum_list = []
     _index_list = []
     _role_list = []
+    extra_graphql = None
 
     def add_resource(self, resource):
         if isinstance(resource, Enum):
@@ -58,10 +60,19 @@ class Project(Schema):
             for e in enums:
                 self.add_resource(e)
 
+    def get_extra_graphql(self):
+        if self.extra_graphql:
+            return Template(self.extra_graphql).render(**self.get_extra_graphql_context())
+        return ''
+
+    def get_extra_graphql_context(self):
+        return {'env': env}
+
     def render(self):
         self.add_enums()
         return graphql_template.render(collection_list=self._collection_list, enum_list=self._enum_list,
-                                       index_list=self._index_list, function_list=self._func)
+                                       index_list=self._index_list, function_list=self._func,
+                                       extra_graphql=self.get_extra_graphql())
 
     @property
     def _client(self):

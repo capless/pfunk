@@ -15,3 +15,21 @@ services:
     env_file: .env
     working_dir: /code/
     command: /root/.cache/pypoetry/virtualenvs/pfunk-MATOk_fk-py3.7/bin/jupyter notebook --port=8888 --ip=0.0.0.0 --allow-root
+
+  fauna:
+    restart: always
+    image: fauna/faunadb
+    ports:
+      - 8443:8443
+      - 8444:8444
+      - 8445:8445
+      - 8084:8084
+    volumes:
+      - ./logs:/var/log/faunadb
+      - ./docker-fauna.yml:/docker-fauna.yml
+      - pfunk-fauna-data:/var/lib/faunadb
+    command: --init
+
+volumes:
+  pfunk-fauna-data:
+    external: true

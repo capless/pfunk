@@ -88,7 +88,7 @@ class Project(Schema):
         else:
             secret = env('FAUNA_SECRET')
         resp = requests.post(
-            'https://graphql.fauna.com/import',
+            env('FAUNA_GRAPHQL_URL', 'https://graphql.fauna.com/import'),
             params={'mode': mode},
             auth=BearerAuth(secret),
             data=gql_io

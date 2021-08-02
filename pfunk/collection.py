@@ -1,5 +1,5 @@
 from envs import env
-from faunadb.client import FaunaClient
+from .client import FaunaClient
 from faunadb.errors import BadRequest
 from valley.schema import BaseSchema
 from valley.contrib import Schema

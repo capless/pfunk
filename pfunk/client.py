@@ -9,8 +9,8 @@ class FaunaClient(FC):
     def __init__(
             self,
             secret=None,
-            domain="db.fauna.com",
-            scheme="https",
+            domain=env('FAUNA_DOMAIN', 'db.fauna.com'),
+            scheme=env('FAUNA_SCHEME', "https"),
             port=None,
             timeout=60,
             observer=None,
@@ -18,6 +18,9 @@ class FaunaClient(FC):
             pool_maxsize=10,
             **kwargs):
         self.secret = secret or env('FAUNA_SECRET')
+        env_port = env('FAUNA_PORT')
+        if env_port:
+            port = int(env_port)
         if not self.secret:
             raise ValueError('When creating a FaunaClient instance you must supply the secret argument or set the '
                              'FAUNA_SECRET environment variable.')

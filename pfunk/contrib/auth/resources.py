@@ -115,12 +115,6 @@ class Public(Role):
     def get_privileges(self):
         return [
             {
-                "resource": q.function("create_user"),
-                "actions": {
-                    "call": True
-                }
-            },
-            {
                 "resource": q.function("login_user"),
                 "actions": {
                     "call": self.get_function_lambda()

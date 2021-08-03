@@ -103,10 +103,10 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def publish(cls):
         cls.publish_functions()
         print(f'Published {cls.get_class_name()} functions successfully!')
-        cls.publish_roles()
-        print(f'Published {cls.get_class_name()} roles successfully!')
         cls.publish_indexes()
         print(f'Published {cls.get_class_name()} indexes successfully!')
+        cls.publish_roles()
+        print(f'Published {cls.get_class_name()} roles successfully!')
 
     def get_unique_together(self):
         try:

@@ -1,7 +1,7 @@
 ---
 accelerate_indexes: true
 auth_root_key: secret
-#http_max_concurrent_streams: 100
+http_max_concurrent_streams: 100
 #log_path: /storage/log
 network_admin_http_address: fauna
 network_broadcast_address: fauna
@@ -11,4 +11,4 @@ network_listen_address: fauna
 #shutdown_grace_period_seconds: 0
 storage_data_path: /var/lib/fauna
 #storage_transaction_log_nodes: [ fauna ]
-#stream_enable_api: true
+stream_enable_api: true

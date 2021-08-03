@@ -93,11 +93,13 @@ class Project(Schema):
             auth=BearerAuth(secret),
             data=gql_io
         )
+        if resp.status_code == 200:
+            print('GraphQL Schema Imported Successfully!!')
         for ind in set(self._index_list):
             ind().publish(self._client)
         for col in set(self._collection_list):
             col.publish()
-        return resp.content
+        return resp.status_code
 
     def unpublish(self):
         for ind in set(self._index_list):

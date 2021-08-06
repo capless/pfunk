@@ -10,9 +10,7 @@ from valley.contrib import Schema
 
 from valley.properties import CharProperty, ForeignProperty
 
-from .resources import Index
-from .client import q
-from .collection import Collection, Enum
+from .collection import Collection
 from .template import graphql_template
 
 logger = logging.getLogger('pfunk')
@@ -31,34 +29,49 @@ class Project(Schema):
     name = CharProperty(required=True)
     client = ForeignProperty(FaunaClient)
 
-    _collection_list = []
-    _enum_list = []
-    _index_list = []
-    _role_list = []
+
     extra_graphql = None
 
+    def __init__(self, **kwargs):
+        super(Project, self).__init__(**kwargs)
+        self.collections = set()
+        self.enums = set()
+        self.indexes = set()
+        self.functions = set()
+
     def add_resource(self, resource):
-        if isinstance(resource, Enum):
-            resource_list = self._enum_list
-        elif issubclass(resource, Collection):
-            resource_list = self._collection_list
-        elif issubclass(resource, Index):
-            resource_list = self._index_list
+        if issubclass(resource, Collection):
+            resource_list = self.collections
         else:
             raise ValueError(
-                'Resource has to be one of the following: Collection, Enum, or Index')
-        if not resource in resource_list:
-            resource_list.append(resource)
+                'Resource has to be one of the following: Collection')
+
+        resource_list.add(resource)
 
     def add_resources(self, resource_list):
         for i in resource_list:
             self.add_resource(i)
 
-    def add_enums(self):
-        for i in self._collection_list:
+    def get_enums(self):
+        for i in self.collections:
             enums = i().get_enums()
             for e in enums:
-                self.add_resource(e)
+                self.enums.add(e)
+        return self.enums
+
+    def get_indexes(self):
+        for i in self.collections:
+            for ind in i._indexes:
+                self.indexes.add(ind)
+            for n in i().get_unique_together():
+                self.indexes.add(n)
+        return self.indexes
+
+    def get_functions(self):
+        for i in self.collections:
+            for i in i._functions:
+                self.functions.add(i)
+        return self.functions
 
     def get_extra_graphql(self):
         if self.extra_graphql:
@@ -69,17 +82,10 @@ class Project(Schema):
         return {'env': env}
 
     def render(self):
-        self.add_enums()
-        return graphql_template.render(collection_list=self._collection_list, enum_list=self._enum_list,
-                                       index_list=self._index_list, function_list=self._func,
+        self.get_enums()
+        return graphql_template.render(collection_list=self.collections, enum_list=self.enums,
+                                       index_list=self.indexes, function_list=self._func,
                                        extra_graphql=self.get_extra_graphql())
-
-    @property
-    def _client(self):
-        if self.client:
-            return self.client
-        self.client = FaunaClient(secret=env('FAUNA_SECRET'))
-        return self.client
 
     def publish(self, mode='merge'):
         gql_io = BytesIO(self.render().encode())
@@ -94,15 +100,15 @@ class Project(Schema):
             data=gql_io
         )
         if resp.status_code == 200:
-            print('GraphQL Schema Imported Successfully!!')
-        for ind in set(self._index_list):
-            ind().publish(self._client)
-        for col in set(self._collection_list):
+            test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
+            if not test_mode:
+                print('GraphQL Schema Imported Successfully!!') #pragma: no cover
+        for col in set(self.collections):
             col.publish()
         return resp.status_code
 
     def unpublish(self):
-        for ind in set(self._index_list):
+        for ind in self.indexes:
             ind().unpublish(self._client)
-        for col in set(self._collection_list):
-            col.unpublish_collection()
+        for col in self.collections:
+            col.unpublish()

@@ -1,8 +1,7 @@
 from faunadb.errors import BadRequest
 
 from pfunk import StringField, Collection, Enum, EnumField
-from pfunk.contrib.auth.resources import CreateUser, LoginUser, UpdatePassword, Public, UserRole
-from pfunk.contrib.generic import GenericDelete
+from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole
 from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField
 from pfunk.client import q
@@ -17,7 +16,7 @@ class Group(Collection):
     users = ManyToManyField('pfunk.contrib.auth.collections.User', relation_name='users_groups')
 
     def __unicode__(self):
-        return self.name
+        return self.name  # pragma: no cover
 
 
 class BaseUser(Collection):
@@ -34,7 +33,7 @@ class BaseUser(Collection):
     account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
 
     def __unicode__(self):
-        return self.username
+        return self.username  # pragma: no cover
 
     @classmethod
     def login(cls, username, password, _token=None):
@@ -54,37 +53,7 @@ class BaseUser(Collection):
         )
         return cls(_ref=ref, _lazied=True)
 
-    @classmethod
-    def create_user(cls, _token=None, **kwargs):
-
-        c = cls(**kwargs)
-
-        c.validate()
-        password = kwargs.pop('password')
-        data = c.get_create_user_values()
-        data['password'] = password
-
-        u = c.client(_token=_token).query(
-            q.call("create_user", data)
-        )
-
-        return
-
-    def get_create_user_values(self):
-        data = dict()
-        for k, v in self._data.items():
-            prop = self._base_properties.get(k)
-            data[k] = prop.get_db_value(value=v)
-        return data
-
-    @classmethod
-    def update_password(cls, current_password, new_password, _token=None):
-        c = cls()
-        return c.client(_token=_token).query(
-            q.call("update_password", {'current_password': current_password, 'new_password': new_password})
-        )
-
-    def update_password_b(self, current_password, new_password, _token=None):
+    def update_password(self, current_password, new_password, _token=None):
         self.client(token=_token).query(
         q.if_(q.identify(self._get_identity(),
                          current_password),
@@ -104,9 +73,8 @@ class BaseUser(Collection):
             q.get(q.current_identity())
         )
 
-
     def __unicode__(self):
-        return self.username
+        return self.username  # pragma: no cover
 
 
 class UserGroups(Collection):

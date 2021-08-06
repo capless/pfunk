@@ -5,6 +5,7 @@ GENDER_PRONOUN = Enum(name='gender_pronouns', choices=['he', 'her', 'they'])
 
 
 class Sport(Collection):
+    _use_crud_functions = True
     name = StringField(required=True)
     slug = SlugField()
 
@@ -12,7 +13,7 @@ class Sport(Collection):
         return self.name
 
     class Meta:
-        unique_together = ['name', 'slug']
+        unique_together = [('name', 'slug')]
 
 
 class Person(Collection):

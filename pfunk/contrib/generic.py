@@ -7,7 +7,7 @@ class GenericFunction(Function):
     action = 'create'
 
     def get_role(self):
-        return None
+        return None # pragma: no cover
 
     def get_name(self):
         return f"{self.action}_{self.collection.get_class_name()}"

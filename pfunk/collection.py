@@ -26,12 +26,12 @@ class Enum(Schema):
     choices = ListProperty(required=True)
 
     def __unicode__(self):
-        return self.name
+        return self.name  # pragma: no cover
 
 
 class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     """
-    Base class for all pFunk Documents classes.
+    Base class for all pFunk Collection classes.
     """
     BUILTIN_DOC_ATTRS = []
     _functions = []
@@ -99,38 +99,22 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         c.save(_credentials=_credentials, _token=_token)
         return c
 
+    ##############
+    # Deployment #
+    ##############
     @classmethod
     def publish(cls):
         cls.publish_functions()
-        print(f'Published {cls.get_class_name()} functions successfully!')
+
+        test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
+        if not test_mode:
+            print(f'Published {cls.get_class_name()} functions successfully!')  #pragma: no cover
         cls.publish_indexes()
-        print(f'Published {cls.get_class_name()} indexes successfully!')
+        if not test_mode:
+            print(f'Published {cls.get_class_name()} indexes successfully!') #pragma: no cover
         cls.publish_roles()
-        print(f'Published {cls.get_class_name()} roles successfully!')
-
-    def get_unique_together(self):
-        try:
-            meta_unique_together = self.Meta.unique_together
-        except AttributeError:
-            return
-        unique_together = []
-
-        for i in meta_unique_together:
-            fields = '_'.join(i)
-            name = f'{self.get_class_name()}_unique_{fields}'
-            terms = [{'binding': f, 'field': ['data', f]} for f in i]
-            unique = True
-            source = self.get_collection_name()
-            Indy = type(''.join([f.capitalize() for f in i])+'Index', (Index, ), {
-                'name': name,
-                'terms': terms,
-                'unique': unique,
-                'source': source
-            })
-            unique_together.append(Indy)
-        return unique_together
-
-
+        if not test_mode:
+            print(f'Published {cls.get_class_name()} roles successfully!') #pragma: no cover
 
     @classmethod
     def publish_functions(cls):
@@ -160,25 +144,35 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                     print(f'Error ({i.__name__.lower()}): ', err.description)
 
     @classmethod
-    def publish_indexes(cls):
-        c = cls()
-        ut = c.get_unique_together()
-        if ut:
-            cls._indexes.extend(ut)
-        for i in cls._indexes:
-            try:
-                i().publish(c.client())
-            except BadRequest as e:
-                for err in e.errors:
-                    print(f'Error ({i.__name__.lower()}): ', err.description)
-
-    @classmethod
     def unpublish(cls):
         c = cls()
         print(f'Unpublishing: {c.get_collection_name()}')
         result = c.client().query(
             q.delete(q.collection(c.get_collection_name()))
         )
+        return result
+
+    def get_unique_together(self):
+        try:
+            meta_unique_together = self.Meta.unique_together
+        except AttributeError:
+            return []
+        unique_together = set()
+
+        for i in meta_unique_together:
+            fields = '_'.join(i)
+            name = f'{self.get_class_name()}_unique_{fields}'
+            terms = [{'binding': f, 'field': ['data', f]} for f in i]
+            unique = True
+            source = self.get_collection_name()
+            Indy = type(''.join([f.capitalize() for f in i])+'Index', (Index, ), {
+                'name': name,
+                'terms': terms,
+                'unique': unique,
+                'source': source
+            })
+            unique_together.add(Indy)
+        return list(unique_together)
 
     def get_db_values(self):
         data = dict()
@@ -195,17 +189,20 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         client = self.client(_token=_token)
         for k, v in relational_data.items():
             for i in v:
-                resp = client.query(
-                    q.create(
-                        q.collection(k),
-                        {
-                           "data": {
-                               f"{self.get_class_name()}ID": self.ref,
-                               f"{i.get_class_name()}ID": i.ref
-                           }
-                        }
+                try:
+                    resp = client.query(
+                        q.create(
+                            q.collection(k),
+                            {
+                               "data": {
+                                   f"{self.get_class_name()}ID": self.ref,
+                                   f"{i.get_class_name()}ID": i.ref
+                               }
+                            }
+                        )
                     )
-                )
+                except BadRequest:
+                    pass
 
     def save(self, _credentials=None, _token=None):
         self.validate()
@@ -266,13 +263,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return [self.__class__(_ref=i, _lazied=True) for i in data]
 
     @classmethod
-    def all(cls, paginate_by=100, after=None, ts=None, _token=None):
-        c = cls()
-        return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.call_function(
-            c.all_function_name(), _token=_token, size=paginate_by, after=after, ts=ts).get('data')]
+    def all(cls, page_size=100, after=None, before=None, ts=None, events=False, sources=False, _token=None):
+        return cls.get_index(cls().all_index_name(), page_size=page_size, after=after, before=before, ts=ts, events=events,
+                       sources=sources, _token=_token)
 
     @classmethod
-    def get_index(cls, index_name, terms=[], page_size=100, _token=None):
+    def get_index(cls, index_name, terms=[], page_size=100, after=None, before=None, ts=None, events=False,
+                  sources=False, _token=None):
         c = cls()
         return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.client(_token=_token).query(
             q.map_(
@@ -281,7 +278,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                           ),
                 q.paginate(
                     q.match(q.index(index_name), terms),
-                    page_size
+                    size=page_size,
+                    after=after,
+                    before=before,
+                    ts=ts,
+                    events=events
                 )
             )
         ).get('data')]

@@ -8,6 +8,8 @@ services:
       context: .
     expose:
       - "8010"
+    depends_on:
+      - fauna
     ports:
       - 8010:8888
     volumes:

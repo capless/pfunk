@@ -23,7 +23,7 @@ class FaunaClient(FC):
             port = int(env_port)
         if not self.secret:
             raise ValueError('When creating a FaunaClient instance you must supply the secret argument or set the '
-                             'FAUNA_SECRET environment variable.')
+                             'FAUNA_SECRET environment variable.')  # pragma: no cover
 
         super(FaunaClient, self).__init__(secret,
             domain=domain,

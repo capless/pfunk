@@ -46,7 +46,7 @@ class CollectionTestCase(unittest.TestCase):
         self.assertEqual(self.collection().all_index_name(), 'all_people')
 
     def test_get_unique_together(self):
-        self.assertEqual(len(Sport().get_unique_together()), 2)
+        self.assertEqual(len(Sport().get_unique_together()), 1)
 
 
 

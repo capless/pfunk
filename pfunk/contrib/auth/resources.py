@@ -188,7 +188,7 @@ class GenericAuthorizationRole(Role):
         ]
         priv_list.extend([
             {
-                "resource": q.function(i.get_name()),
+                "resource": q.function(i().get_name()),
                 "actions": {
                     "read": True
                 }
@@ -197,7 +197,7 @@ class GenericAuthorizationRole(Role):
         ])
         priv_list.extend([
             {
-                "resource": q.function(i.get_name()),
+                "resource": q.function(i(self.collection).get_name()),
                 "actions": {
                     "call": True
                 }

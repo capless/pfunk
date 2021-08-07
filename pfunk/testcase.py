@@ -4,7 +4,6 @@ import uuid
 import os
 from pfunk import Project
 from pfunk.client import FaunaClient, q
-from decorator import decorator
 
 
 class PFunkTestCase(unittest.TestCase):

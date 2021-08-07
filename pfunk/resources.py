@@ -23,19 +23,19 @@ class Resource(object):
         return payload_dict
 
     def publish(self):
-        raise NotImplementedError
+        raise NotImplementedError # pragma: no cover
 
     def unpublish(self):
-        raise NotImplementedError
+        raise NotImplementedError # pragma: no cover
 
     def get_body(self):
-        raise NotImplementedError
+        raise NotImplementedError # pragma: no cover
 
 
 class Function(Resource):
 
     def get_role(self):
-        return None
+        return None # pragma: no cover
 
     def publish(self):
         return create_or_update_function(self.collection.client(), self.get_payload())
@@ -48,7 +48,7 @@ class Role(Resource):
     user_table = None
 
     def get_lambda(self, resource_type):
-        return
+        return # pragma: no cover
 
     def get_payload(self):
         payload_dict = {
@@ -62,10 +62,10 @@ class Role(Resource):
         return payload_dict
 
     def get_data(self):
-        return None
+        return None # pragma: no cover
 
     def get_privileges(self):
-        raise NotImplementedError
+        raise NotImplementedError # pragma: no cover
 
     def get_membership_lambda(self):
         return q.query(
@@ -111,6 +111,9 @@ class Index(object):
         if self.values:
             kwargs['values'] = self.values
         return kwargs
+
+    def get_name(self):
+        return self.name
 
     def publish(self, client):
         return client.query(q.create_index(self.get_kwargs()))

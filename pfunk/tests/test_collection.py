@@ -26,6 +26,7 @@ class CollectionTestCase(unittest.TestCase):
         self.assertEqual(fields, {
             'first_name': q.select('first_name', q.var("input")),
             'gender_pronoun': q.select('gender_pronoun', q.var('input')),
+            'group': q.select('group', q.var("input")),
             'last_name': q.select('last_name', q.var("input")),
             'sport': q.select('sport', q.var("input"))
         })
@@ -46,7 +47,9 @@ class CollectionTestCase(unittest.TestCase):
         self.assertEqual(self.collection().all_index_name(), 'all_people')
 
     def test_get_unique_together(self):
-        self.assertEqual(len(Sport().get_unique_together()), 1)
+        sport = Sport()
+        sport.get_unique_together()
+        self.assertEqual(len(sport._indexes), 1)
 
 
 

@@ -53,25 +53,17 @@ class BaseUser(Collection):
         )
         return cls(_ref=ref, _lazied=True)
 
-    def update_password(self, current_password, new_password, _token=None):
-        self.client(token=_token).query(
-        q.if_(q.identify(self._get_identity(),
-                         current_password),
-              q.update(q.current_identity(), {
-                  "credentials": {"password": new_password}
-              }),
-              q.abort("Wrong current password.")
-              ))
+    @classmethod
+    def update_password(cls, current_password, new_password, _token=None):
+        c = cls()
+        return c.client(_token=_token).query(
+            q.call("update_password", {'current_password': current_password, 'new_password': new_password})
+        )
 
     @classmethod
     def get_current_user(cls, _token=None):
         c = cls()
         return cls.get(c.client(_token=_token).query(q.current_identity()).id())
-
-    def _get_identity(self, _token=None):
-        return self.client(token=_token).query(
-            q.get(q.current_identity())
-        )
 
     def __unicode__(self):
         return self.username  # pragma: no cover

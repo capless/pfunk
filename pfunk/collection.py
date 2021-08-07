@@ -50,6 +50,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         if _ref:
             self.ref = _ref
         self._lazied = _lazied
+        self._indexes = set(self._indexes)
+        self._roles = set(self._roles)
+        self._functions = set(self._functions)
+        if self._use_crud_functions:
+            for i in self._crud_functions:
+                self._functions.add(i)
+
 
     def get_fields(self):
         return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k not in self._non_public_fields}
@@ -120,7 +127,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def publish_functions(cls):
         c = cls()
         if c._use_crud_functions:
-            c._functions.extend(c._crud_functions)
+            for f in c._crud_functions:
+                c._functions.add(f)
         for i in c._functions:
             i(c).publish()
 
@@ -133,9 +141,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     @classmethod
     def publish_indexes(cls):
         c = cls()
-        ut = c.get_unique_together()
-        if ut:
-            cls._indexes.extend(ut)
+        c.get_unique_together()
+
         for i in cls._indexes:
             try:
                 i().publish(c.client())
@@ -157,7 +164,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             meta_unique_together = self.Meta.unique_together
         except AttributeError:
             return []
-        unique_together = set()
+
 
         for i in meta_unique_together:
             fields = '_'.join(i)
@@ -165,14 +172,17 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             terms = [{'binding': f, 'field': ['data', f]} for f in i]
             unique = True
             source = self.get_collection_name()
-            Indy = type(''.join([f.capitalize() for f in i])+'Index', (Index, ), {
+
+            Indy = type(self.get_collection_name().capitalize()+''.join([f.capitalize() for f in i])+'Index', (Index, ), {
                 'name': name,
                 'terms': terms,
                 'unique': unique,
                 'source': source
             })
-            unique_together.add(Indy)
-        return list(unique_together)
+            self._indexes.add(Indy)
+
+
+
 
     def get_db_values(self):
         data = dict()

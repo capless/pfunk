@@ -41,12 +41,10 @@ class Project(Schema):
 
     def add_resource(self, resource):
         if issubclass(resource, Collection):
-            resource_list = self.collections
+            self.collections.add(resource)
         else:
             raise ValueError(
                 'Resource has to be one of the following: Collection')
-
-        resource_list.add(resource)
 
     def add_resources(self, resource_list):
         for i in resource_list:
@@ -58,20 +56,6 @@ class Project(Schema):
             for e in enums:
                 self.enums.add(e)
         return self.enums
-
-    def get_indexes(self):
-        for i in self.collections:
-            for ind in i._indexes:
-                self.indexes.add(ind)
-            for n in i().get_unique_together():
-                self.indexes.add(n)
-        return self.indexes
-
-    def get_functions(self):
-        for i in self.collections:
-            for i in i._functions:
-                self.functions.add(i)
-        return self.functions
 
     def get_extra_graphql(self):
         if self.extra_graphql:

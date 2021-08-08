@@ -2,8 +2,16 @@ from faunadb import query as q
 from faunadb.errors import BadRequest
 
 
-def create_or_update_role(client, payload={}):
+def create_or_update_role(client, payload:dict={}):
+    """
+    Utility that attempts to create a role and if that fails it attempts to update it.
+    Args:
+        client: FaunaClient instance
+        payload: dict containing the details about the role
 
+    Returns: query
+
+    """
     try:
         response = client.query(
             q.create_role(payload)
@@ -24,6 +32,15 @@ def create_or_update_role(client, payload={}):
 
 
 def create_or_update_function(client, payload):
+    """
+    Utility that attempts to create a function and if that fails it attempts to update it.
+    Args:
+        client: FaunaClient instance
+        payload: dict contains the details about the function
+
+    Returns: query
+
+    """
     try:
         response = client.query(
             q.create_function(

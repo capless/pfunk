@@ -1,6 +1,8 @@
 from typing import Optional
 
 from envs import env
+
+from .api.events import Event
 from .client import FaunaClient
 from faunadb.errors import BadRequest
 from valley.schema import BaseSchema
@@ -50,6 +52,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     _non_public_fields: list = []
     _verbose_plural_name: str = None
     _collection_name: str = None
+    _events: list = []
+
 
     def __init__(self, _ref:str=None, _lazied:bool=False, **kwargs) -> None:
         """
@@ -67,10 +71,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         self._indexes = set(self._indexes)
         self._roles = set(self._roles)
         self._functions = set(self._functions)
+        if self._use_base_events:
+            self._events.extend([])
+        self._events = set(self._events)
+
         if self._use_crud_functions:
             for i in self._crud_functions:
                 self._functions.add(i)
-
 
     def get_fields(self) -> dict:
         """
@@ -508,3 +515,17 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
 
         self.client(_token=_token).query(q.delete(self.ref))
+
+    #######
+    # API #
+    #######
+
+    def get_api_event(self, event, context):
+        pass
+
+    def get_event(self, event):
+        pass
+
+
+
+

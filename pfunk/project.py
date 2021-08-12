@@ -1,21 +1,27 @@
 import logging
+from functools import lru_cache
 
 import requests
 from io import BytesIO
 
 from envs import env
+
 from faunadb.client import FaunaClient
 from jinja2 import Template
 from valley.contrib import Schema
 
-from valley.properties import CharProperty, ForeignProperty
+from valley.properties import CharProperty, ForeignProperty, ForeignListProperty
+from valley.utils import import_util
 
+from .api.events import Event
 from .collection import Collection
+from .fields import ForeignList
 from .template import graphql_template
 
 logger = logging.getLogger('pfunk')
 
 __all__ = ['Project']
+
 
 class BearerAuth(requests.auth.AuthBase):
     """
@@ -38,18 +44,41 @@ class Project(Schema):
     """
     Project configuration class.
     """
-    name: str = CharProperty(required=True)
-    client: FaunaClient = ForeignProperty(FaunaClient)
-
+    name: str = CharProperty(required=False)
+    client: FaunaClient = ForeignProperty(FaunaClient, required=False)
+    _collections: list = ForeignList(Collection, required=False)
 
     extra_graphql: str = None
 
     def __init__(self, **kwargs):
         super(Project, self).__init__(**kwargs)
-        self.collections = set()
+        self.validate()
+        self.collections = set(self._collections or [])
+        self.event_types = set()
         self.enums = set()
         self.indexes = set()
         self.functions = set()
+
+    def add_event_type(self, event_type):
+        """
+        Add event type to the project
+        Args:
+            event_type: Event
+
+        Returns:
+
+        """
+        if issubclass(event_type, Event):
+            self.event_types.add(event_type)
+        elif issubclass(event_type, str):
+            try:
+                et = import_util(event_type)
+            except ImportError:
+                et = None
+            if issubclass(et, Event):
+                self.event_types.add(et)
+        else:
+            raise ValueError('Event Type has to be one of the following: Event')
 
     def add_resource(self, resource) -> None:
         """
@@ -63,6 +92,13 @@ class Project(Schema):
 
         if issubclass(resource, Collection):
             self.collections.add(resource)
+        elif issubclass(resource, str):
+            try:
+                r = import_util(resource)
+            except ImportError:
+                r = None
+            if issubclass(r, Collection):
+                self.collections.add(resource)
         else:
             raise ValueError(
                 'Resource has to be one of the following: Collection')
@@ -79,6 +115,15 @@ class Project(Schema):
 
         for i in resource_list:
             self.add_resource(i)
+
+    @lru_cache(maxsize=128, typed=False)
+    def get_event_types(self) -> set:
+        print('Got Here')
+        for i in self.collections:
+            event_types = i().get_event_types()
+            for e in event_types:
+                self.event_types.add(e)
+        return self.event_types
 
     def get_enums(self) -> set:
         """
@@ -162,3 +207,14 @@ class Project(Schema):
             ind().unpublish(self._client)
         for col in self.collections:
             col.unpublish()
+
+    def event_handler(self, event: dict, context: object) -> object:
+        return self.get_event(self.get_event_object(event), context)
+
+    def get_event_object(self, event):
+        filter(lambda x: x.event_keys == event.keys(), self._event_types)
+
+    def get_event(self, event, context):
+        pass
+
+

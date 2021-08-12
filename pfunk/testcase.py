@@ -36,6 +36,7 @@ class CollectionTestCase(PFunkTestCase):
     def setUp(self) -> None:
         super(CollectionTestCase, self).setUp()
         self.project = Project()
+
         self.project.add_resources(self.collections)
         self.project.publish()
 

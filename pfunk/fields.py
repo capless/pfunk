@@ -210,3 +210,8 @@ class ListField(GraphQLMixin, ListProperty):
 
     def get_db_value(self, value):
         return value
+
+
+class ForeignList(ForeignListProperty):
+    def get_validators(self):
+        return [ManyToManyValidators(self.foreign_class)]

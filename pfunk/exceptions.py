@@ -1,3 +1,6 @@
+from pfunk.api.http import HttpNotFoundResponse
+
+
 class LoginFailed(Exception):
     """Exception raised when an attempt to login fails."""
     pass
@@ -6,3 +9,4 @@ class LoginFailed(Exception):
 class DocNotFound(Exception):
     """Exception raised when a document is not found."""
     pass
+

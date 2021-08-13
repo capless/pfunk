@@ -49,7 +49,7 @@ class CollectionTestCase(unittest.TestCase):
     def test_get_unique_together(self):
         sport = Sport()
         sport.get_unique_together()
-        self.assertEqual(len(sport._indexes), 1)
+        self.assertEqual(len(sport.collection_indexes), 1)
 
 
 

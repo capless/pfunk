@@ -16,6 +16,7 @@ pip = "^21.0.1"
 pytz = "^2021.1"
 graphql-core = "^3.1.5"
 decorator = "^5.0.9"
+Werkzeug = "^2.0.1"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

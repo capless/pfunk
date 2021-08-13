@@ -1,8 +1,9 @@
+from functools import lru_cache
 from typing import Optional
 
 from envs import env
 
-from .api.events import Event
+from .api.events import Event, CreateEvent, DeleteEvent, UpdateEvent, DetailEvent, ListEvent
 from .client import FaunaClient
 from faunadb.errors import BadRequest
 from valley.schema import BaseSchema
@@ -40,20 +41,34 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     This class is analogous to a model in Django.
     """
     BUILTIN_DOC_ATTRS: list = []
-    _functions: list = []
-    """Functions that are attached to this collection"""
-    _indexes: list = []
-    """Indexes that are attached to this collection"""
-    _roles: list = []
-    _lazied: bool = False
-    _all_index: bool = True
-    _use_crud_functions: bool = False
-    _crud_functions: list = [GenericCreate, GenericDelete, GenericUpdate, AllFunction]
-    _non_public_fields: list = []
-    _verbose_plural_name: str = None
-    _collection_name: str = None
-    _events: list = []
-
+    collection_functions: list = []
+    """Functions that are attached to this collection."""
+    collection_indexes: list = []
+    """Indexes that are attached to this collection."""
+    collection_roles: list = []
+    """Roles that are attached to this collection."""
+    all_index: bool = True
+    """Specifies whether to create the all index."""
+    use_crud_functions: bool = False
+    """Specifies whether to create the CRUD functions"""
+    crud_functions: list = [GenericCreate, GenericDelete, GenericUpdate, AllFunction]
+    """Specifies the CRUD functions used if the `use_crud_functions` variable is `True`"""
+    use_crud_views: bool = True
+    """Specifies whether to use the CRUD views."""
+    crud_views: list = [CreateEvent, DeleteEvent, UpdateEvent, DetailEvent, ListEvent]
+    """Specifies the base events used if the `use_base_events` variable is `True`"""
+    non_public_fields: list = []
+    """Specifies all fields that are not public."""
+    verbose_plural_name: str = None
+    """Overrides the default plural collection name."""
+    collection_name: str = None
+    """Overrides the default collection name."""
+    collection_views: list = []
+    """Events that are attached to this collection."""
+    protected_vars: list = ['functions', 'indexes', 'roles', 'lazied', 'all_index', 'use_crud_functions',
+                            'use_base_events', 'base_events', 'non_public_fields', 'verbose_plural_name',
+                            'collection_name']
+    """List of class variables that are not allowed a field names. """
 
     def __init__(self, _ref:str=None, _lazied:bool=False, **kwargs) -> None:
         """
@@ -65,19 +80,23 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
 
         super(Collection, self).__init__(**kwargs)
+        intersected_var_names = set(self.protected_vars).intersection(self._base_properties.keys())
+        if len(intersected_var_names) != 0:
+            raise ValueError(f'You are using protected var names in your schema: {intersected_var_names}')
+
         if _ref:
             self.ref = _ref
         self._lazied = _lazied
-        self._indexes = set(self._indexes)
-        self._roles = set(self._roles)
-        self._functions = set(self._functions)
-        if self._use_base_events:
-            self._events.extend([])
-        self._events = set(self._events)
+        self.collection_indexes = set(self.collection_indexes)
+        self.collection_roles = set(self.collection_roles)
+        self.collection_functions = set(self.collection_functions)
+        if self.use_crud_views:
+            self.collection_views.extend(self.crud_views)
+        self.collection_events = set(self.collection_events)
 
-        if self._use_crud_functions:
-            for i in self._crud_functions:
-                self._functions.add(i)
+        if self.use_crud_functions:
+            for i in self.crud_functions:
+                self.collection_functions.add(i)
 
     def get_fields(self) -> dict:
         """
@@ -86,7 +105,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: dict
 
         """
-        return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k not in self._non_public_fields}
+        return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k not in self.non_public_fields}
 
     def get_collection_name(self) -> str:
         """
@@ -95,7 +114,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: str
 
         """
-        return self._collection_name or self.get_class_name().capitalize()
+        return self.collection_name or self.get_class_name().capitalize()
 
     def get_enums(self) -> list:
         """
@@ -123,8 +142,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         """
 
-        if cls._verbose_plural_name:
-            return cls._verbose_plural_name
+        if cls.verbose_plural_name:
+            return cls.verbose_plural_name
         return f"{cls.get_class_name()}s"
 
     def all_index_name(self) -> str:
@@ -228,10 +247,10 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
         """
         c = cls()
-        if c._use_crud_functions:
-            for f in c._crud_functions:
-                c._functions.add(f)
-        for i in c._functions:
+        if c.use_crud_functions:
+            for f in c.crud_functions:
+                c.collection_functions.add(f)
+        for i in c.collection_functions:
             i(c).publish()
 
     @classmethod
@@ -242,7 +261,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
         """
         c = cls()
-        for i in cls._roles:
+        for i in cls.collection_roles:
             i(c).publish()
 
     @classmethod
@@ -255,7 +274,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         c = cls()
         c.get_unique_together()
 
-        for i in cls._indexes:
+        for i in cls.collection_indexes:
             try:
                 i().publish(c.client())
             except BadRequest as e:
@@ -301,7 +320,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 'unique': unique,
                 'source': source
             })
-            self._indexes.add(Indy)
+            self.collection_indexes.add(Indy)
 
     def get_db_values(self) -> tuple:
         """
@@ -523,8 +542,14 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def get_api_event(self, event, context):
         pass
 
-    def get_event(self, event):
-        pass
+    def urls(self):
+        rules = []
+        for i in self.collection_views:
+            if isinstance(i, list):
+                rules.extend(i)
+            else:
+                rules.append(i)
+        return rules
 
 
 

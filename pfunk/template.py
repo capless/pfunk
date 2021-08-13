@@ -18,7 +18,7 @@ type {{t.get_class_name()|capitalize}} {
 
 type Query {
 {% for t in collection_list %}
-    {% if t._all_index %}
+    {% if t.all_index %}
     all{{t.get_verbose_plural_name()|capitalize}}: [{{t.get_class_name()|capitalize}}] @index(name: "all_{{t.get_verbose_plural_name()}}")
     {% endif %}
 {% endfor %}

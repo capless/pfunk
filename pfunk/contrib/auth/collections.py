@@ -22,9 +22,9 @@ class Group(Collection):
 class BaseUser(Collection):
     #Settings
     _credential_field = 'password'
-    _functions = [LoginUser, UpdatePassword]
-    _roles = [Public, UserRole]
-    _non_public_fields = ['groups']
+    collection_functions = [LoginUser, UpdatePassword]
+    collection_roles = [Public, UserRole]
+    non_public_fields = ['groups']
     #Fields
     username = StringField(required=True, unique=True)
     first_name = StringField(required=True)
@@ -70,7 +70,7 @@ class BaseUser(Collection):
 
 
 class UserGroups(Collection):
-    _collection_name = 'users_groups'
+    collection_name = 'users_groups'
     userID = ReferenceField('pfunk.contrib.auth.collections.User')
     groupID = ReferenceField(Group)
     permissions = ListField()

@@ -193,7 +193,7 @@ class GenericAuthorizationRole(Role):
                     "read": True
                 }
             }
-            for i in self.collection._indexes
+            for i in self.collection.collection_indexes
         ])
         priv_list.extend([
             {
@@ -202,7 +202,7 @@ class GenericAuthorizationRole(Role):
                     "call": True
                 }
             }
-            for i in self.collection._functions
+            for i in self.collection.collection_functions
         ])
         return priv_list
 

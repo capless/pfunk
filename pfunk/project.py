@@ -12,6 +12,7 @@ from valley.contrib import Schema
 
 from valley.properties import CharProperty, ForeignProperty, ForeignListProperty
 from valley.utils import import_util
+from werkzeug.routing import Map
 
 from .api.events import Event
 from .collection import Collection
@@ -116,15 +117,6 @@ class Project(Schema):
         for i in resource_list:
             self.add_resource(i)
 
-    @lru_cache(maxsize=128, typed=False)
-    def get_event_types(self) -> set:
-        print('Got Here')
-        for i in self.collections:
-            event_types = i().get_event_types()
-            for e in event_types:
-                self.event_types.add(e)
-        return self.event_types
-
     def get_enums(self) -> set:
         """
         Get all of the Enums added to the project.
@@ -214,7 +206,16 @@ class Project(Schema):
     def get_event_object(self, event):
         filter(lambda x: x.event_keys == event.keys(), self._event_types)
 
-    def get_event(self, event, context):
-        pass
+    def urls(self):
+        rules = []
+        for i in self.collections:
+            rules.extend(i.urls)
+        return Map(
+            rules=rules,
+            strict_slashes=True
+        )
+
+
+
 
 

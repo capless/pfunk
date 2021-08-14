@@ -1,7 +1,11 @@
+import json
+
+
 class Request(object):
 
-    def __init__(self, event):
+    def __init__(self, event, kwargs):
         self.raw_event = event
+        self.kwargs = kwargs
         self.is_base64_encoded = event['isBase64Encoded']
         self.body = event.get('body')
         self.headers = event.get('headers', {})
@@ -12,7 +16,7 @@ class Request(object):
 
 class RESTRequest(Request):
 
-    def __init__(self, event):
+    def __init__(self, event, kwargs=None):
         super(RESTRequest, self).__init__(event)
         self.resource = event['resource']
         self.method = event['httpMethod']
@@ -27,7 +31,7 @@ class RESTRequest(Request):
 
 class HTTPRequest(Request):
 
-    def __init__(self, event):
+    def __init__(self, event, kwargs=None):
         self.raw_event = event
         self.version = event.get('version')
         self.route_key = event.get('routeKey')
@@ -45,8 +49,32 @@ class HTTPRequest(Request):
 class Response(object):
     status_code = 200
 
-    def __init__(self, content=b'', *args, **kwargs):
-        self.content = content
+    def __init__(self, content=b'', headers={}, *args, **kwargs):
+        self.raw_content = content
+        self.raw_headers = headers
+
+    @property
+    def body(self):
+        return self.raw_content
+
+    @property
+    def headers(self):
+        return self.raw_headers
+
+    @property
+    def response(self):
+        return {
+            'statusCode': self.status_code,
+            'body': self.body,
+            'headers': self.headers
+    }
+
+
+class JSONResponse(Response):
+
+    @property
+    def body(self):
+        return json.load(self.raw_content)
 
 
 class HttpNotFoundResponse(Response):

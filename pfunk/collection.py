@@ -3,7 +3,7 @@ from typing import Optional
 
 from envs import env
 
-from .api.events import Event, CreateEvent, DeleteEvent, UpdateEvent, DetailEvent, ListEvent
+from .api.events import Event
 from .client import FaunaClient
 from faunadb.errors import BadRequest
 from valley.schema import BaseSchema
@@ -18,6 +18,7 @@ from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate, AllFun
 from .resources import Index
 
 __all__ = ['Enum', 'Collection']
+
 
 class PFunkDeclaredVars(DeclaredVars):
     base_field_class = BaseProperty
@@ -539,18 +540,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     # API #
     #######
 
-    def get_api_event(self, event, context):
-        pass
-
+    @property
     def urls(self):
-        rules = []
-        for i in self.collection_views:
-            if isinstance(i, list):
-                rules.extend(i)
-            else:
-                rules.append(i)
-        return rules
-
-
-
-
+        return [i.url for i in self.collection_views]

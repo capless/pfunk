@@ -15,6 +15,7 @@ from valley.utils import import_util
 from werkzeug.routing import Map
 
 from .api.events import Event
+from .api.http import HTTPRequest, RESTRequest
 from .collection import Collection
 from .fields import ForeignList
 from .template import graphql_template
@@ -22,6 +23,20 @@ from .template import graphql_template
 logger = logging.getLogger('pfunk')
 
 __all__ = ['Project']
+
+
+API_EVENT_TYPES = {
+        'aws:api-rest': ['resource', 'path', 'httpMethod', 'headers',
+                         'multiValueHeaders', 'queryStringParameters',
+                         'multiValueQueryStringParameters',
+                         'pathParameters', 'stageVariables',
+                         'requestContext', 'body', 'isBase64Encoded'
+                         ],
+        'aws:api-http': [
+            'version', 'routeKey', 'rawPath', 'rawQueryString',
+            'headers', 'requestContext', 'isBase64Encoded'
+        ]
+    }
 
 
 class BearerAuth(requests.auth.AuthBase):
@@ -201,19 +216,46 @@ class Project(Schema):
             col.unpublish()
 
     def event_handler(self, event: dict, context: object) -> object:
+        event_type = self.get_event_type(event)
+        if event_type in ['aws:api-http', 'aws:api-rest']:
+            if event_type == 'aws:api-http':
+                request = HTTPRequest(event)
+            elif event_type == 'aws:api-rest':
+                request = RESTRequest(event)
+            view, kwargs = self.urls.match(request.path, request.method)
+            return view(event, context, kwargs)
         return self.get_event(self.get_event_object(event), context)
 
-    def get_event_object(self, event):
-        filter(lambda x: x.event_keys == event.keys(), self._event_types)
+    def get_event_type(self, event: dict) -> str:
+        """
+        Determine the event type (ex. REST API, HTTP API, SQS, S3, SNS, SES)
+        Args:
+            event: Event dictionary
 
+        Returns: str
+
+        """
+        event_keys = event.keys()
+
+        if 'Records' in event_keys:
+            event = event['Records'][0]
+            return event.get('EventSource') or event.get('eventSource')
+
+        for k, v in API_EVENT_TYPES.items():
+            matched = len(set(v).intersection(event_keys)) >= len(v)
+            if matched:
+                return k
+
+    @property
     def urls(self):
         rules = []
         for i in self.collections:
             rules.extend(i.urls)
-        return Map(
+        _map = Map(
             rules=rules,
             strict_slashes=True
         )
+        return _map.bind('')
 
 
 

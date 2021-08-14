@@ -1,5 +1,3 @@
-import json
-
 from werkzeug.routing import Rule
 from pfunk.api.http import Request, RESTRequest, HTTPRequest
 
@@ -8,23 +6,30 @@ class View(object):
     url_prefix: str
     """Specifies a prefix to use in the get_url method."""
     request_class: Request = Request
+    http_methods: list = ['get']
 
     def __init__(self, collection):
         self.collection = collection
         self.request: Request
+        self.context: object
 
     @property
-    def urls(self):
+    def url(self):
         raise NotImplementedError
 
-    def get_request(self, event):
-        raise NotImplementedError
+    def get_request(self, event, kwargs):
+        self.request = self.request_class(event, kwargs)
 
-    def get_response(self, event, context):
-        self.get_request(event)
-        response = self.process_request()
+    def get_response(self, event, context, kwargs):
 
-        return response.to_dict()
+        self.get_request(event, kwargs)
+        self.lambda_context = context
+
+        response = self.process_request(context=self.get_context())
+        return response.response
+
+    def get_context(self):
+        return {}
 
     def process_request(self):
         response = getattr(self, self.request.method)()
@@ -34,9 +39,7 @@ class View(object):
         self.request = self.request_class(event)
 
 
-
-
-class RESTEvent(View):
+class RESTView(View):
     request_class = RESTRequest
     event_keys: list = ['resource', 'path', 'httpMethod', 'headers',
                         'multiValueHeaders', 'queryStringParameters',
@@ -46,7 +49,7 @@ class RESTEvent(View):
                         ]
 
 
-class HTTPEvent(View):
+class HTTPView(View):
     request_class = HTTPRequest
     event_keys: list = [
         'version', 'routeKey', 'rawPath', 'rawQueryString',
@@ -58,32 +61,32 @@ class ActionMixin(object):
     action: str
 
     @property
-    def urls(self):
-        return [Rule(f'{self.collection}/{self.action}/')]
+    def url(self):
+        return [Rule(f'{self.collection}/{self.action}/', endpoint=self.as_view(), methods=[self.http_method])]
 
 
 class IDMixin(ActionMixin):
 
     @property
-    def urls(self):
-        return [Rule(f'{self.collection}/<int:id>/{self.action}/')]
+    def url(self):
+        return [Rule(f'{self.collection}/<int:id>/{self.action}/', endpoint=self.as_view, methods=[self.http_method])]
 
 
-class CreateEvent(ActionMixin, HTTPEvent):
+class CreateEvent(ActionMixin, HTTPView):
     action = 'create'
 
 
-class UpdateEvent(IDMixin, HTTPEvent):
+class UpdateEvent(IDMixin, HTTPView):
     action = 'update'
 
 
-class DetailEvent(IDMixin, HTTPEvent):
+class DetailEvent(IDMixin, HTTPView):
     action = 'detail'
 
 
-class DeleteEvent(IDMixin, HTTPEvent):
+class DeleteEvent(IDMixin, HTTPView):
     action = 'delete'
 
 
-class ListEvent(ActionMixin):
+class ListEvent(ActionMixin, HTTPView):
     action = 'list'

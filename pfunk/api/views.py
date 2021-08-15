@@ -13,15 +13,14 @@ class View(object):
         self.request: Request
         self.context: object
 
-    @property
-    def url(self):
+    @classmethod
+    def url(cls, collection):
         raise NotImplementedError
 
     def get_request(self, event, kwargs):
         self.request = self.request_class(event, kwargs)
 
     def get_response(self, event, context, kwargs):
-
         self.get_request(event, kwargs)
         self.lambda_context = context
 
@@ -34,6 +33,12 @@ class View(object):
     def process_request(self):
         response = getattr(self, self.request.method)()
         return response
+
+    @classmethod
+    def as_view(cls):
+        def view(event, context, kwargs):
+            return cls().get_response(event, context, kwargs)
+        return view
 
     def get_request(self, event):
         self.request = self.request_class(event)
@@ -60,33 +65,33 @@ class HTTPView(View):
 class ActionMixin(object):
     action: str
 
-    @property
-    def url(self):
-        return [Rule(f'{self.collection}/{self.action}/', endpoint=self.as_view(), methods=[self.http_method])]
+    @classmethod
+    def url(cls, collection):
+        return [Rule(f'{collection}/{cls.action}/', endpoint=cls.as_view(), methods=[cls.http_method])]
 
 
 class IDMixin(ActionMixin):
 
-    @property
-    def url(self):
-        return [Rule(f'{self.collection}/<int:id>/{self.action}/', endpoint=self.as_view, methods=[self.http_method])]
+    @classmethod
+    def url(self, collection):
+        return [Rule(f'{collection.get_class_name()}/<int:id>/{self.action}/', endpoint=self.as_view, methods=[self.http_method])]
 
 
-class CreateEvent(ActionMixin, HTTPView):
+class CreateView(ActionMixin, HTTPView):
     action = 'create'
 
 
-class UpdateEvent(IDMixin, HTTPView):
+class UpdateView(IDMixin, HTTPView):
     action = 'update'
 
 
-class DetailEvent(IDMixin, HTTPView):
+class DetailView(IDMixin, HTTPView):
     action = 'detail'
 
 
-class DeleteEvent(IDMixin, HTTPView):
+class DeleteView(IDMixin, HTTPView):
     action = 'delete'
 
 
-class ListEvent(ActionMixin, HTTPView):
+class ListView(ActionMixin, HTTPView):
     action = 'list'

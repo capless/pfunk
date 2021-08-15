@@ -4,6 +4,7 @@ from typing import Optional
 from envs import env
 
 from .api.events import Event
+from .api.views import DetailView, CreateView, UpdateView, DeleteView, ListView
 from .client import FaunaClient
 from faunadb.errors import BadRequest
 from valley.schema import BaseSchema
@@ -56,7 +57,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     """Specifies the CRUD functions used if the `use_crud_functions` variable is `True`"""
     use_crud_views: bool = True
     """Specifies whether to use the CRUD views."""
-    crud_views: list = [CreateEvent, DeleteEvent, UpdateEvent, DetailEvent, ListEvent]
+    crud_views: list = [CreateView, UpdateView, ListView, DeleteView, DetailView]
     """Specifies the base events used if the `use_base_events` variable is `True`"""
     non_public_fields: list = []
     """Specifies all fields that are not public."""
@@ -93,7 +94,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         self.collection_functions = set(self.collection_functions)
         if self.use_crud_views:
             self.collection_views.extend(self.crud_views)
-        self.collection_events = set(self.collection_events)
+
 
         if self.use_crud_functions:
             for i in self.crud_functions:
@@ -542,4 +543,4 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
     @property
     def urls(self):
-        return [i.url for i in self.collection_views]
+        return [i.url(self) for i in self.collection_views]

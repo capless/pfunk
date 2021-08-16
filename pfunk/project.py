@@ -250,7 +250,8 @@ class Project(Schema):
     def urls(self):
         rules = []
         for i in self.collections:
-            rules.extend(i.urls)
+            col = i()
+            rules.extend(col.urls)
         _map = Map(
             rules=rules,
             strict_slashes=True

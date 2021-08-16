@@ -1,5 +1,7 @@
 import json
 
+from pfunk.utils.json_utils import PFunkEncoder
+
 
 class Request(object):
 
@@ -17,7 +19,7 @@ class Request(object):
 class RESTRequest(Request):
 
     def __init__(self, event, kwargs=None):
-        super(RESTRequest, self).__init__(event)
+        super(RESTRequest, self).__init__(event, kwargs=kwargs)
         self.resource = event['resource']
         self.method = event['httpMethod']
         self.path_params = event['pathParameters']
@@ -32,6 +34,7 @@ class RESTRequest(Request):
 class HTTPRequest(Request):
 
     def __init__(self, event, kwargs=None):
+        super(HTTPRequest, self).__init__(event, kwargs=kwargs)
         self.raw_event = event
         self.version = event.get('version')
         self.route_key = event.get('routeKey')
@@ -74,7 +77,7 @@ class JSONResponse(Response):
 
     @property
     def body(self):
-        return json.load(self.raw_content)
+        return json.dumps(self.raw_content, cls=PFunkEncoder)
 
 
 class HttpNotFoundResponse(Response):
@@ -87,49 +90,3 @@ class HttpForbiddenResponse(Response):
 
 class HttpMethodNotAllowedResponse(Response):
     status_code = 405
-
-
-# {
-# 	'version': '2.0',
-# 	'routeKey': 'ANY /http-api-gateway',
-# 	'rawPath': '/http-api-gateway',
-# 	'rawQueryString': '',
-#     'queryStringParameters': {
-#             'bass': 'True',
-#             'cas': 'False'
-#         }
-#   'cookies': ['ca=dafdsfasdfadsfafsdfadsfdasaf', 'cb=retetterterterertertetertererter'],
-# 	'headers': {
-# 		'accept': '*/*',
-# 		'accept-encoding': 'gzip, deflate, br',
-# 		'content-length': '4',
-# 		'content-type': 'text/plain',
-# 		'host': '66fm7ju9b8.execute-api.us-east-1.amazonaws.com',
-# 		'postman-token': '58845f4e-066c-471a-80b3-26d4c28650b8',
-# 		'user-agent': 'PostmanRuntime/7.28.3',
-# 		'x-amzn-trace-id': 'Root=1-6116a867-3afdf5102ce6eb5b79c6532e',
-# 		'x-forwarded-for': '99.140.245.215',
-# 		'x-forwarded-port': '443',
-# 		'x-forwarded-proto': 'https'
-# 	},
-# 	'requestContext': {
-# 		'accountId': '986625141461',
-# 		'apiId': '66fm7ju9b8',
-# 		'domainName': '66fm7ju9b8.execute-api.us-east-1.amazonaws.com',
-# 		'domainPrefix': '66fm7ju9b8',
-# 		'http': {
-# 			'method': 'PUT',
-# 			'path': '/http-api-gateway',
-# 			'protocol': 'HTTP/1.1',
-# 			'sourceIp': '99.140.245.215',
-# 			'userAgent': 'PostmanRuntime/7.28.3'
-# 		},
-# 		'requestId': 'EA9AJgj2oAMEMcQ=',
-# 		'routeKey': 'ANY /http-api-gateway',
-# 		'stage': '$default',
-# 		'time': '13/Aug/2021:17:14:15 +0000',
-# 		'timeEpoch': 1628874855166
-# 	},
-# 	'body': 'Test',
-# 	'isBase64Encoded': False
-# }

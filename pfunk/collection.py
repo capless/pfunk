@@ -94,6 +94,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         self.collection_functions = set(self.collection_functions)
         if self.use_crud_views:
             self.collection_views.extend(self.crud_views)
+        self.collection_views = set(self.collection_views)
+
 
 
         if self.use_crud_functions:

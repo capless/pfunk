@@ -1,5 +1,5 @@
 from werkzeug.routing import Rule
-from pfunk.api.http import Request, RESTRequest, HTTPRequest
+from pfunk.api.http import Request, RESTRequest, HTTPRequest, JSONResponse
 
 
 class View(object):
@@ -24,24 +24,23 @@ class View(object):
         self.get_request(event, kwargs)
         self.lambda_context = context
 
-        response = self.process_request(context=self.get_context())
+        response = self.process_request()
         return response.response
 
     def get_context(self):
         return {}
 
     def process_request(self):
-        response = getattr(self, self.request.method)()
+        response = getattr(self, self.request.method.lower())()
         return response
 
     @classmethod
-    def as_view(cls):
-        def view(event, context, kwargs):
-            return cls().get_response(event, context, kwargs)
-        return view
+    def as_view(cls, collection):
+        c = cls(collection)
 
-    def get_request(self, event):
-        self.request = self.request_class(event)
+        def view(event, context, kwargs):
+            return c.get_response(event, context, kwargs)
+        return view
 
 
 class RESTView(View):
@@ -67,18 +66,20 @@ class ActionMixin(object):
 
     @classmethod
     def url(cls, collection):
-        return [Rule(f'{collection}/{cls.action}/', endpoint=cls.as_view(), methods=[cls.http_method])]
+        return Rule(f'/{collection.get_class_name()}/{cls.action}/', endpoint=cls.as_view(collection), methods=cls.http_methods)
 
 
 class IDMixin(ActionMixin):
 
     @classmethod
-    def url(self, collection):
-        return [Rule(f'{collection.get_class_name()}/<int:id>/{self.action}/', endpoint=self.as_view, methods=[self.http_method])]
+    def url(cls, collection):
+        return Rule(f'/{collection.get_class_name()}/<int:id>/{cls.action}/', endpoint=cls.as_view(collection),
+                    methods=cls.http_methods)
 
 
 class CreateView(ActionMixin, HTTPView):
     action = 'create'
+    http_methods = ['post']
 
 
 class UpdateView(IDMixin, HTTPView):
@@ -88,6 +89,11 @@ class UpdateView(IDMixin, HTTPView):
 class DetailView(IDMixin, HTTPView):
     action = 'detail'
 
+    def get(self, **kwargs):
+        return JSONResponse(
+            content=self.collection.get(self.request.kwargs.get('id'))
+        )
+    
 
 class DeleteView(IDMixin, HTTPView):
     action = 'delete'
@@ -95,3 +101,10 @@ class DeleteView(IDMixin, HTTPView):
 
 class ListView(ActionMixin, HTTPView):
     action = 'list'
+
+    def get(self, **kwargs):
+        return JSONResponse(
+            content=self.collection.all()
+        )
+
+

@@ -14,5 +14,7 @@ class PFunkEncoder(ValleyEncoder):
             if self.show_type:
                 obj_dict['_type'] = '{}.{}'.format(inspect.getmodule(obj).__name__, obj.__class__.__name__)
             return obj_dict
-
+        if hasattr(obj, 'get_collection_name'):
+            if obj._lazied:
+                obj = obj._get(obj.ref.id())
         return super(PFunkEncoder, self).default(obj)

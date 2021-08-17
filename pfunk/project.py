@@ -13,7 +13,7 @@ from valley.contrib import Schema
 from valley.properties import CharProperty, ForeignProperty, ForeignListProperty
 from valley.utils import import_util
 from werkzeug.routing import Map
-
+from werkzeug.utils import cached_property
 from .api.events import Event
 from .api.http import HTTPRequest, RESTRequest
 from .collection import Collection
@@ -246,7 +246,7 @@ class Project(Schema):
             if matched:
                 return k
 
-    @property
+    @cached_property
     def urls(self):
         rules = []
         for i in self.collections:

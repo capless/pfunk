@@ -3,7 +3,6 @@ from typing import Optional
 
 from envs import env
 
-from .api.events import Event
 from .api.views import DetailView, CreateView, UpdateView, DeleteView, ListView
 from .client import FaunaClient
 from faunadb.errors import BadRequest
@@ -59,6 +58,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     """Specifies whether to use the CRUD views."""
     crud_views: list = [CreateView, UpdateView, ListView, DeleteView, DetailView]
     """Specifies the base events used if the `use_base_events` variable is `True`"""
+    require_auth: bool = True
+    """Determines wheter to require authentication and authorization"""
     non_public_fields: list = []
     """Specifies all fields that are not public."""
     verbose_plural_name: str = None
@@ -95,8 +96,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         if self.use_crud_views:
             self.collection_views.extend(self.crud_views)
         self.collection_views = set(self.collection_views)
-
-
 
         if self.use_crud_functions:
             for i in self.crud_functions:
@@ -538,6 +537,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
 
         self.client(_token=_token).query(q.delete(self.ref))
+
+    @classmethod
+    def delete_from_id(cls, id:str, _token=None) -> None:
+        c = cls()
+        c.client(_token=_token).query(q.delete(q.ref(q.collection(c.get_collection_name()), id)))
 
     #######
     # API #

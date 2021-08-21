@@ -218,12 +218,16 @@ class Project(Schema):
     def event_handler(self, event: dict, context: object) -> object:
         event_type = self.get_event_type(event)
         if event_type in ['aws:api-http', 'aws:api-rest']:
+
             if event_type == 'aws:api-http':
-                request = HTTPRequest(event)
+                http = event.get('requestContext').get('http', {})
+                view, kwargs = self.urls.match(http.get('path'), http.get('method'))
+                request = HTTPRequest(event, kwargs=kwargs)
             elif event_type == 'aws:api-rest':
-                request = RESTRequest(event)
-            view, kwargs = self.urls.match(request.path, request.method)
-            return view(event, context, kwargs)
+                view, kwargs = self.urls.match(event.get('path'), event.get('httpMethod'))
+                request = RESTRequest(event, kwargs=kwargs)
+
+            return view(request, context, kwargs)
         return self.get_event(self.get_event_object(event), context)
 
     def get_event_type(self, event: dict) -> str:

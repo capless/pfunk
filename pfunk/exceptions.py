@@ -10,3 +10,7 @@ class DocNotFound(Exception):
     """Exception raised when a document is not found."""
     pass
 
+
+class TokenValidationFailed(Exception):
+    """Exception raised when a JWT validation fails"""
+    pass

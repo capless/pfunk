@@ -1,5 +1,7 @@
 import json
 
+from werkzeug.http import parse_cookie
+
 from pfunk.utils.json_utils import PFunkEncoder
 
 
@@ -11,6 +13,8 @@ class Request(object):
         self.is_base64_encoded = event['isBase64Encoded']
         self.body = event.get('body')
         self.headers = event.get('headers', {})
+        self.user = None
+        self.token: str
         
     def get_cookies(self, raw_cookies):
         return raw_cookies
@@ -30,6 +34,9 @@ class RESTRequest(Request):
 
         self.query_string_params = event['queryStringParameters']
 
+    def get_cookies(self, raw_cookies):
+        return parse_cookie(raw_cookies)
+
 
 class HTTPRequest(Request):
 
@@ -41,12 +48,16 @@ class HTTPRequest(Request):
         self.raw_path = event.get('rawPath')
         self.raw_query_string = event.get('rawQueryString')
 
-        self.cookies = self.get_cookies(event.get('cookies'))
+        self.cookies = self.get_cookies(event.get('cookies', []))
         http = event.get('requestContext').get('http', {})
         self.method = http.get('method')
         self.path = http.get('path')
         self.query_string_params = event.get('queryStringParameters', {})
         self.source_ip = http.get('sourceIp')
+
+    def get_cookies(self, raw_cookies):
+        return parse_cookie(';'.join(raw_cookies))
+
 
 
 class Response(object):

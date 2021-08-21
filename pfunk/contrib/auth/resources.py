@@ -258,16 +258,18 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
     name_suffix = 'group_based_crud_role'
 
     def get_lambda(self, resource_type):
+        perm = f'{self.collection.get_collection_name()}-{resource_type}'.lower()
         if resource_type == 'write':
             group_ref = q.select(self.current_group_field,
                                  q.select('data', q.var('old_object')))
             lambda_args = ["old_object", "new_object", "object_ref"]
+
             return q.query(
                 q.lambda_(lambda_args,
                           q.and_(
                               q.equals(
                                   # User ID from index
-                                  q.select(0, q.filter_(lambda i: q.equals(resource_type, i),
+                                  q.select(0, q.filter_(lambda i: q.equals(perm, i),
                                                         q.select(self.permissions_field,
                                                                  q.get(
                                                                      q.match(
@@ -276,7 +278,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                                                          q.current_identity()
                                                                      )
                                                                  )))),
-                                  resource_type
+                                  perm
                               ),
                               q.equals(
                                   q.select(self.current_group_field, q.select('data', q.var('old_object'))),
@@ -298,7 +300,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
             q.lambda_(
                 lambda_args,
                 q.equals(
-                    q.select(0, q.filter_(lambda i: q.equals(resource_type, i),
+                    q.select(0, q.filter_(lambda i: q.equals(perm, i),
                                           q.select(self.permissions_field,
                                                    q.select("data",
                                                             q.get(q.match(
@@ -306,7 +308,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                                                 group_ref,
                                                                 q.current_identity()
                                                             )))))),
-                    resource_type
+                    perm
                 )
             )
         )

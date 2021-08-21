@@ -1,4 +1,12 @@
+import json
+import random
+import datetime
+
+import dateutil
+import jwt
+from envs import env
 from faunadb.errors import BadRequest
+from werkzeug.utils import cached_property
 
 from pfunk import StringField, Collection, Enum, EnumField
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole
@@ -76,6 +84,21 @@ class UserGroups(Collection):
     permissions = ListField()
 
 
+class PermissionGroup(object):
+    valid_actions: list = ['create', 'read', 'delete', 'write']
+
+    def __init__(self, collection: Collection, permissions: list):
+        if not issubclass(collection, Collection):
+            raise ValueError('Permission class requires a Collection class as the first argument.')
+        self.collection = collection
+        self._permissions = permissions
+        self.collection_name = self.collection.get_class_name()
+
+    @cached_property
+    def permissions(self):
+        return [f'{self.collection_name}-{i}'.lower() for i in self._permissions if i in self.valid_actions]
+
+
 class User(BaseUser):
     groups = ManyToManyField(Group, 'users_groups')
 
@@ -99,7 +122,11 @@ class User(BaseUser):
                 perm_list.extend(p)
         return perm_list
 
-    def add_permissions(self, group, permissions, _token=None):
+    def add_permissions(self, group, permissions: list, _token=None):
+        perm_list = []
+        for i in permissions:
+            perm_list.extend(i.permissions)
+
         try:
             user_group = self.client(_token=_token).query(
                 q.paginate(
@@ -113,8 +140,55 @@ class User(BaseUser):
         except IndexError:
             user_group = None
 
-        ug = UserGroups(userID=self, groupID=group, permissions=permissions)
+        ug = UserGroups(userID=self, groupID=group, permissions=perm_list)
         if user_group:
             ug.ref = user_group
         ug.save()
         return ug
+
+
+class Key(Collection):
+    signature_key = StringField(required=True, unique=True)
+    payload_key = StringField(required=True, unique=True)
+    group = ReferenceField(Group, required=True)
+
+    @classmethod
+    def create_key(cls):
+        c = cls()
+        return c.create(signature_key=Fernet.generate_key().decode(),
+                        payload_key=Fernet.generate_key().decode(),
+                        group=Group.get_by('unique_Group_slug', 'admins'))
+
+    @classmethod
+    def get_keys(cls):
+        return cls.all()
+
+    @classmethod
+    def get_key(cls):
+        return random.choice(cls.get_keys())
+
+    @classmethod
+    def create_jwt(cls, secret_claims):
+        key = cls.get_key()
+        pay_f = Fernet(key.payload_key)
+        gmt = dateutil.tz.gettz('GMT')
+        now = datetime.datetime.now(tz=gmt)
+        exp = now + datetime.timedelta(days=1)
+        payload = {
+            'iat': now.timestamp(),
+            'exp': exp.timestamp(),
+            'nbf': now.timestamp(),
+            'iss': env('CORKY_ISSUER', 'corky'),
+            'til': pay_f.encrypt(json.dumps(secret_claims).encode()).decode()
+        }
+        return jwt.encode(payload, key.signature_key, algorithm="HS256", headers={'kid': key.ref.id()}), exp
+
+    @classmethod
+    def decrypt_jwt(cls, encoded):
+        headers = jwt.get_unverified_header(encoded)
+        key = Key.get(headers.get('kid'))
+        decoded = jwt.decode(encoded, key.signature_key, algorithms="HS256", verify=True,
+                             options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
+        pay_f = Fernet(key.payload_key.encode())
+        k = pay_f.decrypt(decoded.get('til').encode())
+        return json.loads(k.decode())

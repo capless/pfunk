@@ -1,9 +1,11 @@
+import functools
 import json
 import random
 import datetime
 
 import dateutil
 import jwt
+from cryptography.fernet import Fernet
 from envs import env
 from faunadb.errors import BadRequest
 from werkzeug.utils import cached_property
@@ -150,20 +152,19 @@ class User(BaseUser):
 class Key(Collection):
     signature_key = StringField(required=True, unique=True)
     payload_key = StringField(required=True, unique=True)
-    group = ReferenceField(Group, required=True)
 
     @classmethod
     def create_key(cls):
         c = cls()
         return c.create(signature_key=Fernet.generate_key().decode(),
-                        payload_key=Fernet.generate_key().decode(),
-                        group=Group.get_by('unique_Group_slug', 'admins'))
+                        payload_key=Fernet.generate_key().decode())
 
     @classmethod
     def get_keys(cls):
         return cls.all()
 
     @classmethod
+    @functools.lru_cache(maxsize=32)
     def get_key(cls):
         return random.choice(cls.get_keys())
 

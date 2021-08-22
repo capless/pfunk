@@ -202,6 +202,8 @@ class Project(Schema):
                 print('GraphQL Schema Imported Successfully!!') #pragma: no cover
         for col in set(self.collections):
             col.publish()
+        if resp.status_code != 200:
+            print(resp.content)
         return resp.status_code
 
     def unpublish(self) -> None:

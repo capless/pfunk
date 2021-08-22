@@ -1,5 +1,6 @@
 from faunadb.errors import PermissionDenied
 
+from pfunk.contrib.auth.collections import PermissionGroup
 from pfunk.tests import User, Group, Sport, Person, House
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import CollectionTestCase
@@ -26,17 +27,11 @@ class AuthTestCase(CollectionTestCase):
         with self.assertRaises(LoginFailed):
             User.login('test', 'wrongpass')
 
-    # def test_get_from_id(self):
-    #     pass
-
     def test_update_password(self):
         token = User.login('test', 'abc123')
         self.user.update_password('abc123', '123abc', _token=token)
         # If the update doesn't work the login call will result in an error
         User.login('test', '123abc')
-
-    # def test_create_group_based(self):
-    #     pass
 
     def test_create_user_based(self):
         token = User.login('test', 'abc123')
@@ -45,7 +40,9 @@ class AuthTestCase(CollectionTestCase):
 
     def test_permissions(self):
         self.assertEqual(self.user.permissions(), [])
-        self.user.add_permissions(self.group, ['create', 'read', 'write', 'delete'])
+
+        self.user.add_permissions(self.group, [PermissionGroup(House, ['create', 'read', 'write', 'delete'])])
         self.assertEqual(
             self.user.permissions(),
-            ['power-users-create', 'power-users-read', 'power-users-write', 'power-users-delete'])
+            ['power-users-house-create', 'power-users-house-read', 'power-users-house-write',
+             'power-users-house-delete'])

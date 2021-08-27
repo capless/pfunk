@@ -5,6 +5,7 @@ import datetime
 
 import dateutil
 import jwt
+from cachetools.func import ttl_cache
 from cryptography.fernet import Fernet
 from envs import env
 from faunadb.errors import BadRequest
@@ -156,15 +157,20 @@ class Key(Collection):
     @classmethod
     def create_key(cls):
         c = cls()
+        if len(c.all()) >= 10:
+            k = c.get_key()
+            k.delete()
+
+
         return c.create(signature_key=Fernet.generate_key().decode(),
                         payload_key=Fernet.generate_key().decode())
 
     @classmethod
+    @ttl_cache(maxsize=32, ttl=60)
     def get_keys(cls):
         return cls.all()
 
     @classmethod
-    @functools.lru_cache(maxsize=32)
     def get_key(cls):
         return random.choice(cls.get_keys())
 

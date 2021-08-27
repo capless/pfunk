@@ -15,6 +15,8 @@ from .client import q
 from valley.properties import BaseProperty, CharProperty, ListProperty
 
 from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate, AllFunction
+from .exceptions import DocNotFound
+from .queryset import Queryset
 from .resources import Index
 
 __all__ = ['Enum', 'Collection']
@@ -441,35 +443,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         return cls()._get(ref, _token=_token)
 
     @classmethod
-    def get_by(cls, name, *args, _token=None) -> list:
-        """
-        Calls an index that is expected to return only one result.
-        Args:
-            name: Name of the index
-            *args: Arguments to pass to the index.
-            _token: Token (secret) used to make call
-
-        Returns: list
-
-        """
-
-        c = cls()
-        raw_qs = c.client(_token=_token).query(
-            q.paginate(q.match(q.index(name), *args)))
-        return c.process_qs(raw_qs.get('data'))[0]
-
-    def process_qs(self, data) -> list:
-        """
-        Processes list of documents. Converts list of dicts returned by Fauna to list of Collection objects.
-        Args:
-            data: list of documents
-
-        Returns: list
-
-        """
-        return [self.__class__(_ref=i, _lazied=True) for i in data]
-
-    @classmethod
     def all(cls, page_size=100, after=None, before=None, ts=None, events=False, sources=False, _token=None) -> list:
         """
         Calls the built-in "all" index.
@@ -490,8 +463,15 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                        sources=sources, _token=_token)
 
     @classmethod
+    def get_by(cls, index_name, terms=[], use_map=True):
+        try:
+            return cls.get_index(index_name, terms=terms, use_map=use_map)[0]
+        except IndexError:
+            raise DocNotFound('Document not found.')
+
+    @classmethod
     def get_index(cls, index_name, terms=[], page_size=100, after=None, before=None, ts=None, events=False,
-                  sources=False, _token=None):
+                  sources=False, use_map=True, _token=None):
         """
         Call an index
         Args:
@@ -510,11 +490,25 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
 
         c = cls()
-        return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.client(_token=_token).query(
-            q.map_(
-                q.lambda_(['ref'],
-                          q.get(q.var('ref'))
-                          ),
+        if use_map:
+            query_response = c.client(_token=_token).query(
+                q.map_(
+                    q.lambda_(['ref'],
+                              q.get(q.var('ref'))
+                              ),
+                    q.paginate(
+                        q.match(q.index(index_name), terms),
+                        size=page_size,
+                        after=after,
+                        before=before,
+                        ts=ts,
+                        events=events
+                    )
+                )
+            )
+            lazied = False
+        else:
+            query_response = c.client(_token=_token).query(
                 q.paginate(
                     q.match(q.index(index_name), terms),
                     size=page_size,
@@ -524,7 +518,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                     events=events
                 )
             )
-        ).get('data')]
+            lazied = True
+
+        return Queryset(query_response, cls, lazied)
 
     def delete(self, _token=None) -> None:
         """

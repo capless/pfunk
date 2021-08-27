@@ -90,6 +90,10 @@ class JSONResponse(Response):
     def body(self):
         return json.dumps(self.raw_content, cls=PFunkEncoder)
 
+    @property
+    def headers(self):
+        return
+
 
 class HttpNotFoundResponse(Response):
     status_code = 404

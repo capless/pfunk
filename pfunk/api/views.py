@@ -22,7 +22,6 @@ class View(object):
     def get_response(self, request, context, kwargs):
         self.request = request
         self.lambda_context = context
-
         response = self.process_response_middleware(self.process_request())
 
         return response.response
@@ -104,25 +103,27 @@ class CreateView(ActionMixin, HTTPView):
 class UpdateView(IDMixin, HTTPView):
     action = 'update'
 
+    def update(self, **kwargs):
+        pass
+
 
 class DetailView(IDMixin, HTTPView):
     action = 'detail'
 
     def get(self, **kwargs):
+        content = {'success': True}
+        response_class = JSONResponse
         try:
-            return JSONResponse(
-                content={
-                    'success': True,
-                    'data': self.collection.get(self.request.kwargs.get('id'))
-                }
-            )
+            content['data'] = self.collection.get(self.request.kwargs.get('id'))
         except NotFound:
-            return HttpNotFoundResponse(
-                content={
-                    'success': False,
-                    'msg': 'Not Found'
-                }
-            )
+            content['success'] = False
+            content['msg'] = 'Not Found'
+            response_class = HttpNotFoundResponse
+
+        return response_class(
+            content=content
+        )
+
     
 
 class DeleteView(IDMixin, HTTPView):
@@ -141,10 +142,19 @@ class ListView(ActionMixin, HTTPView):
     action = 'list'
 
     def get(self, **kwargs):
+        query_kwargs = self.request.query_string_params
+        all_kwargs = {
+            'after': query_kwargs.get('after'),
+            'before': query_kwargs.get('before')
+        }
+        if self.request.query_string_params.get('page_size'):
+            all_kwargs['page_size'] = query_kwargs.get('page_size')
+
+
         return JSONResponse(
             content={
                 'success': True,
-                'data': self.collection.all()
+                'data': self.collection.all(**all_kwargs)
             }
         )
 

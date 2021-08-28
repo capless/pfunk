@@ -20,6 +20,7 @@ pyjwt = "^2.1.0"
 pip = "^21.2.4"
 cryptography = "^3.4.7"
 cachetools = "^4.2.2"
+click = "^8.0.1"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

@@ -26,3 +26,28 @@ type Query {
 
 {{extra_graphql}}
 """)
+
+wsgi_template = Template("""
+from envs import env
+from valley.utils import import_util
+
+project = import_util(env('PFUNK_PROJECT', '{{PFUNK_PROJECT}}'))
+app = project.wsgi_app
+
+if __name__ == '__main__':
+    from werkzeug.serving import run_simple
+    run_simple('127.0.0.1', 3434, app, use_debugger=True, use_reloader=True)
+""")
+
+project_template = Template("""
+from pfunk import Project
+
+
+project = Project()
+""")
+
+collections_templates = Template("""
+from pfunk import Collection
+
+# Write some collections here
+""")

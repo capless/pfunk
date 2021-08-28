@@ -12,6 +12,7 @@ from valley.contrib import Schema
 
 from valley.properties import CharProperty, ForeignProperty, ForeignListProperty
 from valley.utils import import_util
+from werkzeug import Request
 from werkzeug.routing import Map
 from werkzeug.utils import cached_property
 from .api.events import Event
@@ -218,6 +219,10 @@ class Project(Schema):
             col.unpublish()
 
     def event_handler(self, event: dict, context: object) -> object:
+        if isinstance(event, Request):
+            request = event
+            view, kwargs = self.urls.match(request.path, request.method)
+            return view(request, context, kwargs)
         event_type = self.get_event_type(event)
         if event_type in ['aws:api-http', 'aws:api-rest']:
 
@@ -263,6 +268,11 @@ class Project(Schema):
             strict_slashes=True
         )
         return _map.bind('')
+
+    def wsgi_app(self, environ, start_response):
+        request = Request(environ)
+        response = self.event_handler(request, object())
+        return response(environ, start_response)
 
 
 

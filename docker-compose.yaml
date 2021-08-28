@@ -8,10 +8,12 @@ services:
       context: .
     expose:
       - "8010"
+      - "3434"
     depends_on:
       - fauna
     ports:
       - 8010:8888
+      - 3434:3434
     volumes:
       - ./:/code/
     env_file: .env

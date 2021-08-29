@@ -60,8 +60,8 @@ def add_stage(stage: str, fauna_key: str, filename: str):
 @click.option('--wsgi', default='wsgi.app')
 @click.option('--port', default=3434)
 @click.option('--hostname', default='localhost')
-def local(hostname: str, port: int, wsgi_app: str, use_debugger: bool, use_reloader: bool):
-    app = import_util(wsgi_app)
+def local(hostname: str, port: int, wsgi: str, use_debugger: bool, use_reloader: bool):
+    app = import_util(wsgi)
     run_simple(hostname, port, app, use_debugger=use_debugger, use_reloader=use_reloader)
 
 if __name__ == '__main__':

@@ -153,7 +153,7 @@ class User(BaseUser):
 class Key(Collection):
     signature_key = StringField(required=True, unique=True)
     payload_key = StringField(required=True, unique=True)
-
+    use_crud_views = False
     @classmethod
     def create_key(cls):
         c = cls()

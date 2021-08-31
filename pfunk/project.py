@@ -12,11 +12,13 @@ from valley.contrib import Schema
 
 from valley.properties import CharProperty, ForeignProperty, ForeignListProperty
 from valley.utils import import_util
-from werkzeug import Request
+from werkzeug import Request as WerkzeugRequest
+from werkzeug.exceptions import NotFound
+from werkzeug.http import HTTP_STATUS_CODES
 from werkzeug.routing import Map
 from werkzeug.utils import cached_property
 from .api.events import Event
-from .api.http import HTTPRequest, RESTRequest
+from .api.http import HTTPRequest, RESTRequest, WSGIRequest, HttpNotFoundResponse
 from .collection import Collection
 from .fields import ForeignList
 from .template import graphql_template
@@ -219,21 +221,25 @@ class Project(Schema):
             col.unpublish()
 
     def event_handler(self, event: dict, context: object) -> object:
-        if isinstance(event, Request):
-            request = event
-            view, kwargs = self.urls.match(request.path, request.method)
-            return view(request, context, kwargs)
         event_type = self.get_event_type(event)
-        if event_type in ['aws:api-http', 'aws:api-rest']:
-
+        if event_type in ['aws:api-http', 'aws:api-rest', 'wsgi']:
+            if event_type == 'wsgi':
+                path = event.path
+                method = event.method
+                request_cls = WSGIRequest
             if event_type == 'aws:api-http':
                 http = event.get('requestContext').get('http', {})
-                view, kwargs = self.urls.match(http.get('path'), http.get('method'))
-                request = HTTPRequest(event, kwargs=kwargs)
+                path = http.get('path')
+                method = http.get('method')
+                request_cls = HTTPRequest
             elif event_type == 'aws:api-rest':
-                view, kwargs = self.urls.match(event.get('path'), event.get('httpMethod'))
-                request = RESTRequest(event, kwargs=kwargs)
-
+                path = event.get('path')
+                method = event.get('httpMethod')
+            try:
+                view, kwargs = self.urls.match(path, method)
+            except NotFound:
+                return HttpNotFoundResponse('Not Found')
+            request = request_cls(event, kwargs)
             return view(request, context, kwargs)
         return self.get_event(self.get_event_object(event), context)
 
@@ -246,8 +252,10 @@ class Project(Schema):
         Returns: str
 
         """
-        event_keys = event.keys()
 
+        if isinstance(event, WerkzeugRequest):
+            return 'wsgi'
+        event_keys = event.keys()
         if 'Records' in event_keys:
             event = event['Records'][0]
             return event.get('EventSource') or event.get('eventSource')
@@ -270,9 +278,12 @@ class Project(Schema):
         return _map.bind('')
 
     def wsgi_app(self, environ, start_response):
-        request = Request(environ)
+        request = WerkzeugRequest(environ)
         response = self.event_handler(request, object())
-        return response(environ, start_response)
+        status_str = f'{response.status_code} {HTTP_STATUS_CODES.get(response.status_code)}'
+
+        start_response(status_str, response.wsgi_headers)
+        return [str.encode(response.body)]
 
 
 

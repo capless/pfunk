@@ -1,13 +1,19 @@
+import json
+
 from faunadb.errors import NotFound, PermissionDenied
+from werkzeug import Response
 from werkzeug.routing import Rule
 from pfunk.api.http import Request, RESTRequest, HTTPRequest, JSONResponse, HttpNotFoundResponse, HttpForbiddenResponse
+from pfunk.api.http import Response as PFunkResponse
 from pfunk.exceptions import TokenValidationFailed
+from pfunk.utils.json_utils import PFunkEncoder
 
 
 class View(object):
     url_prefix: str
     """Specifies a prefix to use in the get_url method."""
     request_class: Request = Request
+    response_class: PFunkResponse
     http_methods: list = ['get']
 
     def __init__(self, collection, auth_required=True):
@@ -19,12 +25,18 @@ class View(object):
     def url(cls, collection):
         raise NotImplementedError
 
+    def get_response_class(self):
+        if not isinstance(self.request, Request):
+            return Response
+        return self.response_class or JSONResponse
+
     def get_response(self, request, context, kwargs):
         self.request = request
         self.lambda_context = context
         response = self.process_response_middleware(self.process_request())
-
-        return response.response
+        if not isinstance(self.request, Request):
+            return response
+        return response
 
     def process_response_middleware(self, response):
         return response
@@ -94,7 +106,6 @@ class IDMixin(ActionMixin):
         return Rule(f'/{collection.get_class_name()}/<int:id>/{cls.action}/', endpoint=cls.as_view(collection),
                     methods=cls.http_methods)
 
-
 class CreateView(ActionMixin, HTTPView):
     action = 'create'
     http_methods = ['post']
@@ -125,7 +136,6 @@ class DetailView(IDMixin, HTTPView):
         )
 
     
-
 class DeleteView(IDMixin, HTTPView):
     action = 'delete'
 
@@ -142,15 +152,16 @@ class ListView(ActionMixin, HTTPView):
     action = 'list'
 
     def get(self, **kwargs):
-        query_kwargs = self.request.query_string_params
+        query_kwargs = self.request.query_params
         all_kwargs = {
             'after': query_kwargs.get('after'),
             'before': query_kwargs.get('before')
         }
-        if self.request.query_string_params.get('page_size'):
+        if self.request.query_params.get('page_size'):
             all_kwargs['page_size'] = query_kwargs.get('page_size')
 
-
+        if not isinstance(self.request, Request):
+            return Response(json.dumps(self.collection.all(**all_kwargs), cls=PFunkEncoder))
         return JSONResponse(
             content={
                 'success': True,

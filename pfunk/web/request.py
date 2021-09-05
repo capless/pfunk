@@ -2,7 +2,7 @@ import json
 
 from werkzeug.http import parse_cookie
 
-from pfunk.utils.json_utils import PFunkEncoder
+
 
 
 class Request(object):
@@ -18,7 +18,7 @@ class Request(object):
         return raw_cookies
 
     def get_json(self):
-        if self.content_type == 'applicaton/json':
+        if self.headers.get('content-type') == 'application/json':
             return json.loads(self.body)
 
 
@@ -73,7 +73,7 @@ class HTTPRequest(BaseAPIGatewayRequest):
         self.raw_query_string = event.get('rawQueryString')
 
         self.cookies = self.get_cookies(event.get('cookies', []))
-        http = event.get('requestContext').get('http', {})
+        http = event.get('requestContext').get('web', {})
         self.method = http.get('method')
         self.path = http.get('path')
         self.source_ip = http.get('sourceIp')
@@ -82,52 +82,3 @@ class HTTPRequest(BaseAPIGatewayRequest):
         return parse_cookie(';'.join(raw_cookies))
 
 
-class Response(object):
-    status_code = 200
-    content_type: str = 'text/html'
-
-    def __init__(self, content, headers={}, *args, **kwargs):
-        self.raw_content = content
-        self.raw_headers = headers
-
-    @property
-    def body(self):
-        return self.raw_content
-
-    @property
-    def headers(self):
-        headers = {'Content-Type': self.content_type}
-        headers.update(self.raw_headers)
-        return headers
-
-    @property
-    def wsgi_headers(self):
-        return self.headers.items()
-
-    @property
-    def response(self):
-        return {
-            'statusCode': self.status_code,
-            'body': self.body,
-            'headers': self.headers
-    }
-
-
-class JSONResponse(Response):
-    content_type: str = 'application/json'
-
-    @property
-    def body(self):
-        return json.dumps(self.raw_content, cls=PFunkEncoder)
-
-
-class HttpNotFoundResponse(Response):
-    status_code = 404
-
-
-class HttpForbiddenResponse(Response):
-    status_code = 403
-
-
-class HttpMethodNotAllowedResponse(Response):
-    status_code = 405

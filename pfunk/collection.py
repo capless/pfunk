@@ -1,19 +1,16 @@
-from functools import lru_cache
-from typing import Optional
+import json
 
 from envs import env
-
-from .api.views import DetailView, CreateView, UpdateView, DeleteView, ListView
-from .client import FaunaClient
 from faunadb.errors import BadRequest
-from valley.schema import BaseSchema
 from valley.contrib import Schema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
+from valley.properties import BaseProperty, CharProperty, ListProperty
+from valley.schema import BaseSchema
 from valley.utils import import_util
 
+from pfunk.client import FaunaClient
+from pfunk.web.views.json import DetailView, CreateView, UpdateView, DeleteView, ListView
 from .client import q
-from valley.properties import BaseProperty, CharProperty, ListProperty
-
 from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate, AllFunction
 from .exceptions import DocNotFound
 from .queryset import Queryset
@@ -75,7 +72,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             'collection_name']
     """List of class variables that are not allowed a field names. """
 
-    def __init__(self, _ref:str=None, _lazied:bool=False, **kwargs) -> None:
+    def __init__(self, _ref: object=None, _lazied:bool=False, **kwargs) -> None:
         """
         Args:
             _ref: Fauna ref instance (faunadb.objects.Ref)
@@ -343,6 +340,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 relational_data[prop.relation_name] = v
         return data, relational_data
 
+    def get_foreign_fields_by_type(self, cls_str):
+        cls = import_util(cls_str)
+        return {k: {'foreign_class': v.foreign_class, 'field_type': v.__class__.__name__} for k, v in
+                self._base_properties.items() if isinstance(v, cls)}
+
     def _save_related(self, relational_data, _token=None) -> None:
         """
         Save related data
@@ -424,8 +426,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         resp = self.client(_token=_token).query(q.get(q.ref(q.collection(self.get_collection_name()), ref)))
         ref = resp['ref']
         data = resp['data']
-
-        self._data = data
+        self._data = self.process_schema_kwargs(data)
         self.ref = ref
         return self
 
@@ -538,6 +539,20 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def delete_from_id(cls, id:str, _token=None) -> None:
         c = cls()
         c.client(_token=_token).query(q.delete(q.ref(q.collection(c.get_collection_name()), id)))
+
+    ########
+    # JSON #
+    ########
+
+    def to_dict(self):
+        field_data = self._data.copy()
+        ref = {'id': self.ref.id(), 'collection': self.ref.collection().id()}
+        obj = {
+            'ref': ref,
+            'data': field_data
+        }
+
+        return obj
 
     #######
     # API #

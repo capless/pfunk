@@ -23,7 +23,7 @@ class FaunaClient(FC):
         :param domain:
           Base URL for the FaunaDB server.
         :param scheme:
-          ``"http"`` or ``"https"``.
+          ``"web"`` or ``"https"``.
         :param port:
           Port of the FaunaDB server.
         :param timeout:

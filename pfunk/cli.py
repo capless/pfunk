@@ -15,7 +15,7 @@ def pfunk():
 @pfunk.command()
 @click.option('--stage', prompt=True, help='Application stage', default='local')
 @click.option('--fauna_key', prompt=True, help='Fauna Key')
-@click.option('--api_type', type=click.Choice(['http', 'rest', 'none']), prompt=True, help='API Type (http, rest, none)')
+@click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
 def init(name: str, api_type: str, fauna_key: str, stage: str):
     if not os.path.exists(f'{name}/pfunk.json'):

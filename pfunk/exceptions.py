@@ -1,4 +1,3 @@
-from pfunk.api.http import HttpNotFoundResponse
 
 
 class LoginFailed(Exception):

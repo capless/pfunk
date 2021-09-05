@@ -13,12 +13,13 @@ from valley.contrib import Schema
 from valley.properties import CharProperty, ForeignProperty, ForeignListProperty
 from valley.utils import import_util
 from werkzeug import Request as WerkzeugRequest
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.http import HTTP_STATUS_CODES
 from werkzeug.routing import Map
 from werkzeug.utils import cached_property
-from .api.events import Event
-from .api.http import HTTPRequest, RESTRequest, WSGIRequest, HttpNotFoundResponse
+from pfunk.web.events import Event
+from pfunk.web.request import HTTPRequest, RESTRequest, WSGIRequest
+from pfunk.web.response import HttpNotFoundResponse, JSONMethodNotAllowedResponse
 from .collection import Collection
 from .fields import ForeignList
 from .template import graphql_template
@@ -29,13 +30,13 @@ __all__ = ['Project']
 
 
 API_EVENT_TYPES = {
-        'aws:api-rest': ['resource', 'path', 'httpMethod', 'headers',
+        'aws:web-rest': ['resource', 'path', 'httpMethod', 'headers',
                          'multiValueHeaders', 'queryStringParameters',
                          'multiValueQueryStringParameters',
                          'pathParameters', 'stageVariables',
                          'requestContext', 'body', 'isBase64Encoded'
                          ],
-        'aws:api-http': [
+        'aws:web-web': [
             'version', 'routeKey', 'rawPath', 'rawQueryString',
             'headers', 'requestContext', 'isBase64Encoded'
         ]
@@ -222,23 +223,25 @@ class Project(Schema):
 
     def event_handler(self, event: dict, context: object) -> object:
         event_type = self.get_event_type(event)
-        if event_type in ['aws:api-http', 'aws:api-rest', 'wsgi']:
+        if event_type in ['aws:web-web', 'aws:web-rest', 'wsgi']:
             if event_type == 'wsgi':
                 path = event.path
                 method = event.method
                 request_cls = WSGIRequest
-            if event_type == 'aws:api-http':
-                http = event.get('requestContext').get('http', {})
+            if event_type == 'aws:web-web':
+                http = event.get('requestContext').get('web', {})
                 path = http.get('path')
                 method = http.get('method')
                 request_cls = HTTPRequest
-            elif event_type == 'aws:api-rest':
+            elif event_type == 'aws:web-rest':
                 path = event.get('path')
                 method = event.get('httpMethod')
             try:
                 view, kwargs = self.urls.match(path, method)
             except NotFound:
-                return HttpNotFoundResponse('Not Found')
+                return HttpNotFoundResponse()
+            except MethodNotAllowed:
+                return JSONMethodNotAllowedResponse()
             request = request_cls(event, kwargs)
             return view(request, context, kwargs)
         return self.get_event(self.get_event_object(event), context)

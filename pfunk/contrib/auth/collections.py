@@ -13,6 +13,7 @@ from werkzeug.utils import cached_property
 
 from pfunk import StringField, Collection, Enum, EnumField
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole
+from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField
 from pfunk.client import q
@@ -30,14 +31,22 @@ class Group(Collection):
         return self.name  # pragma: no cover
 
 
+def send_verification_email(doc):
+    if not doc.ref and doc.use_email_verification:
+        doc.attach_verification_key()
+        doc.send_verification_email()
+
+
 class BaseUser(Collection):
-    #Settings
+    # Settings
     _credential_field = 'password'
     collection_functions = [LoginUser, UpdatePassword]
     collection_roles = [Public, UserRole]
     non_public_fields = ['groups']
     use_email_verification = True
-    #Fields
+    # Signals
+    pre_save_signals = [send_verification_email]
+    # Fields
     username = StringField(required=True, unique=True)
     first_name = StringField(required=True)
     last_name = StringField(required=True)
@@ -47,12 +56,6 @@ class BaseUser(Collection):
 
     def __unicode__(self):
         return self.username  # pragma: no cover
-
-    def save(self, _credentials=None, _token=None) -> None:
-        if not self.ref and self.use_email_verification:
-            self.attach_verification_key()
-            self.send_verification_email()
-        super(BaseUser, self).save(_credentials=_credentials, _token=_token)
 
     @classmethod
     def login(cls, username, password, _token=None):
@@ -75,8 +78,19 @@ class BaseUser(Collection):
     def attach_verification_key(self):
         self.verification_key = uuid.uuid4()
 
-    def send_verification_email(self):
-        pass
+    def send_verification_email(self, from_email=None):
+        project_name = env('PROJECT_NAME', '')
+
+        send_email(
+            txt_template='auth/verification_email.txt',
+            html_template='auth/verification_email.html',
+            to_emails=[self.email],
+            from_email=from_email or env('DEFAULT_FROM_EMAIL'),
+            subject=f'{project_name} Email Verification',
+            first_name=self.first_name,
+            last_name=self.last_name,
+            verification_key=self.verification_key
+        )
 
     @classmethod
     def forgot_password(cls, email):

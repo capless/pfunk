@@ -4,75 +4,29 @@ from pfunk.contrib.email.base import EmailBackend
 
 
 class SESBackend(EmailBackend):
-    region_name = env('SES_REGION_NAME','us-east-1')
+    region_name = env('SES_REGION_NAME', 'us-east-1')
+    charset = "UTF-8"
 
-    def send_email(self, template:str, to_emails:list, from_email:str =None, bcc_emails:list = None):
+
+
+    def send_email(self, subject: str, to_emails: list, html_template: str = None, txt_template: str = None,
+                   from_email: str = None, cc_emails: list = [], bcc_emails: list = [], fail_silently: bool = True,
+                   **kwargs):
+        # Create Boto3 Client
         client = boto3.client("ses", region_name=self.region_name)
-        CHARSET = "UTF-8"
-        html_template = self.get_template(template)
-        html_template.render()
 
         response = client.send_email(
-            Source='string',
+            Source=from_email or env('DEFAULT_FROM_EMAIL'),
             Destination={
-                'ToAddresses': [
-                    'string',
-                ],
-                'CcAddresses': [
-                    'string',
-                ],
-                'BccAddresses': [
-                    'string',
-                ]
+                'ToAddresses': to_emails,
+                'CcAddresses': cc_emails,
+                'BccAddresses': bcc_emails
             },
             Message={
                 'Subject': {
-                    'Data': 'string',
-                    'Charset': 'string'
+                    'Data': subject,
+                    'Charset': self.charset
                 },
-                'Body': {
-                    'Text': {
-                        'Data': 'string',
-                        'Charset': 'string'
-                    },
-                    'Html': {
-                        'Data': 'string',
-                        'Charset': 'string'
-                    }
-                }
-            },
-            ReplyToAddresses=[
-                'string',
-            ],
-            ReturnPath='string',
-            SourceArn='string',
-            ReturnPathArn='string',
-            Tags=[
-                {
-                    'Name': 'string',
-                    'Value': 'string'
-                },
-            ],
-            ConfigurationSetName='string'
+                'Body': self.get_body_kwargs(html_template=html_template, txt_template=txt_template, **kwargs)
+            }
         )
-        #
-        # response = ses_client.send_email(
-        #     Destination={
-        #         "ToAddresses": [
-        #             "abhishek@learnaws.org",
-        #         ],
-        #     },
-        #     Message={
-        #         "Body": {
-        #             "Html": {
-        #                 "Charset": CHARSET,
-        #                 "Data": HTML_EMAIL_CONTENT,
-        #             }
-        #         },
-        #         "Subject": {
-        #             "Charset": CHARSET,
-        #             "Data": "Amazing Email Tutorial",
-        #         },
-        #     },
-        #     Source="abhishek@learnaws.org",
-        # )

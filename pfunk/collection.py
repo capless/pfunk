@@ -374,6 +374,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 except BadRequest:
                     pass
 
+    def call_signals(self, name):
+        signals = getattr(self, name, [])
+        for i in signals:
+            i(self)
+
     def save(self, _credentials=None, _token=None) -> None:
         """
         Save current instance to Fauna
@@ -384,7 +389,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
 
         """
-
+        self.call_signals('pre_validate_signals')
         self.validate()
         data, relational_data = self.get_db_values()
 
@@ -397,6 +402,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             }
 
         if not self.ref:
+            self.call_signals('pre_create_signals')
             resp = self.client(_token=_token).query(
                 q.create(
                     q.collection(self.get_collection_name()),
@@ -404,13 +410,17 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                 ))
             self.ref = resp['ref']
         else:
+            self.call_signals('pre_update_signals')
             self.client(_token=_token).query(
                 q.update(
                     self.ref,
                     data_dict
                 )
             )
+
+        self.call_signals('pre_save_related_signals')
         self._save_related(relational_data, _token=_token)
+        self.call_signals('post_save_signals')
 
     def _get(self, ref, _token=None):
         """
@@ -532,14 +542,16 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
 
         """
-
+        self.call_signals('pre_delete_signals')
         self.client(_token=_token).query(q.delete(self.ref))
-
+        self.call_signals('post_delete_signals')
+        
     @classmethod
     def delete_from_id(cls, id:str, _token=None) -> None:
         c = cls()
+        c.call_signals('pre_delete_signals')
         c.client(_token=_token).query(q.delete(q.ref(q.collection(c.get_collection_name()), id)))
-
+        c.call_signals('post_delete_signals')
     ########
     # JSON #
     ########

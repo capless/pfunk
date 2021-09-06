@@ -68,3 +68,6 @@ class ListView(QuerysetMixin, ActionMixin, JSONView):
     restrict_content_type = False
     action = 'list'
 
+
+class GraphQLView(HTTPView):
+    pass

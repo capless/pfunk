@@ -21,6 +21,7 @@ pip = "^21.2.4"
 cryptography = "^3.4.7"
 cachetools = "^4.2.2"
 click = "^8.0.1"
+boto3 = "^1.18.36"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

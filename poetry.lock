@@ -78,6 +78,38 @@ six = ">=1.9.0"
 webencodings = "*"
 
 [[package]]
+name = "boto3"
+version = "1.18.36"
+description = "The AWS SDK for Python"
+category = "main"
+optional = false
+python-versions = ">= 3.6"
+
+[package.dependencies]
+botocore = ">=1.21.36,<1.22.0"
+jmespath = ">=0.7.1,<1.0.0"
+s3transfer = ">=0.5.0,<0.6.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
+
+[[package]]
+name = "botocore"
+version = "1.21.36"
+description = "Low-level, data-driven core of boto 3."
+category = "main"
+optional = false
+python-versions = ">= 3.6"
+
+[package.dependencies]
+jmespath = ">=0.7.1,<1.0.0"
+python-dateutil = ">=2.1,<3.0.0"
+urllib3 = ">=1.25.4,<1.27"
+
+[package.extras]
+crt = ["awscrt (==0.11.24)"]
+
+[[package]]
 name = "cachetools"
 version = "4.2.2"
 description = "Extensible memoizing collections and decorators"
@@ -411,6 +443,14 @@ MarkupSafe = ">=2.0"
 
 [package.extras]
 i18n = ["Babel (>=2.7)"]
+
+[[package]]
+name = "jmespath"
+version = "0.10.0"
+description = "JSON Matching Expressions"
+category = "main"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "jsonschema"
@@ -791,7 +831,7 @@ python-versions = ">=3.5"
 name = "python-dateutil"
 version = "2.8.1"
 description = "Extensions to the standard Python datetime module"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 
@@ -883,6 +923,20 @@ security = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)"]
 socks = ["PySocks (>=1.5.6,!=1.5.7)", "win-inet-pton"]
 
 [[package]]
+name = "s3transfer"
+version = "0.5.0"
+description = "An Amazon S3 Transfer Manager"
+category = "main"
+optional = false
+python-versions = ">= 3.6"
+
+[package.dependencies]
+botocore = ">=1.12.36,<2.0a.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
+
+[[package]]
 name = "send2trash"
 version = "1.5.0"
 description = "Send file to trash natively under Mac OS X, Windows and Linux."
@@ -894,7 +948,7 @@ python-versions = "*"
 name = "six"
 version = "1.15.0"
 description = "Python 2 and 3 compatibility utilities"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
@@ -1032,7 +1086,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "663e398fce96a28908887a6ea7b067c876c1ca1254919545ba10cc46d5c5b916"
+content-hash = "8802c74c0b7769abee1ac8d0d3b5b4cd5da59a609f4a8839843daf9037b02711"
 
 [metadata.files]
 appnope = [
@@ -1082,6 +1136,14 @@ backcall = [
 bleach = [
     {file = "bleach-3.3.0-py2.py3-none-any.whl", hash = "sha256:6123ddc1052673e52bab52cdc955bcb57a015264a1c57d37bea2f6b817af0125"},
     {file = "bleach-3.3.0.tar.gz", hash = "sha256:98b3170739e5e83dd9dc19633f074727ad848cbedb6026708c8ac2d3b697a433"},
+]
+boto3 = [
+    {file = "boto3-1.18.36-py3-none-any.whl", hash = "sha256:a7fccb61d95230322dd812629455df14167307c569077fa89d297eae73605ffb"},
+    {file = "boto3-1.18.36.tar.gz", hash = "sha256:4df1085f5c24504a1b1a6584947f27b67c26eda123f29d3cecce9b2fd683e09b"},
+]
+botocore = [
+    {file = "botocore-1.21.36-py3-none-any.whl", hash = "sha256:e3e522fbe0bad1197aa7182451dc05f650310e77cf0a77749f6a5e82794c53de"},
+    {file = "botocore-1.21.36.tar.gz", hash = "sha256:5b9a7d30e44b8a0a2bbbde62ae01bf6c349017e836985a0248552b00bbce7fae"},
 ]
 cachetools = [
     {file = "cachetools-4.2.2-py3-none-any.whl", hash = "sha256:2cc0b89715337ab6dbba85b5b50effe2b0c74e035d83ee8ed637cf52f12ae001"},
@@ -1301,6 +1363,10 @@ jedi = [
 jinja2 = [
     {file = "Jinja2-3.0.1-py3-none-any.whl", hash = "sha256:1f06f2da51e7b56b8f238affdd6b4e2c61e39598a378cc49345bc1bd42a978a4"},
     {file = "Jinja2-3.0.1.tar.gz", hash = "sha256:703f484b47a6af502e743c9122595cc812b0271f661722403114f71a79d0f5a4"},
+]
+jmespath = [
+    {file = "jmespath-0.10.0-py2.py3-none-any.whl", hash = "sha256:cdf6525904cc597730141d61b36f2e4b8ecc257c420fa2f4549bac2c2d0cb72f"},
+    {file = "jmespath-0.10.0.tar.gz", hash = "sha256:b85d0567b8666149a93172712e68920734333c0ce7e89b78b3e987f71e5ed4f9"},
 ]
 jsonschema = [
     {file = "jsonschema-3.2.0-py2.py3-none-any.whl", hash = "sha256:4e5b3cf8216f577bee9ce139cbe72eca3ea4f292ec60928ff24758ce626cd163"},
@@ -1545,6 +1611,10 @@ qtpy = [
 requests = [
     {file = "requests-2.25.1-py2.py3-none-any.whl", hash = "sha256:c210084e36a42ae6b9219e00e48287def368a26d03a048ddad7bfee44f75871e"},
     {file = "requests-2.25.1.tar.gz", hash = "sha256:27973dd4a904a4f13b263a19c866c13b92a39ed1c964655f025f3f8d3d75b804"},
+]
+s3transfer = [
+    {file = "s3transfer-0.5.0-py3-none-any.whl", hash = "sha256:9c1dc369814391a6bda20ebbf4b70a0f34630592c9aa520856bf384916af2803"},
+    {file = "s3transfer-0.5.0.tar.gz", hash = "sha256:50ed823e1dc5868ad40c8dc92072f757aa0e653a192845c94a3b676f4a62da4c"},
 ]
 send2trash = [
     {file = "Send2Trash-1.5.0-py3-none-any.whl", hash = "sha256:f1691922577b6fa12821234aeb57599d887c4900b9ca537948d2dac34aea888b"},

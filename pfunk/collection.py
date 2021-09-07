@@ -308,7 +308,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         except AttributeError:
             return None
 
-
         for i in meta_unique_together:
             fields = '_'.join(i)
             name = f'{self.get_class_name()}_unique_{fields}'
@@ -375,7 +374,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                     pass
 
     def call_signals(self, name):
-        signals = getattr(self, name, [])
+        signals = getattr(self, name) or []
         for i in signals:
             i(self)
 
@@ -545,7 +544,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         self.call_signals('pre_delete_signals')
         self.client(_token=_token).query(q.delete(self.ref))
         self.call_signals('post_delete_signals')
-        
+
     @classmethod
     def delete_from_id(cls, id:str, _token=None) -> None:
         c = cls()
@@ -563,7 +562,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             'ref': ref,
             'data': field_data
         }
-
         return obj
 
     #######

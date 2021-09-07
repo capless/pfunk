@@ -2,11 +2,12 @@ from faunadb.errors import NotFound as FaunaNotFound, PermissionDenied, BadReque
 from valley.exceptions import ValidationException
 from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.routing import Rule
+from werkzeug.http import dump_cookie
 
-from pfunk.exceptions import TokenValidationFailed
+from pfunk.exceptions import TokenValidationFailed, LoginFailed
 from pfunk.web.request import Request, RESTRequest, HTTPRequest
 from pfunk.web.response import (Response, HttpNotFoundResponse, HttpForbiddenResponse, HttpBadRequestResponse,
-                                HttpMethodNotAllowedResponse)
+                                HttpMethodNotAllowedResponse, HttpUnauthorizedResponse)
 
 
 class View(object):
@@ -18,15 +19,19 @@ class View(object):
     forbidden_class: HttpForbiddenResponse = HttpForbiddenResponse
     bad_request_class: HttpBadRequestResponse = HttpBadRequestResponse
     method_not_allowed_class: HttpMethodNotAllowedResponse = HttpMethodNotAllowedResponse
+    unauthorized_class: HttpUnauthorizedResponse = HttpUnauthorizedResponse
     login_required = True
     http_methods: list = ['get']
     content_type_accepted: str
     restrict_content_type: bool = False
+    action: str = ''
 
     def __init__(self, collection, auth_required=True):
         self.collection = collection
         self.request: Request
         self.context: object
+        self.headers = {}
+        self.cookies = {}
 
     @classmethod
     def url(cls, collection):
@@ -65,10 +70,16 @@ class View(object):
             return self.not_found_class()
         except (PermissionDenied, TokenValidationFailed):
             return self.forbidden_class()
-        except (BadRequest, ValidationException) as e:
+        except (BadRequest, ) as e:
             return self.bad_request_class(payload=str(e))
+        except (ValidationException, ) as e:
+            key, value = str(e).split(':')
+            return self.bad_request_class(payload={'validation_errors': {key:value}})
         except (MethodNotAllowed,):
             return self.method_not_allowed_class()
+        except (LoginFailed, ) as e:
+            return self.unauthorized_class(payload=str(e))
+
         return response
 
     @classmethod
@@ -82,8 +93,38 @@ class View(object):
 
     def get_response(self):
         return self.get_response_class()(
-            payload=''
+            payload='',
+            headers=self.get_headers()
         )
+
+    def set_cookie(self, key: str, value: str = "",
+        max_age: int = None,
+        expires: int = None,
+        path: str = "/",
+        domain: str = None,
+        secure: bool = True,
+        httponly: bool = True,
+        charset: str = "utf-8",
+        sync_expires: bool = True,
+        max_size: int = 4093,
+        samesite: str = None):
+        self.cookies[key] = dump_cookie(key,value=value, max_age=max_age, expires=expires, path=path, domain=domain,
+                                        secure=secure, httponly=httponly, charset=charset, sync_expires=sync_expires,
+                                        max_size=max_size, samesite=samesite)
+
+    def get_headers(self):
+        if len(self.cookies.keys()) > 0:
+            cookie_list = []
+            for k, v in self.cookies.items():
+                cookie_list.append(v)
+            self.headers['Set-Cookie'] = ','.join(cookie_list)
+        return self.headers
+
+    def get_query(self):
+        raise NotImplementedError
+
+    def get_query_kwargs(self):
+        raise NotImplementedError
 
     def put(self, **kwargs):
         return self.get_response()

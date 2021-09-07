@@ -3,16 +3,18 @@ import json
 import random
 import datetime
 
-import dateutil
+
 import jwt
 from cachetools.func import ttl_cache
 from cryptography.fernet import Fernet
+from dateutil import tz
 from envs import env
 from faunadb.errors import BadRequest
 from werkzeug.utils import cached_property
 
 from pfunk import StringField, Collection, Enum, EnumField
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole
+from pfunk.contrib.auth.views import LoginView, SignUpView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField
@@ -20,6 +22,57 @@ from pfunk.client import q
 
 
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
+
+
+class Key(Collection):
+    signature_key = StringField(required=True, unique=True)
+    payload_key = StringField(required=True, unique=True)
+    use_crud_views = False
+
+    @classmethod
+    def create_key(cls):
+        c = cls()
+        if len(c.all()) >= 10:
+            k = c.get_key()
+            k.delete()
+
+        return c.create(signature_key=Fernet.generate_key().decode(),
+                        payload_key=Fernet.generate_key().decode())
+
+    @classmethod
+    @ttl_cache(maxsize=32, ttl=60)
+    def get_keys(cls):
+        return cls.all()
+
+    @classmethod
+    def get_key(cls):
+        return random.choice(cls.get_keys())
+
+    @classmethod
+    def create_jwt(cls, secret_claims):
+        key = cls.get_key()
+        pay_f = Fernet(key.payload_key)
+        gmt = tz.gettz('GMT')
+        now = datetime.datetime.now(tz=gmt)
+        exp = now + datetime.timedelta(days=1)
+        payload = {
+            'iat': now.timestamp(),
+            'exp': exp.timestamp(),
+            'nbf': now.timestamp(),
+            'iss': env('PROJECT_NAME', 'pfunk'),
+            'til': pay_f.encrypt(json.dumps(secret_claims).encode()).decode()
+        }
+        return jwt.encode(payload, key.signature_key, algorithm="HS256", headers={'kid': key.ref.id()}), exp
+
+    @classmethod
+    def decrypt_jwt(cls, encoded):
+        headers = jwt.get_unverified_header(encoded)
+        key = Key.get(headers.get('kid'))
+        decoded = jwt.decode(encoded, key.signature_key, algorithms="HS256", verify=True,
+                             options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
+        pay_f = Fernet(key.payload_key.encode())
+        k = pay_f.decrypt(decoded.get('til').encode())
+        return json.loads(k.decode())
 
 
 class Group(Collection):
@@ -44,6 +97,8 @@ class BaseUser(Collection):
     collection_roles = [Public, UserRole]
     non_public_fields = ['groups']
     use_email_verification = True
+    # Views
+    collection_views = [LoginView, SignUpView]
     # Signals
     pre_save_signals = [send_verification_email]
     # Fields
@@ -66,6 +121,22 @@ class BaseUser(Collection):
             )
         except BadRequest:
             raise LoginFailed('The login credentials you entered are incorrect.')
+
+    @classmethod
+    def get_permissions(cls, ref, _token=None):
+        return []
+
+    @classmethod
+    def api_login(cls, username, password, _token=None):
+        token = cls.login(username=username, password=password, _token=_token)
+        user = cls.get_current_user(_token=token)
+        claims = user.to_dict().copy()
+        try:
+            claims.get('data').pop('verification_key')
+        except KeyError:
+            pass
+        claims['token'] = token
+        return Key.create_jwt(claims)
 
     @classmethod
     def get_from_id(cls, _token=None):
@@ -100,7 +171,10 @@ class BaseUser(Collection):
     def signup(cls, _token=None, **kwargs):
         data = kwargs
         data['account_status'] = 'INACTIVE'
-        data.pop('groups')
+        try:
+            data.pop('groups')
+        except KeyError:
+            pass
         cls.create(**data, _token=_token)
 
     @classmethod
@@ -189,53 +263,3 @@ class User(BaseUser):
         return ug
 
 
-class Key(Collection):
-    signature_key = StringField(required=True, unique=True)
-    payload_key = StringField(required=True, unique=True)
-    use_crud_views = False
-
-    @classmethod
-    def create_key(cls):
-        c = cls()
-        if len(c.all()) >= 10:
-            k = c.get_key()
-            k.delete()
-
-
-        return c.create(signature_key=Fernet.generate_key().decode(),
-                        payload_key=Fernet.generate_key().decode())
-
-    @classmethod
-    @ttl_cache(maxsize=32, ttl=60)
-    def get_keys(cls):
-        return cls.all()
-
-    @classmethod
-    def get_key(cls):
-        return random.choice(cls.get_keys())
-
-    @classmethod
-    def create_jwt(cls, secret_claims):
-        key = cls.get_key()
-        pay_f = Fernet(key.payload_key)
-        gmt = dateutil.tz.gettz('GMT')
-        now = datetime.datetime.now(tz=gmt)
-        exp = now + datetime.timedelta(days=1)
-        payload = {
-            'iat': now.timestamp(),
-            'exp': exp.timestamp(),
-            'nbf': now.timestamp(),
-            'iss': env('CORKY_ISSUER', 'corky'),
-            'til': pay_f.encrypt(json.dumps(secret_claims).encode()).decode()
-        }
-        return jwt.encode(payload, key.signature_key, algorithm="HS256", headers={'kid': key.ref.id()}), exp
-
-    @classmethod
-    def decrypt_jwt(cls, encoded):
-        headers = jwt.get_unverified_header(encoded)
-        key = Key.get(headers.get('kid'))
-        decoded = jwt.decode(encoded, key.signature_key, algorithms="HS256", verify=True,
-                             options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
-        pay_f = Fernet(key.payload_key.encode())
-        k = pay_f.decrypt(decoded.get('til').encode())
-        return json.loads(k.decode())

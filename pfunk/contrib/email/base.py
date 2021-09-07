@@ -1,4 +1,5 @@
-from jinja2.loaders import FileSystemLoader, Environment
+from jinja2 import Environment
+from jinja2.loaders import FileSystemLoader
 from envs import env
 from valley.utils import import_util
 

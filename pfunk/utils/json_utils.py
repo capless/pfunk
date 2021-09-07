@@ -17,4 +17,7 @@ class PFunkEncoder(ValleyEncoder):
         if hasattr(obj, 'get_collection_name'):
             if obj._lazied:
                 obj = obj._get(obj.ref.id())
-        return super(PFunkEncoder, self).default(obj)
+        try:
+            return super(PFunkEncoder, self).default(obj)
+        except AttributeError:
+            return str(obj)

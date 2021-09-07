@@ -1,5 +1,5 @@
 from pfunk.web.response import JSONResponse, JSONNotFoundResponse, JSONBadRequestResponse, \
-    JSONMethodNotAllowedResponse
+    JSONMethodNotAllowedResponse, JSONUnauthorizedResponse
 from pfunk.client import q
 from pfunk.web.views.base import ActionMixin, HTTPView, IDMixin, ObjectMixin, QuerysetMixin, UpdateMixin
 
@@ -11,10 +11,12 @@ class JSONView(HTTPView):
     not_found_class = JSONNotFoundResponse
     bad_request_class = JSONBadRequestResponse
     method_not_allowed_class = JSONMethodNotAllowedResponse
+    unauthorized_class: JSONUnauthorizedResponse = JSONUnauthorizedResponse
 
     def get_response(self):
         return self.response_class(
-            payload=self.get_query()
+            payload=self.get_query(),
+            headers=self.get_headers()
         )
 
 

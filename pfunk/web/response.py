@@ -11,7 +11,6 @@ class Response(object):
     def __init__(self, payload=None, headers={}, *args, **kwargs):
         self.raw_payload = payload or self.default_payload
         self.raw_headers = headers
-        self.cookies = {}
 
     @property
     def body(self):
@@ -21,7 +20,7 @@ class Response(object):
     def headers(self):
         headers = {'Content-Type': self.content_type}
         headers.update(self.raw_headers)
-        headers.update(self.cookies)
+
         return headers
 
     @property
@@ -61,6 +60,12 @@ class MethodNotAllowedResponseMixin(object):
     success: bool = False
 
 
+class UnauthorizedResponseMixin(object):
+    status_code = 401
+    default_payload = 'Unauthorized'
+    success: bool = False
+
+
 class JSONResponse(Response):
     content_type: str = 'application/json'
     success: bool = True
@@ -71,6 +76,14 @@ class JSONResponse(Response):
             'success': self.success,
             'data': self.raw_payload
         }, cls=PFunkEncoder)
+
+
+class JSONUnauthorizedResponse(UnauthorizedResponseMixin, JSONResponse):
+    pass
+
+
+class HttpUnauthorizedResponse(UnauthorizedResponseMixin, Response):
+    pass
 
 
 class JSONNotFoundResponse(NotFoundResponseMixin, JSONResponse):

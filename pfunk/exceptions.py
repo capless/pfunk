@@ -13,3 +13,8 @@ class DocNotFound(Exception):
 class TokenValidationFailed(Exception):
     """Exception raised when a JWT validation fails"""
     pass
+
+
+class Unauthorized(Exception):
+    """Exception raised when the request is not authorized"""
+    pass

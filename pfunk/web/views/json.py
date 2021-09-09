@@ -1,5 +1,5 @@
 from pfunk.web.response import JSONResponse, JSONNotFoundResponse, JSONBadRequestResponse, \
-    JSONMethodNotAllowedResponse, JSONUnauthorizedResponse
+    JSONMethodNotAllowedResponse, JSONUnauthorizedResponse, JSONForbiddenResponse
 from pfunk.client import q
 from pfunk.web.views.base import ActionMixin, HTTPView, IDMixin, ObjectMixin, QuerysetMixin, UpdateMixin
 
@@ -12,6 +12,7 @@ class JSONView(HTTPView):
     bad_request_class = JSONBadRequestResponse
     method_not_allowed_class = JSONMethodNotAllowedResponse
     unauthorized_class: JSONUnauthorizedResponse = JSONUnauthorizedResponse
+    forbidden_class = JSONForbiddenResponse
 
     def get_response(self):
         return self.response_class(
@@ -23,9 +24,10 @@ class JSONView(HTTPView):
 class CreateView(UpdateMixin, ActionMixin, JSONView):
     action = 'create'
     http_methods = ['put']
+    login_required = True
 
     def get_query(self):
-        obj = self.collection.create(**self.get_query_kwargs())
+        obj = self.collection.create(**self.get_query_kwargs(), _token=self.request.token)
         return obj
 
     def get_m2m_kwargs(self, obj):
@@ -45,9 +47,10 @@ class CreateView(UpdateMixin, ActionMixin, JSONView):
 class UpdateView(UpdateMixin, IDMixin, JSONView):
     action = 'update'
     http_methods = ['post']
+    login_required = True
 
     def get_query(self):
-        obj = self.collection.get(self.request.kwargs.get('id'))
+        obj = self.collection.get(self.request.kwargs.get('id'), _token=self.request.token)
         obj._data.update(self.get_query_kwargs())
         obj.save()
         return obj
@@ -56,19 +59,23 @@ class UpdateView(UpdateMixin, IDMixin, JSONView):
 class DetailView(ObjectMixin, IDMixin, JSONView):
     action = 'detail'
     restrict_content_type = False
+    login_required = True
 
-    
+
 class DeleteView(ObjectMixin, IDMixin, JSONView):
     action = 'delete'
     http_methods = ['delete']
+    login_required = True
 
     def get_query(self):
-        return self.collection.delete_from_id(self.request.kwargs.get('id'), **self.get_query_kwargs())
+        return self.collection.delete_from_id(self.request.kwargs.get('id'), _token=self.request.token,
+                                              **self.get_query_kwargs())
 
 
 class ListView(QuerysetMixin, ActionMixin, JSONView):
     restrict_content_type = False
     action = 'list'
+    login_required = True
 
 
 class GraphQLView(HTTPView):

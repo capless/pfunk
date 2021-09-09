@@ -12,12 +12,12 @@ from envs import env
 from faunadb.errors import BadRequest
 from werkzeug.utils import cached_property
 
-from pfunk import StringField, Collection, Enum, EnumField
+from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole
 from pfunk.contrib.auth.views import LoginView, SignUpView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed
-from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField
+from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
 from pfunk.client import q
 
 
@@ -122,8 +122,7 @@ class BaseUser(Collection):
         except BadRequest:
             raise LoginFailed('The login credentials you entered are incorrect.')
 
-    @classmethod
-    def get_permissions(cls, ref, _token=None):
+    def permissions(self, _token=None):
         return []
 
     @classmethod
@@ -136,6 +135,8 @@ class BaseUser(Collection):
         except KeyError:
             pass
         claims['token'] = token
+        claims['permissions'] = user.permissions()
+
         return Key.create_jwt(claims)
 
     @classmethod

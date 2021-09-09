@@ -1,10 +1,13 @@
+from envs import env
 from faunadb.errors import NotFound as FaunaNotFound, PermissionDenied, BadRequest
+from jwt import InvalidSignatureError
 from valley.exceptions import ValidationException
 from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.routing import Rule
 from werkzeug.http import dump_cookie
 
-from pfunk.exceptions import TokenValidationFailed, LoginFailed
+
+from pfunk.exceptions import TokenValidationFailed, LoginFailed, Unauthorized
 from pfunk.web.request import Request, RESTRequest, HTTPRequest
 from pfunk.web.response import (Response, HttpNotFoundResponse, HttpForbiddenResponse, HttpBadRequestResponse,
                                 HttpMethodNotAllowedResponse, HttpUnauthorizedResponse)
@@ -50,14 +53,14 @@ class View(object):
 
         self.request = request
 
+
         if self.restrict_content_type:
             if request.headers.get('content-type') != self.content_type_accepted:
                 return self.bad_request_class('Wrong content-type')
         self.lambda_context = context
 
         response = self.process_request()
-        if not isinstance(self.request, Request):
-            return response
+
         return response
 
     def get_context(self):
@@ -65,10 +68,12 @@ class View(object):
 
     def process_request(self):
         try:
+            if self.login_required:
+                self.token_check()
             response = getattr(self, self.request.method.lower())()
         except (FaunaNotFound, NotFound):
             return self.not_found_class()
-        except (PermissionDenied, TokenValidationFailed):
+        except (PermissionDenied):
             return self.forbidden_class()
         except (BadRequest, ) as e:
             return self.bad_request_class(payload=str(e))
@@ -79,9 +84,29 @@ class View(object):
             return self.method_not_allowed_class()
         except (LoginFailed, ) as e:
             return self.unauthorized_class(payload=str(e))
+        except (Unauthorized, InvalidSignatureError, TokenValidationFailed):
+            return self.unauthorized_class()
 
         return response
 
+    def get_token(self):
+        from pfunk.contrib.auth.collections import Key
+        enc_token = self.request.cookies.get(env('TOKEN_COOKIE_NAME', 'tk'))
+        if not enc_token:
+            enc_token = self.request.headers.get('Authorization')
+        if not enc_token:
+            return
+        token = Key.decrypt_jwt(enc_token)
+        return token
+
+    def token_check(self):
+        if self.login_required:
+            token = self.get_token()
+            if token:
+                self.request.jwt = token
+                self.request.token = token.get('token')
+            else:
+                raise Unauthorized
     @classmethod
     def as_view(cls, collection):
         c = cls(collection)
@@ -108,6 +133,9 @@ class View(object):
         sync_expires: bool = True,
         max_size: int = 4093,
         samesite: str = None):
+        debug = env('DEBUG', True, var_type='boolean')
+        if debug:
+            secure = False
         self.cookies[key] = dump_cookie(key,value=value, max_age=max_age, expires=expires, path=path, domain=domain,
                                         secure=secure, httponly=httponly, charset=charset, sync_expires=sync_expires,
                                         max_size=max_size, samesite=samesite)
@@ -174,6 +202,8 @@ class QuerysetMixin(object):
         }
         if self.request.query_params.get('page_size'):
             kwargs['page_size'] = query_kwargs.get('page_size')
+        kwargs['_token'] = self.request.token
+        print('Kwargs: ', kwargs)
         return kwargs
 
 
@@ -183,7 +213,7 @@ class ObjectMixin(object):
         return self.collection.get(self.request.kwargs.get('id'), **self.get_query_kwargs())
 
     def get_query_kwargs(self):
-        return {}
+        return {'_token': self.request.token}
 
 
 class UpdateMixin(object):
@@ -198,7 +228,7 @@ class UpdateMixin(object):
             if current_value:
                 obj = col.get(current_value)
                 data[k] = obj
-        print('Before Data: ', data)
+
         return data
 
 

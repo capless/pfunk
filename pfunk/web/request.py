@@ -12,7 +12,8 @@ class Request(object):
         self.kwargs = kwargs
 
         self.user = None
-        self.token: str
+        self.token: str = None
+        self.jwt: str = None
         
     def get_cookies(self, raw_cookies):
         return raw_cookies

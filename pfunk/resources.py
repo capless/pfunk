@@ -221,3 +221,23 @@ class Index(object):
 
         """
         return self.collection.client().query(q.delete(q.index(self.name)))
+
+
+class Filter(Function):
+    indexes: list = []
+
+    def get_body(self):
+        return q.query(
+            q.lambda_(["input"],
+                      q.map_(
+                          q.lambda_(['ref'],
+                                    q.get(q.var('ref'))
+                                    ),
+                          q.paginate(
+                              q.match(q.index(self.collection.all_index_name())),
+                              q.select('size', q.var('input'))
+                          )
+                      )
+                      )
+        )
+

@@ -1,8 +1,7 @@
-import uuid
+import datetime
 import json
 import random
-import datetime
-
+import uuid
 
 import jwt
 from cachetools.func import ttl_cache
@@ -12,14 +11,13 @@ from envs import env
 from faunadb.errors import BadRequest
 from werkzeug.utils import cached_property
 
+from pfunk.client import q
 from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole
-from pfunk.contrib.auth.views import LoginView, SignUpView
+from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
-from pfunk.client import q
-
 
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
@@ -84,10 +82,13 @@ class Group(Collection):
         return self.name  # pragma: no cover
 
 
-def send_verification_email(doc):
+def attach_verification_key(doc):
     if not doc.ref and doc.use_email_verification:
         doc.attach_verification_key()
-        doc.send_verification_email()
+
+
+def send_verification_email(doc):
+    doc.send_verification_email()
 
 
 class BaseUser(Collection):
@@ -98,9 +99,10 @@ class BaseUser(Collection):
     non_public_fields = ['groups']
     use_email_verification = True
     # Views
-    collection_views = [LoginView, SignUpView]
+    collection_views = [LoginView, SignUpView, VerifyEmailView]
     # Signals
-    pre_save_signals = [send_verification_email]
+    pre_create_signals = [attach_verification_key]
+    post_create_signals = [send_verification_email]
     # Fields
     username = StringField(required=True, unique=True)
     first_name = StringField(required=True)
@@ -149,6 +151,13 @@ class BaseUser(Collection):
 
     def attach_verification_key(self):
         self.verification_key = uuid.uuid4()
+
+    @classmethod
+    def verify_email(cls, verification_key):
+        user = cls.get_by('unique_User_verification_key', [verification_key])
+        user.verification_key = ''
+        user.account_status = 'ACTIVE'
+        user.save()
 
     def send_verification_email(self, from_email=None):
         project_name = env('PROJECT_NAME', '')
@@ -262,5 +271,3 @@ class User(BaseUser):
             ug.ref = user_group
         ug.save()
         return ug
-
-

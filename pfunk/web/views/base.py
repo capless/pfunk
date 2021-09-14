@@ -3,11 +3,10 @@ from faunadb.errors import NotFound as FaunaNotFound, PermissionDenied, BadReque
 from jwt import InvalidSignatureError
 from valley.exceptions import ValidationException
 from werkzeug.exceptions import NotFound, MethodNotAllowed
-from werkzeug.routing import Rule
 from werkzeug.http import dump_cookie
+from werkzeug.routing import Rule
 
-
-from pfunk.exceptions import TokenValidationFailed, LoginFailed, Unauthorized
+from pfunk.exceptions import TokenValidationFailed, LoginFailed, Unauthorized, DocNotFound, GraphQLError
 from pfunk.web.request import Request, RESTRequest, HTTPRequest
 from pfunk.web.response import (Response, HttpNotFoundResponse, HttpForbiddenResponse, HttpBadRequestResponse,
                                 HttpMethodNotAllowedResponse, HttpUnauthorizedResponse)
@@ -29,7 +28,7 @@ class View(object):
     restrict_content_type: bool = False
     action: str = ''
 
-    def __init__(self, collection, auth_required=True):
+    def __init__(self, collection=None):
         self.collection = collection
         self.request: Request
         self.context: object
@@ -53,7 +52,6 @@ class View(object):
 
         self.request = request
 
-
         if self.restrict_content_type:
             if request.headers.get('content-type') != self.content_type_accepted:
                 return self.bad_request_class('Wrong content-type')
@@ -71,18 +69,18 @@ class View(object):
             if self.login_required:
                 self.token_check()
             response = getattr(self, self.request.method.lower())()
-        except (FaunaNotFound, NotFound):
+        except (FaunaNotFound, NotFound, DocNotFound):
             return self.not_found_class()
-        except (PermissionDenied):
+        except PermissionDenied:
             return self.forbidden_class()
-        except (BadRequest, ) as e:
+        except (BadRequest, GraphQLError) as e:
             return self.bad_request_class(payload=str(e))
-        except (ValidationException, ) as e:
+        except (ValidationException,) as e:
             key, value = str(e).split(':')
-            return self.bad_request_class(payload={'validation_errors': {key:value}})
+            return self.bad_request_class(payload={'validation_errors': {key: value}})
         except (MethodNotAllowed,):
             return self.method_not_allowed_class()
-        except (LoginFailed, ) as e:
+        except (LoginFailed,) as e:
             return self.unauthorized_class(payload=str(e))
         except (Unauthorized, InvalidSignatureError, TokenValidationFailed):
             return self.unauthorized_class()
@@ -92,8 +90,9 @@ class View(object):
     def get_token(self):
         from pfunk.contrib.auth.collections import Key
         enc_token = self.request.cookies.get(env('TOKEN_COOKIE_NAME', 'tk'))
+
         if not enc_token:
-            enc_token = self.request.headers.get('Authorization')
+            enc_token = self.request.headers.get('Authorization', None)
         if not enc_token:
             return
         token = Key.decrypt_jwt(enc_token)
@@ -107,8 +106,9 @@ class View(object):
                 self.request.token = token.get('token')
             else:
                 raise Unauthorized
+
     @classmethod
-    def as_view(cls, collection):
+    def as_view(cls, collection=None):
         c = cls(collection)
 
         def view(request, context, kwargs):
@@ -123,20 +123,20 @@ class View(object):
         )
 
     def set_cookie(self, key: str, value: str = "",
-        max_age: int = None,
-        expires: int = None,
-        path: str = "/",
-        domain: str = None,
-        secure: bool = True,
-        httponly: bool = True,
-        charset: str = "utf-8",
-        sync_expires: bool = True,
-        max_size: int = 4093,
-        samesite: str = None):
+                   max_age: int = None,
+                   expires: int = None,
+                   path: str = "/",
+                   domain: str = None,
+                   secure: bool = True,
+                   httponly: bool = True,
+                   charset: str = "utf-8",
+                   sync_expires: bool = True,
+                   max_size: int = 4093,
+                   samesite: str = None):
         debug = env('DEBUG', True, var_type='boolean')
         if debug:
             secure = False
-        self.cookies[key] = dump_cookie(key,value=value, max_age=max_age, expires=expires, path=path, domain=domain,
+        self.cookies[key] = dump_cookie(key, value=value, max_age=max_age, expires=expires, path=path, domain=domain,
                                         secure=secure, httponly=httponly, charset=charset, sync_expires=sync_expires,
                                         max_size=max_size, samesite=samesite)
 
@@ -203,7 +203,6 @@ class QuerysetMixin(object):
         if self.request.query_params.get('page_size'):
             kwargs['page_size'] = query_kwargs.get('page_size')
         kwargs['_token'] = self.request.token
-        print('Kwargs: ', kwargs)
         return kwargs
 
 

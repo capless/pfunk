@@ -1,5 +1,3 @@
-import json
-
 from envs import env
 from faunadb.errors import BadRequest
 from valley.contrib import Schema
@@ -72,7 +70,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             'collection_name']
     """List of class variables that are not allowed a field names. """
 
-    def __init__(self, _ref: object=None, _lazied:bool=False, **kwargs) -> None:
+    def __init__(self, _ref: object = None, _lazied: bool = False, **kwargs) -> None:
         """
         Args:
             _ref: Fauna ref instance (faunadb.objects.Ref)
@@ -107,7 +105,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: dict
 
         """
-        return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k not in self.non_public_fields}
+        return {k: q.select(k, q.var("input")) for k, v in self._base_properties.items() if
+                k not in self.non_public_fields}
 
     def get_collection_name(self) -> str:
         """
@@ -168,7 +167,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         return f"all_{self.get_verbose_plural_name()}_function"
 
-    def call_function(self, func_name:str, _validate:bool=False, _token:str=None, **kwargs):
+    def call_function(self, func_name: str, _validate: bool = False, _token: str = None, **kwargs):
         """
         Call a Fauna user defined function (UDF).
         Args:
@@ -233,13 +232,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
         if not test_mode:
-            print(f'Published {cls.get_class_name()} functions successfully!')  #pragma: no cover
+            print(f'Published {cls.get_class_name()} functions successfully!')  # pragma: no cover
         cls.publish_indexes()
         if not test_mode:
-            print(f'Published {cls.get_class_name()} indexes successfully!') #pragma: no cover
+            print(f'Published {cls.get_class_name()} indexes successfully!')  # pragma: no cover
         cls.publish_roles()
         if not test_mode:
-            print(f'Published {cls.get_class_name()} roles successfully!') #pragma: no cover
+            print(f'Published {cls.get_class_name()} roles successfully!')  # pragma: no cover
 
     @classmethod
     def publish_functions(cls) -> None:
@@ -315,12 +314,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             unique = True
             source = self.get_collection_name()
 
-            Indy = type(self.get_collection_name().capitalize()+''.join([f.capitalize() for f in i])+'Index', (Index, ), {
-                'name': name,
-                'terms': terms,
-                'unique': unique,
-                'source': source
-            })
+            Indy = type(self.get_collection_name().capitalize() + ''.join([f.capitalize() for f in i]) + 'Index',
+                        (Index,), {
+                            'name': name,
+                            'terms': terms,
+                            'unique': unique,
+                            'source': source
+                        })
             self.collection_indexes.add(Indy)
 
     def get_db_values(self) -> tuple:
@@ -363,10 +363,10 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                         q.create(
                             q.collection(k),
                             {
-                               "data": {
-                                   f"{self.get_class_name()}ID": self.ref,
-                                   f"{i.get_class_name()}ID": i.ref
-                               }
+                                "data": {
+                                    f"{self.get_class_name()}ID": self.ref,
+                                    f"{i.get_class_name()}ID": i.ref
+                                }
                             }
                         )
                     )
@@ -377,6 +377,18 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         signals = getattr(self, name) or []
         for i in signals:
             i(self)
+
+    def get_data_dict(self, _credentials=None):
+        data, relational_data = self.get_db_values()
+
+        data_dict = dict()
+        data_dict['data'] = data
+
+        if _credentials:
+            data_dict['credentials'] = {
+                'password': _credentials
+            }
+        return data_dict, relational_data
 
     def save(self, _credentials=None, _token=None) -> None:
         """
@@ -390,25 +402,19 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
         self.call_signals('pre_validate_signals')
         self.validate()
-        data, relational_data = self.get_db_values()
-
-        data_dict = dict()
-        data_dict['data'] = data
-
-        if _credentials:
-            data_dict['credentials'] = {
-                'password': _credentials
-            }
 
         if not self.ref:
             self.call_signals('pre_create_signals')
+            data_dict, relational_data = self.get_data_dict(_credentials=_credentials)
             resp = self.client(_token=_token).query(
                 q.create(
                     q.collection(self.get_collection_name()),
                     data_dict
                 ))
             self.ref = resp['ref']
+            self.call_signals('post_create_signals')
         else:
+            data_dict, relational_data = self.get_data_dict(_credentials=_credentials)
             self.call_signals('pre_update_signals')
             self.client(_token=_token).query(
                 q.update(
@@ -469,8 +475,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         """
 
-        return cls.get_index(cls().all_index_name(), page_size=page_size, after=after, before=before, ts=ts, events=events,
-                       sources=sources, _token=_token)
+        return cls.get_index(cls().all_index_name(), page_size=page_size, after=after, before=before, ts=ts,
+                             events=events,
+                             sources=sources, _token=_token)
 
     @classmethod
     def get_by(cls, index_name, terms=[], use_map=True):
@@ -546,11 +553,12 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         self.call_signals('post_delete_signals')
 
     @classmethod
-    def delete_from_id(cls, id:str, _token=None) -> None:
+    def delete_from_id(cls, id: str, _token=None) -> None:
         c = cls()
         c.call_signals('pre_delete_signals')
         c.client(_token=_token).query(q.delete(q.ref(q.collection(c.get_collection_name()), id)))
         c.call_signals('post_delete_signals')
+
     ########
     # JSON #
     ########

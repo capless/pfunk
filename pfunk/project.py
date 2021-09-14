@@ -1,5 +1,5 @@
 import logging
-from functools import lru_cache
+
 
 import requests
 from io import BytesIO
@@ -10,7 +10,7 @@ from faunadb.client import FaunaClient
 from jinja2 import Template
 from valley.contrib import Schema
 
-from valley.properties import CharProperty, ForeignProperty, ForeignListProperty
+from valley.properties import CharProperty, ForeignProperty
 from valley.utils import import_util
 from werkzeug import Request as WerkzeugRequest
 from werkzeug.exceptions import NotFound, MethodNotAllowed
@@ -23,6 +23,8 @@ from pfunk.web.response import HttpNotFoundResponse, JSONMethodNotAllowedRespons
 from .collection import Collection
 from .fields import ForeignList
 from .template import graphql_template
+from .utils.publishing import BearerAuth
+from .web.views.graphql import GraphQLView
 
 logger = logging.getLogger('pfunk')
 
@@ -41,23 +43,6 @@ API_EVENT_TYPES = {
             'headers', 'requestContext', 'isBase64Encoded'
         ]
     }
-
-
-class BearerAuth(requests.auth.AuthBase):
-    """
-    Bearer Token Auth class for the requests library.
-    """
-    def __init__(self, token):
-        """
-
-        Args:
-            token: Fauna secret token
-        """
-        self.token = token
-
-    def __call__(self, r):
-        r.headers["authorization"] = "Bearer " + self.token
-        return r
 
 
 class Project(Schema):
@@ -195,7 +180,7 @@ class Project(Schema):
         else:
             secret = env('FAUNA_SECRET')
         resp = requests.post(
-            env('FAUNA_GRAPHQL_URL', 'https://graphql.fauna.com/import'),
+            env('FAUNA_GRAPHQL_IMPORT_URL', 'https://graphql.fauna.com/import'),
             params={'mode': mode},
             auth=BearerAuth(secret),
             data=gql_io
@@ -270,7 +255,7 @@ class Project(Schema):
 
     @cached_property
     def urls(self):
-        rules = []
+        rules = [GraphQLView.url()]
         for i in self.collections:
             col = i()
             rules.extend(col.urls)

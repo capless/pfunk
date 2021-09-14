@@ -18,3 +18,8 @@ class TokenValidationFailed(Exception):
 class Unauthorized(Exception):
     """Exception raised when the request is not authorized"""
     pass
+
+
+class GraphQLError(Exception):
+    """Graphql SyntaxError"""
+    pass

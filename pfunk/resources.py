@@ -2,7 +2,7 @@ import re
 
 from faunadb.query import query
 
-from pfunk.utils.publishing import create_or_update_function, create_or_update_role
+from pfunk.utils.publishing import create_or_update_function, create_or_update_role, create_or_pass_index
 from pfunk.client import q
 
 
@@ -162,8 +162,8 @@ class Role(Resource):
 class Index(object):
     name: str = None
     source: str = None
-    unique: bool = False
-    serialized: bool = True
+    unique: bool = None
+    serialized: bool = None
     terms: list = None
     values: list = None
     _accept_kwargs: list = ['name', 'source', 'unique', 'serialized', 'terms', 'values']
@@ -176,6 +176,7 @@ class Index(object):
             the same name.
         """
         for k, v in kwargs.items():
+            print(k, v)
             if k in self._accept_kwargs:
                 setattr(self, k, v)
 
@@ -186,12 +187,18 @@ class Index(object):
         Returns: dict
 
         """
-        kwargs = {'name': self.name, 'source': q.collection(self.source), 'serialized': self.serialized,
-                  'unique': self.unique}
+
+        kwargs = {'name': self.name, 'source': q.collection(self.source), }
         if self.terms:
+
             kwargs['terms'] = self.terms
         if self.values:
             kwargs['values'] = self.values
+        if self.serialized:
+            kwargs['serialized'] = self.serialized
+        if self.unique:
+            kwargs['unique'] = self.unique
+
         return kwargs
 
     def get_name(self) -> str:
@@ -212,15 +219,15 @@ class Index(object):
         Returns: query
 
         """
-        return client.query(q.create_index(self.get_kwargs()))
+        return create_or_pass_index(client, self.get_kwargs())
 
-    def unpublish(self) -> query:
+    def unpublish(self, client) -> query:
         """
         Unpublish Index
         Returns: query
 
         """
-        return self.collection.client().query(q.delete(q.index(self.name)))
+        return client.query(q.delete(q.index(self.name)))
 
 
 class Filter(Function):

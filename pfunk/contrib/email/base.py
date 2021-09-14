@@ -1,15 +1,13 @@
-from jinja2 import Environment
-from jinja2.loaders import FileSystemLoader
+
 from envs import env
 from valley.utils import import_util
+
+from pfunk.contrib.templates import temp_env
 
 
 class EmailBackend(object):
 
     def get_template(self, template:str):
-        temp_env = Environment(
-            loader=FileSystemLoader('templates')
-        )
         return temp_env.get_template(template)
 
     def send_email(self):

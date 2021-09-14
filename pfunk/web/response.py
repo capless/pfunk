@@ -78,6 +78,13 @@ class JSONResponse(Response):
         }, cls=PFunkEncoder)
 
 
+class GraphQLResponse(JSONResponse):
+
+    @property
+    def body(self):
+        return json.dumps(self.raw_payload, cls=PFunkEncoder)
+
+
 class JSONUnauthorizedResponse(UnauthorizedResponseMixin, JSONResponse):
     pass
 

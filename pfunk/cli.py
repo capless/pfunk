@@ -14,10 +14,12 @@ def pfunk():
 
 @pfunk.command()
 @click.option('--stage', prompt=True, help='Application stage', default='local')
+@click.option('--email', prompt=True, help='Default From Email')
+@click.option('--bucket', prompt=True, help='S3 Bucket')
 @click.option('--fauna_key', prompt=True, help='Fauna Key')
 @click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
-def init(name: str, api_type: str, fauna_key: str, stage: str):
+def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage: str):
     if not os.path.exists(f'{name}/pfunk.json'):
         if not os.path.exists(name):
             os.mkdir(name)
@@ -26,9 +28,11 @@ def init(name: str, api_type: str, fauna_key: str, stage: str):
                 'name': name,
                 'api_type': api_type,
                 'stages': {stage: {
-                    'fauna_key': fauna_key,
+                    'fauna_secret': fauna_key,
+                    'bucket': bucket,
+                    'default_from_email': email
                 }}
-            }, f)
+            }, f, indent=4, sort_keys=True)
         open(f'{name}/__init__.py', 'x').close()
         with open(f'{name}/wsgi.py', 'x') as f:
             f.write(wsgi_template.render(PFUNK_PROJECT=f'{name}.project'))

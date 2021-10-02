@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pfunk"
-version = "0.3.1"
+version = "0.5.0"
 description = "A Python library created make building FaunaDB GraphQL schemas and authentication code easier."
 authors = ["Brian Jinwright"]
 license = "Apache-2.0"
@@ -31,3 +31,6 @@ pdoc = "^7.2.0"
 
 [build-system]
 requires = ["poetry>=0.12"]
+
+[tool.poetry.scripts]
+pfunk = 'pfunk.cli:pfunk'

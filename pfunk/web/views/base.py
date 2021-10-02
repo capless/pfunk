@@ -70,21 +70,22 @@ class View(object):
                 self.token_check()
             response = getattr(self, self.request.method.lower())()
         except (FaunaNotFound, NotFound, DocNotFound):
-            return self.not_found_class()
+            response = self.not_found_class()
         except PermissionDenied:
-            return self.forbidden_class()
+            response = self.forbidden_class()
         except (BadRequest, GraphQLError) as e:
-            return self.bad_request_class(payload=str(e))
+            response = self.bad_request_class(payload=str(e))
         except (ValidationException,) as e:
             key, value = str(e).split(':')
-            return self.bad_request_class(payload={'validation_errors': {key: value}})
+            response = self.bad_request_class(payload={'validation_errors': {key: value}})
         except (MethodNotAllowed,):
-            return self.method_not_allowed_class()
+            response = self.method_not_allowed_class()
         except (LoginFailed,) as e:
-            return self.unauthorized_class(payload=str(e))
+            response = self.unauthorized_class(payload=str(e))
         except (Unauthorized, InvalidSignatureError, TokenValidationFailed):
-            return self.unauthorized_class()
-
+            response = self.unauthorized_class()
+        if isinstance(self.request, (HTTPRequest, RESTRequest)):
+            return response.response
         return response
 
     def get_token(self):

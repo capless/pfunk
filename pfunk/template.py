@@ -44,6 +44,7 @@ from pfunk import Project
 
 
 project = Project()
+handler = project.event_handler
 """)
 
 collections_templates = Template("""

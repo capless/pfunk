@@ -11,12 +11,15 @@ s3 = boto3.client('s3')
 
 class Deploy(object):
     config_path = 'pfunk.json'
-    build_path = '_build'
-    requirements_file_path = 'requirements.txt'
+    build_folder = '_build'
+    requirements_file_name = 'requirements.txt'
     python_version = 'python3.9'
 
     def __init__(self, config_path=None):
         self.config_path = config_path or self.config_path
+        self.project_folder = f'{os.path.dirname(os.path.abspath(self.config_path))}'
+        self.build_path = f'{self.project_folder}/{self.build_folder}'
+        self.requirements_file_path = f'{self.project_folder}/{self.requirements_file_name}'
         self.config = self.load_config()
         self.project_name = self.config.get('name')
 
@@ -51,7 +54,8 @@ class Deploy(object):
         self.remove_build_artifacts(stage_name, zip_name)
 
     def copy_app_files(self):
-        shutil.copytree(f'../{self.project_name}', f'{self.build_path}/{self.project_name}',
+
+        shutil.copytree(f'{self.project_folder}/{self.project_name}', f'{self.build_path}/{self.project_name}',
                         ignore=shutil.ignore_patterns(
                             self.config_path, self.requirements_file_path))
 
@@ -100,7 +104,7 @@ class Deploy(object):
             name=logical_id,
             CodeUri=sm.S3URI(
                 Bucket=sm.Ref(Ref='Bucket'), Key=sm.Ref(Ref='CodeZipKey')),
-            Handler=f'{self.project_name}.project.event_handler',
+            Handler=f'{self.project_name}.project.project.event_handler',
             Runtime=self.python_version,
             Environment=sm.Environment(Variables=self.get_env_vars(stage_name, stage_settings)),
             Events=[sm.APIEvent(name=logical_id, Path='{proxy+}', Method='any')]

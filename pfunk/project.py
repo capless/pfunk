@@ -1,6 +1,5 @@
 import logging
 
-
 import requests
 from io import BytesIO
 
@@ -30,19 +29,18 @@ logger = logging.getLogger('pfunk')
 
 __all__ = ['Project']
 
-
 API_EVENT_TYPES = {
-        'aws:web-rest': ['resource', 'path', 'httpMethod', 'headers',
-                         'multiValueHeaders', 'queryStringParameters',
-                         'multiValueQueryStringParameters',
-                         'pathParameters', 'stageVariables',
-                         'requestContext', 'body', 'isBase64Encoded'
-                         ],
-        'aws:web-web': [
-            'version', 'routeKey', 'rawPath', 'rawQueryString',
-            'headers', 'requestContext', 'isBase64Encoded'
-        ]
-    }
+    'aws:web-rest': ['resource', 'path', 'httpMethod', 'headers',
+                     'multiValueHeaders', 'queryStringParameters',
+                     'multiValueQueryStringParameters',
+                     'pathParameters', 'stageVariables',
+                     'requestContext', 'body', 'isBase64Encoded'
+                     ],
+    'aws:web-web': [
+        'version', 'routeKey', 'rawPath', 'rawQueryString',
+        'headers', 'requestContext', 'isBase64Encoded'
+    ]
+}
 
 
 class Project(Schema):
@@ -164,7 +162,7 @@ class Project(Schema):
                                        index_list=self.indexes, function_list=self._func,
                                        extra_graphql=self.get_extra_graphql())
 
-    def publish(self, mode:str='merge') -> int:
+    def publish(self, mode: str = 'merge', secret=None) -> int:
         """
         Publishes the collections, indexes, functions, and roles to Fauna
         Args:
@@ -175,9 +173,10 @@ class Project(Schema):
         """
 
         gql_io = BytesIO(self.render().encode())
-        if self.client:
+
+        if not secret and self.client:
             secret = self.client.secret
-        else:
+        elif not secret:
             secret = env('FAUNA_SECRET')
         resp = requests.post(
             env('FAUNA_GRAPHQL_IMPORT_URL', 'https://graphql.fauna.com/import'),
@@ -188,7 +187,7 @@ class Project(Schema):
         if resp.status_code == 200:
             test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
             if not test_mode:
-                print('GraphQL Schema Imported Successfully!!') #pragma: no cover
+                print('GraphQL Schema Imported Successfully!!')  # pragma: no cover
         for col in set(self.collections):
             col.publish()
         if resp.status_code != 200:
@@ -221,6 +220,7 @@ class Project(Schema):
             elif event_type == 'aws:web-rest':
                 path = event.get('path')
                 method = event.get('httpMethod')
+                request_cls = RESTRequest
             try:
                 view, kwargs = self.urls.match(path, method)
             except NotFound:
@@ -272,8 +272,3 @@ class Project(Schema):
 
         start_response(status_str, response.wsgi_headers)
         return [str.encode(response.body)]
-
-
-
-
-

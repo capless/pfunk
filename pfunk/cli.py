@@ -1,10 +1,13 @@
 import click
 import json
 import os
+import sys
 
 from valley.utils import import_util
 from werkzeug.serving import run_simple
+
 from pfunk.template import wsgi_template, project_template, collections_templates
+from pfunk.utils.deploy import Deploy
 
 
 @click.group()
@@ -12,22 +15,27 @@ def pfunk():
     pass
 
 
+def load_config_file(filename):
+    with open(filename, 'r') as f:
+        config = json.load(f)
+    return config
+
 @pfunk.command()
-@click.option('--stage', prompt=True, help='Application stage', default='local')
+@click.option('--stage_name', prompt=True, help='Application stage', default='dev')
 @click.option('--email', prompt=True, help='Default From Email')
 @click.option('--bucket', prompt=True, help='S3 Bucket')
 @click.option('--fauna_key', prompt=True, help='Fauna Key')
 @click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
-def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage: str):
-    if not os.path.exists(f'{name}/pfunk.json'):
+def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str):
+    if not os.path.exists(f'pfunk.json'):
         if not os.path.exists(name):
             os.mkdir(name)
-        with open(f'{name}/pfunk.json', 'x') as f:
+        with open(f'pfunk.json', 'x') as f:
             json.dump({
                 'name': name,
                 'api_type': api_type,
-                'stages': {stage: {
+                'stages': {stage_name: {
                     'fauna_secret': fauna_key,
                     'bucket': bucket,
                     'default_from_email': email
@@ -35,7 +43,7 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
             }, f, indent=4, sort_keys=True)
         open(f'{name}/__init__.py', 'x').close()
         with open(f'{name}/wsgi.py', 'x') as f:
-            f.write(wsgi_template.render(PFUNK_PROJECT=f'{name}.project'))
+            f.write(wsgi_template.render(PFUNK_PROJECT=f'{name}.project.project'))
         with open(f'{name}/project.py', 'x') as f:
             f.write(project_template.render())
         with open(f'{name}/collections.py', 'x') as f:
@@ -47,12 +55,12 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
 @pfunk.command()
 @click.option('--filename', default='pfunk.json', help='Fauna Key')
 @click.option('--fauna_key', prompt=True, help='Fauna Key')
-@click.argument('stage')
-def add_stage(stage: str, fauna_key: str, filename: str):
+@click.argument('stage_name')
+def add_stage(stage_name: str, fauna_key: str, filename: str):
     if os.path.isfile(filename):
         with open(filename, 'r') as f:
             config = json.load(f)
-            config['stages'][stage] = {'fauna_key': fauna_key}
+            config['stages'][stage_name] = {'fauna_key': fauna_key}
         with open(filename, 'w+') as f:
             f.write(json.dumps(config))
     else:
@@ -61,12 +69,54 @@ def add_stage(stage: str, fauna_key: str, filename: str):
 @pfunk.command()
 @click.option('--use_reloader', default=True)
 @click.option('--use_debugger', default=True)
-@click.option('--wsgi', default='wsgi.app')
+@click.option('--config_file', default='pfunk.json')
+@click.option('--wsgi', default=None)
 @click.option('--port', default=3434)
 @click.option('--hostname', default='localhost')
-def local(hostname: str, port: int, wsgi: str, use_debugger: bool, use_reloader: bool):
-    app = import_util(wsgi)
+def local(hostname: str, port: int, wsgi: str, config_file: str, use_debugger: bool, use_reloader: bool):
+    config = load_config_file(config_file)
+    sys.path.insert(0, os.getcwd())
+    wsgi_path = wsgi or f'{config.get("name")}.wsgi.app'
+    app = import_util(wsgi_path)
     run_simple(hostname, port, app, use_debugger=use_debugger, use_reloader=use_reloader)
+
+
+@pfunk.command()
+@click.option('--config_path', help='Configuration file path', default='pfunk.json')
+@click.option('--project_path', help='Project module path')
+@click.argument('stage_name')
+def publish(stage_name: str, project_path: str, config_path: str):
+    config = load_config_file(config_path)
+    project_path = f'{config.get("name")}.project.project'
+    project = import_util(project_path)
+    secret = config['stages'][stage_name]['fauna_secret']
+    project.publish(secret=secret)
+
+
+@pfunk.command()
+@click.option('--config_path', help='Configuration file path', default='pfunk.json')
+@click.option('--project_path', help='Project module path')
+@click.argument('stage_name')
+def seed_keys(stage_name: str, project_path: str, config_path: str):
+    config = load_config_file(config_path)
+    secret = config['stages'][stage_name]['fauna_secret']
+    Key = import_util('pfunk.contrib.auth.collections.Key')
+    for i in range(10):
+        Key.create_key()
+
+
+
+@pfunk.command()
+@click.option('--config_path', help='Configuration file path')
+@click.argument('stage_name')
+def deploy(stage_name: str, config_path: str):
+    try:
+        d = Deploy(config_path=config_path)
+    except FileNotFoundError:
+        cp = config_path or 'pfunk.json'
+        print(f'Deploy Failed: Config path ({cp}) not found ')
+        return
+    d.deploy(stage_name)
 
 if __name__ == '__main__':
     pfunk()

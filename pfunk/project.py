@@ -228,6 +228,8 @@ class Project(Schema):
             except NotFound:
                 return HttpNotFoundResponse()
             except MethodNotAllowed:
+                if event_type in ['aws:web-rest', 'aws:web-web']:
+                    return JSONMethodNotAllowedResponse().response
                 return JSONMethodNotAllowedResponse()
             request = request_cls(event, kwargs)
             return view(request, context, kwargs)

@@ -89,7 +89,8 @@ class Deploy(object):
         return {
             'STAGE_NAME': stage_name,
             'FAUNA_SECRET': stage_settings.get('fauna_secret'),
-            'DEFAULT_FROM_EMAIL': stage_settings.get('default_from_email')
+            'DEFAULT_FROM_EMAIL': stage_settings.get('default_from_email'),
+            'TEMPLATE_ROOT_DIR': 'templates'
         }
 
     def build_template(self, stage_name, bucket, zip_name, stage_settings):
@@ -104,7 +105,7 @@ class Deploy(object):
             name=logical_id,
             CodeUri=sm.S3URI(
                 Bucket=sm.Ref(Ref='Bucket'), Key=sm.Ref(Ref='CodeZipKey')),
-            Handler=f'{self.project_name}.project.project.event_handler',
+            Handler=f'{self.project_name}.project.handler',
             Runtime=self.python_version,
             Environment=sm.Environment(Variables=self.get_env_vars(stage_name, stage_settings)),
             Events=[sm.APIEvent(name=logical_id, Path='{proxy+}', Method='any')]

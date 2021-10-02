@@ -8,13 +8,13 @@ from cachetools.func import ttl_cache
 from cryptography.fernet import Fernet
 from dateutil import tz
 from envs import env
-from faunadb.errors import BadRequest
+from faunadb.errors import BadRequest, NotFound
 from werkzeug.utils import cached_property
 
 from pfunk.client import q
 from pfunk.collection import Collection, Enum
-from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole
-from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView
+from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
+from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
@@ -30,9 +30,15 @@ class Key(Collection):
     @classmethod
     def create_key(cls):
         c = cls()
-        if len(c.all()) >= 10:
-            k = c.get_key()
-            k.delete()
+        key_cnt = len(c.all())
+        if key_cnt >= 10:
+            over = key_cnt-10
+            for i in range(over):
+                k = c.get_key()
+                try:
+                    k.delete()
+                except NotFound:
+                    pass
 
         return c.create(signature_key=Fernet.generate_key().decode(),
                         payload_key=Fernet.generate_key().decode())
@@ -94,12 +100,12 @@ def send_verification_email(doc):
 class BaseUser(Collection):
     # Settings
     _credential_field = 'password'
-    collection_functions = [LoginUser, UpdatePassword]
+    collection_functions = [LoginUser, UpdatePassword, LogoutUser]
     collection_roles = [Public, UserRole]
     non_public_fields = ['groups']
     use_email_verification = True
     # Views
-    collection_views = [LoginView, SignUpView, VerifyEmailView]
+    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView]
     # Signals
     pre_create_signals = [attach_verification_key]
     post_create_signals = [send_verification_email]
@@ -123,6 +129,13 @@ class BaseUser(Collection):
             )
         except BadRequest:
             raise LoginFailed('The login credentials you entered are incorrect.')
+
+    @classmethod
+    def logout(cls, _token=None):
+        c = cls()
+        return c.client(_token=_token).query(
+            q.call("logout_user")
+        )
 
     def permissions(self, _token=None):
         return []

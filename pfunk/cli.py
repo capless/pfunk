@@ -3,6 +3,7 @@ import json
 import os
 import sys
 
+from jinja2 import TemplateNotFound
 from valley.utils import import_util
 from werkzeug.serving import run_simple
 
@@ -88,7 +89,8 @@ def local(hostname: str, port: int, wsgi: str, config_file: str, use_debugger: b
 def publish(stage_name: str, project_path: str, config_path: str):
     config = load_config_file(config_path)
     sys.path.insert(0, os.getcwd())
-    project_path = f'{config.get("name")}.project.project'
+    if not project_path:
+        project_path = f'{config.get("name")}.project.project'
     project = import_util(project_path)
     secret = config['stages'][stage_name]['fauna_secret']
     os.environ['FAUNA_SECRET'] = secret
@@ -97,9 +99,8 @@ def publish(stage_name: str, project_path: str, config_path: str):
 
 @pfunk.command()
 @click.option('--config_path', help='Configuration file path', default='pfunk.json')
-@click.option('--project_path', help='Project module path')
 @click.argument('stage_name')
-def seed_keys(stage_name: str, project_path: str, config_path: str):
+def seed_keys(stage_name: str, config_path: str):
     config = load_config_file(config_path)
     secret = config['stages'][stage_name]['fauna_secret']
     Key = import_util('pfunk.contrib.auth.collections.Key')
@@ -108,6 +109,31 @@ def seed_keys(stage_name: str, project_path: str, config_path: str):
         Key.create_key()
 
 
+@pfunk.command()
+@click.option('--config_path', help='Configuration file path', default='pfunk.json')
+@click.option('--username', prompt=True, help='Username')
+@click.option('--password', prompt=True, help='Password')
+@click.option('--email', prompt=True, help='Email')
+@click.option('--first_name', prompt=True, help='First Name')
+@click.option('--last_name', prompt=True, help='Last Name')
+@click.argument('stage_name')
+def create_admin_user(stage_name: str, last_name: str, first_name: str, email: str, password: str, username: str,
+                      config_path: str):
+    config = load_config_file(config_path)
+    secret = config['stages'][stage_name]['fauna_secret']
+    User = import_util('pfunk.contrib.auth.collections.User')
+    os.environ['FAUNA_SECRET'] = secret
+    try:
+        User.create(
+            username=username,
+            _credentials=password,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            account_status='ACTIVE'
+        )
+    except TemplateNotFound:
+        pass
 
 @pfunk.command()
 @click.option('--config_path', help='Configuration file path')

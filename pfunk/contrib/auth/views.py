@@ -27,6 +27,14 @@ class LoginView(ActionMixin, JSONAuthView):
         }
 
 
+class LogoutView(ActionMixin, JSONAuthView):
+    action = 'logout'
+    login_required = True
+
+    def get_query(self):
+        self.collection.logout(_token=self.request.token)
+
+
 class SignUpView(ActionMixin, JSONAuthView):
     action = 'sign-up'
     login_required = False

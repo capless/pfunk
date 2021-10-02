@@ -64,7 +64,31 @@ class View(object):
     def get_context(self):
         return {}
 
-    def process_request(self):
+    def process_lambda_request(self):
+
+        try:
+            if self.login_required:
+                self.token_check()
+            response = getattr(self, self.request.method.lower())().response
+        except (FaunaNotFound, NotFound, DocNotFound):
+            response = self.not_found_class().response
+        except PermissionDenied:
+            response = self.forbidden_class().response
+        except (BadRequest, GraphQLError) as e:
+            response = self.bad_request_class(payload=str(e)).response
+        except (ValidationException,) as e:
+            key, value = str(e).split(':')
+            response = self.bad_request_class(payload={'validation_errors': {key: value}}).response
+        except (MethodNotAllowed,):
+            response = self.method_not_allowed_class().response
+        except (LoginFailed,) as e:
+            response = self.unauthorized_class(payload=str(e)).response
+        except (Unauthorized, InvalidSignatureError, TokenValidationFailed):
+            response = self.unauthorized_class().response
+
+        return response
+
+    def process_wsgi_request(self):
         try:
             if self.login_required:
                 self.token_check()
@@ -84,9 +108,13 @@ class View(object):
             response = self.unauthorized_class(payload=str(e))
         except (Unauthorized, InvalidSignatureError, TokenValidationFailed):
             response = self.unauthorized_class()
-        if isinstance(self.request, (HTTPRequest, RESTRequest)):
-            return response.response
         return response
+
+    def process_request(self):
+
+        if isinstance(self.request, (HTTPRequest, RESTRequest)):
+            return self.process_lambda_request()
+        return self.process_wsgi_request()
 
     def get_token(self):
         from pfunk.contrib.auth.collections import Key

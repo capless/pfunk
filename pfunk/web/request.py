@@ -53,10 +53,12 @@ class RESTRequest(BaseAPIGatewayRequest):
         self.resource = event['resource']
         self.method = event['httpMethod']
         self.path_params = event['pathParameters']
+
         try:
-            self.cookies = self.get_cookies(self.headers.pop('cookie'))
+            self.cookies = self.get_cookies(self.headers.pop('Cookie'))
         except KeyError:
             self.cookies = {}
+
         self.stage_vars = event['stageVariables']
         self.path = event['path']
         self.source_ip = event.get('requestContext').get('identity').get('sourceIp')

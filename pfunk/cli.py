@@ -87,10 +87,12 @@ def local(hostname: str, port: int, wsgi: str, config_file: str, use_debugger: b
 @click.argument('stage_name')
 def publish(stage_name: str, project_path: str, config_path: str):
     config = load_config_file(config_path)
+    sys.path.insert(0, os.getcwd())
     project_path = f'{config.get("name")}.project.project'
     project = import_util(project_path)
     secret = config['stages'][stage_name]['fauna_secret']
-    project.publish(secret=secret)
+    os.environ['FAUNA_SECRET'] = secret
+    project.publish()
 
 
 @pfunk.command()

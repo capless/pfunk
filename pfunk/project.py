@@ -162,7 +162,7 @@ class Project(Schema):
                                        index_list=self.indexes, function_list=self._func,
                                        extra_graphql=self.get_extra_graphql())
 
-    def publish(self, mode: str = 'merge', secret=None) -> int:
+    def publish(self, mode: str = 'merge') -> int:
         """
         Publishes the collections, indexes, functions, and roles to Fauna
         Args:
@@ -174,10 +174,11 @@ class Project(Schema):
 
         gql_io = BytesIO(self.render().encode())
 
-        if not secret and self.client:
+        if self.client:
             secret = self.client.secret
-        elif not secret:
+        else:
             secret = env('FAUNA_SECRET')
+
         resp = requests.post(
             env('FAUNA_GRAPHQL_IMPORT_URL', 'https://graphql.fauna.com/import'),
             params={'mode': mode},
@@ -192,6 +193,7 @@ class Project(Schema):
             col.publish()
         if resp.status_code != 200:
             print(resp.content)
+        print(f'GraphQL Response Code: {resp.status_code}')
         return resp.status_code
 
     def unpublish(self) -> None:

@@ -103,6 +103,7 @@ def seed_keys(stage_name: str, project_path: str, config_path: str):
     config = load_config_file(config_path)
     secret = config['stages'][stage_name]['fauna_secret']
     Key = import_util('pfunk.contrib.auth.collections.Key')
+    os.environ['FAUNA_SECRET'] = secret
     for i in range(10):
         Key.create_key()
 

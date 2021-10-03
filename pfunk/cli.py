@@ -7,6 +7,7 @@ from jinja2 import TemplateNotFound
 from valley.utils import import_util
 from werkzeug.serving import run_simple
 
+from pfunk.contrib.auth.collections import Group
 from pfunk.template import wsgi_template, project_template, collections_templates
 from pfunk.utils.deploy import Deploy
 
@@ -116,15 +117,17 @@ def seed_keys(stage_name: str, config_path: str):
 @click.option('--email', prompt=True, help='Email')
 @click.option('--first_name', prompt=True, help='First Name')
 @click.option('--last_name', prompt=True, help='Last Name')
+@click.option('--group_slug', prompt=True, help='User Group Slug', default=None)
+@click.option('--permission_list', prompt=True, type=click.Tuple([list]), help='Permission List', default=None)
 @click.argument('stage_name')
-def create_admin_user(stage_name: str, last_name: str, first_name: str, email: str, password: str, username: str,
+def create_user(stage_name: str, permission_list: tuple, group_slug: str, last_name: str, first_name: str, email: str, password: str, username: str,
                       config_path: str):
     config = load_config_file(config_path)
     secret = config['stages'][stage_name]['fauna_secret']
     User = import_util('pfunk.contrib.auth.collections.User')
     os.environ['FAUNA_SECRET'] = secret
     try:
-        User.create(
+        user = User.create(
             username=username,
             _credentials=password,
             first_name=first_name,
@@ -134,6 +137,9 @@ def create_admin_user(stage_name: str, last_name: str, first_name: str, email: s
         )
     except TemplateNotFound:
         pass
+    if group_slug:
+        group = Group.get_by('unique_Group_slug', group_slug)
+        user.add_permissions(group, permission_list)
 
 @pfunk.command()
 @click.option('--config_path', help='Configuration file path')

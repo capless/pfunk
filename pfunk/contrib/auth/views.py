@@ -33,6 +33,7 @@ class LogoutView(ActionMixin, JSONAuthView):
 
     def get_query(self):
         self.collection.logout(_token=self.request.token)
+        self.set_cookie(env('TOKEN_COOKIE_NAME', 'tk'), value="", max_age=0, expires=0)
 
 
 class SignUpView(ActionMixin, JSONAuthView):

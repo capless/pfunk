@@ -143,6 +143,7 @@ class BaseUser(Collection):
     @classmethod
     def api_login(cls, username, password, _token=None):
         token = cls.login(username=username, password=password, _token=_token)
+        print('Raw Token: ', token)
         user = cls.get_current_user(_token=token)
         claims = user.to_dict().copy()
         try:
@@ -174,18 +175,19 @@ class BaseUser(Collection):
 
     def send_verification_email(self, from_email=None):
         project_name = env('PROJECT_NAME', '')
-
-        send_email(
-            txt_template='auth/verification_email.txt',
-            html_template='auth/verification_email.html',
-            to_emails=[self.email],
-            from_email=from_email or env('DEFAULT_FROM_EMAIL'),
-            subject=f'{project_name} Email Verification',
-            first_name=self.first_name,
-            last_name=self.last_name,
-            verification_key=self.verification_key
-        )
-
+        try:
+            send_email(
+                txt_template='auth/verification_email.txt',
+                html_template='auth/verification_email.html',
+                to_emails=[self.email],
+                from_email=from_email or env('DEFAULT_FROM_EMAIL'),
+                subject=f'{project_name} Email Verification',
+                first_name=self.first_name,
+                last_name=self.last_name,
+                verification_key=self.verification_key
+            )
+        except:
+            pass
     @classmethod
     def forgot_password(cls, email):
         pass

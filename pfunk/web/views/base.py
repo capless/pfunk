@@ -65,7 +65,6 @@ class View(object):
         return {}
 
     def process_lambda_request(self):
-
         try:
             if self.login_required:
                 self.token_check()
@@ -85,7 +84,6 @@ class View(object):
             response = self.unauthorized_class(payload=str(e)).response
         except (Unauthorized, InvalidSignatureError, TokenValidationFailed):
             response = self.unauthorized_class().response
-
         return response
 
     def process_wsgi_request(self):

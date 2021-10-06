@@ -45,8 +45,8 @@ class LogoutUser(AuthFunction):
 
     def get_body(self):
         return q.query(
-            q.lambda_(["input"],
-                      q.logout()
+            q.lambda_([],
+                      q.logout(False)
                       )
         )
 
@@ -131,6 +131,12 @@ class Public(Role):
             },
             {
                 "resource": q.function("update_password"),
+                "actions": {
+                    "call": True
+                }
+            },
+            {
+                "resource": q.function("logout_user"),
                 "actions": {
                     "call": True
                 }

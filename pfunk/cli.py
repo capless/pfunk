@@ -7,7 +7,7 @@ from jinja2 import TemplateNotFound
 from valley.utils import import_util
 from werkzeug.serving import run_simple
 
-from pfunk.contrib.auth.collections import Group
+from pfunk.contrib.auth.collections import Group, PermissionGroup
 from pfunk.template import wsgi_template, project_template, collections_templates
 from pfunk.utils.deploy import Deploy
 
@@ -112,34 +112,40 @@ def seed_keys(stage_name: str, config_path: str):
 
 @pfunk.command()
 @click.option('--config_path', help='Configuration file path', default='pfunk.json')
+@click.option('--project_path', help='Project module path')
 @click.option('--username', prompt=True, help='Username')
-@click.option('--password', prompt=True, help='Password')
+@click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='Password')
 @click.option('--email', prompt=True, help='Email')
 @click.option('--first_name', prompt=True, help='First Name')
 @click.option('--last_name', prompt=True, help='Last Name')
 @click.option('--group_slug', prompt=True, help='User Group Slug', default=None)
-@click.option('--permission_list', prompt=True, type=click.Tuple([list]), help='Permission List', default=None)
 @click.argument('stage_name')
-def create_user(stage_name: str, permission_list: tuple, group_slug: str, last_name: str, first_name: str, email: str, password: str, username: str,
-                      config_path: str):
+def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_name: str, email: str, password: str, username: str,
+                      project_path: str, config_path: str):
     config = load_config_file(config_path)
     secret = config['stages'][stage_name]['fauna_secret']
     User = import_util('pfunk.contrib.auth.collections.User')
     os.environ['FAUNA_SECRET'] = secret
-    try:
-        user = User.create(
-            username=username,
-            _credentials=password,
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            account_status='ACTIVE'
-        )
-    except TemplateNotFound:
-        pass
+
+    user = User.create(
+        username=username,
+        _credentials=password,
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        account_status='ACTIVE'
+    )
+
     if group_slug:
         group = Group.get_by('unique_Group_slug', group_slug)
-        user.add_permissions(group, permission_list)
+        if not project_path:
+            project_path = f'{config.get("name")}.project.project'
+        sys.path.insert(0, os.getcwd())
+        project = import_util(project_path)
+        perm_list = []
+        for i in project.collections:
+            perm_list.append(PermissionGroup(collection=i, permissions=['create', 'write', 'read', 'delete']))
+        user.add_permissions(group, perm_list)
 
 @pfunk.command()
 @click.option('--config_path', help='Configuration file path')

@@ -18,22 +18,23 @@ class FaunaClient(FC):
             pool_maxsize=10,
             **kwargs) -> None:
         """
-        :param secret:
-          Auth token for the FaunaDB server.
-        :param domain:
-          Base URL for the FaunaDB server.
-        :param scheme:
-          ``"web"`` or ``"https"``.
-        :param port:
-          Port of the FaunaDB server.
-        :param timeout:
-          Read timeout in seconds.
-        :param observer:
-          Callback that will be passed a :any:`RequestResult` after every completed request.
-        :param pool_connections:
-          The number of connection pools to cache.
-        :param pool_maxsize:
-          The maximum number of connections to save in the pool.
+        Args:
+          secret (str, required, default=None):
+            Auth token for the FaunaDB server.
+          domain (str, optional, default="db.fauna.com"):
+            Base URL for the FaunaDB server.
+          scheme (str, optional, default="https"):
+            ``"web"`` or ``"https"``.
+          port (int, optional, default=None):
+            Port of the FaunaDB server.
+          timeout (int, optional, default=60):
+            Read timeout in seconds.
+          observer (optional, default=None):
+            Callback that will be passed a :any:`RequestResult` after every completed request.
+          pool_connections (int, optional, default=10):
+            The number of connection pools to cache.
+          pool_maxsize (int, optional, default=10):
+            The maximum number of connections to save in the pool.
             """
         self.secret = secret or env('FAUNA_SECRET')
         env_port = env('FAUNA_PORT')

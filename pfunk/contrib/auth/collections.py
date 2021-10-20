@@ -16,7 +16,7 @@ from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
 from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView
 from pfunk.contrib.email.base import send_email
-from pfunk.exceptions import LoginFailed
+from pfunk.exceptions import LoginFailed, DocNotFound
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
 
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
@@ -80,9 +80,11 @@ class Key(Collection):
 
 
 class Group(Collection):
+    """ Group collection that the user belongs to """
     name = StringField(required=True)
     slug = SlugField(unique=True, required=False)
-    users = ManyToManyField('pfunk.contrib.auth.collections.User', relation_name='users_groups')
+    users = ManyToManyField(
+        'pfunk.contrib.auth.collections.User', relation_name='users_groups')
 
     def __unicode__(self):
         return self.name  # pragma: no cover
@@ -120,7 +122,8 @@ class BaseUser(Collection):
     last_name = StringField(required=True)
     email = EmailField(required=True, unique=True)
     verification_key = StringField(required=False, unique=True)
-    account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
+    account_status = EnumField(
+        AccountStatus, required=True, default_value="INACTIVE")
 
     def __unicode__(self):
         return self.username  # pragma: no cover
@@ -135,10 +138,12 @@ class BaseUser(Collection):
         c = cls()
         try:
             return c.client(_token=_token).query(
-                q.call("login_user", {"username": username, "password": password})
+                q.call("login_user", {
+                       "username": username, "password": password})
             )
         except BadRequest:
-            raise LoginFailed('The login credentials you entered are incorrect.')
+            raise LoginFailed(
+                'The login credentials you entered are incorrect.')
 
     @classmethod
     def logout(cls, _token=None):
@@ -211,6 +216,7 @@ class BaseUser(Collection):
             )
         except:
             pass
+
     @classmethod
     def forgot_password(cls, email):
         pass
@@ -245,10 +251,20 @@ class BaseUser(Collection):
                 new password for the user
             _token (str, required):
                 auth token of the user
+
+        Returns:
+            dict (dict, required): If update is successful
+                ref (str): fauna ref of the object, 
+                data (dict): copy of the data of the object, 
+                ts (str): timestamp 
+            err_msg (str, required): 
+                If current_password is wrong, will return
+                `Wrong current password.`
         """
         c = cls()
         return c.client(_token=_token).query(
-            q.call("update_password", {'current_password': current_password, 'new_password': new_password})
+            q.call("update_password", {
+                   'current_password': current_password, 'new_password': new_password})
         )
 
     @classmethod
@@ -256,6 +272,10 @@ class BaseUser(Collection):
         """ Returns the user's identity 
         
             Uses fauna's `current_identity()` function
+
+        Returns:
+            id (str):
+                Fauna ID of the user in `User` collection
         """
         c = cls()
         return cls.get(c.client(_token=_token).query(q.current_identity()).id())
@@ -265,7 +285,26 @@ class BaseUser(Collection):
 
 
 class UserGroups(Collection):
-    """ Many-to-many collection of the user-group relationship """
+    """ Many-to-many collection of the user-group relationship 
+    
+        The native fauna-way of holding many-to-many relationship
+        is to only have the ID of the 2 object. Here in pfunk, we
+        leverage the flexibility of the collection to have another
+        field, which is `permissions`, this field holds the capablities
+        of a user, allowing us to add easier permission handling.
+        Instead of manually going to roles and adding individual 
+        collections which can be painful in long term.
+
+    Attributes:
+        collection_name (str):
+            Name of the collection in Fauna
+        userID (str):
+            Fauna ref of user that is tied to the group
+        groupID (str):
+            Fauna ref of a collection that is tied with the user
+        permissions (str[]):
+            List of permissions, `['create', 'read', 'delete', 'write']`
+    """
     collection_name = 'users_groups'
     userID = ReferenceField('pfunk.contrib.auth.collections.User')
     groupID = ReferenceField(Group)
@@ -285,7 +324,8 @@ class PermissionGroup(object):
 
     def __init__(self, collection: Collection, permissions: list):
         if not issubclass(collection, Collection):
-            raise ValueError('Permission class requires a Collection class as the first argument.')
+            raise ValueError(
+                'Permission class requires a Collection class as the first argument.')
         self.collection = collection
         self._permissions = permissions
         self.collection_name = self.collection.get_class_name()
@@ -311,54 +351,59 @@ class User(BaseUser):
         ).get('data')]
 
     def permissions(self, _token=None):
-        """  """
+        """ Returns the permissions of the user 
+        
+            Permissions will be acquired from the field 
+            `permissions` in `UserGroup` class
+
+        Args:
+            _token (str, required):
+                Fauna auth token
+
+        Returns:
+            perm_list (str[]):
+                Permissions of the user in list: `['create', 'read', 'delete', 'write']`
+        """
         perm_list = []
         for i in self.get_groups(_token=_token):
-            ug = UserGroups.get_index('users_groups_by_group_and_user', [i.ref, self.ref], _token=_token)
+            ug = UserGroups.get_index('users_groups_by_group_and_user', [
+                                      i.ref, self.ref], _token=_token)
             for user_group in ug:
                 p = []
                 if isinstance(user_group.permissions, list):
-                    p = [f'{user_group.groupID.slug}-{i}' for i in user_group.permissions]
+                    p = [
+                        f'{user_group.groupID.slug}-{i}' for i in user_group.permissions]
                 perm_list.extend(p)
         return perm_list
 
     def add_permissions(self, group, permissions: list, _token=None):
         """ Adds permission for the user 
         
-        Adds permission by ...
+        Adds permission by extending the list of permission 
+        in the many-to-many collection of the user, i.e. in 
+        the `UserGroup` collection.
 
         Args:
             group (str, required): 
-
+                Group collection of the User
             permissions (list, required):
                 Permissions to give
             _token (str, required):
                 auth token of the user
         
         Returns:
-            UserGroup:
-
-
-        Todo:
-            Make the detailed description
-            Make return obj clearer
+            UserGroup (`contrib.auth.collections.UserGroup`):
+                `UserGroup` instance which has the added permissions 
+                of the user
         """
         perm_list = []
         for i in permissions:
             perm_list.extend(i.permissions)
 
         try:
-            user_group = self.client(_token=_token).query(
-                q.paginate(
-                    q.match(
-                        q.index('users_groups_by_group_and_user'),
-                        group.ref,
-                        self.ref
-                    )
-                )
-            ).get('data')[0]
-        except IndexError:
-            user_group = None
+            user_group = UserGroups.get_by('users_groups_by_group_and_user')
+        except DocNotFound:
+            user_group = UserGroups.create('users_groups_by_group_and_user')
 
         ug = UserGroups(userID=self, groupID=group, permissions=perm_list)
         if user_group:

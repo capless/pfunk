@@ -10,6 +10,17 @@ s3 = boto3.client('s3')
 
 
 class Deploy(object):
+    """ Deploys the API to S3 and CloudFormation
+    
+    Args:
+        config_path (str, required):
+            path of the project
+
+    Attributes:
+        config_path (str, required): 
+            path of the project
+
+    """
     config_path = 'pfunk.json'
     build_folder = '_build'
     requirements_file_name = 'requirements.txt'
@@ -30,6 +41,7 @@ class Deploy(object):
         return config
 
     def deploy(self, stage_name):
+        """ Zips the package, install, uploads to s3 and publishes to CloudFormation """
         try:
             stage_settings = self.config.get('stages')[stage_name]
         except KeyError:
@@ -79,6 +91,9 @@ class Deploy(object):
         s3.upload_file(zip_file, bucket, zip_file)
 
     def remove_build_artifacts(self, stage_name, zip_name):
+        """ Cleans up the uneeded files that was created
+            prior to deploy (successful or not)
+        """
         zip_file = f'{zip_name}.zip'
         print('Removing build path')
         shutil.rmtree(self.build_path)
@@ -95,6 +110,7 @@ class Deploy(object):
         }
 
     def build_template(self, stage_name, bucket, zip_name, stage_settings):
+        """ Generates AWS SAM yaml template and publishes it to CloudFormation """
         sam = sm.SAM(Description=self.config.get('description'), render_type='yaml')
 
         sam.add_parameter(sm.Parameter(name='Bucket', Type='String'))

@@ -13,6 +13,9 @@ from pfunk.web.response import (Response, HttpNotFoundResponse, HttpForbiddenRes
 
 
 class View(object):
+    """ Base view to inherit from. Houses base request and response
+        capabilities and its utils.
+    """
     url_prefix: str
     """Specifies a prefix to use in the get_url method."""
     request_class: Request = Request
@@ -65,6 +68,16 @@ class View(object):
         return {}
 
     def process_lambda_request(self):
+        """ Processes the request from Lambda.
+        
+            Returns response if it returned a successful 
+            query otherwise, a json error response
+        
+        Returns:
+            response (`web.Response`, required):
+                Response object with differing status_code to represent
+                stauts of the request
+        """
         try:
             if self.login_required:
                 self.token_check()
@@ -87,6 +100,16 @@ class View(object):
         return response
 
     def process_wsgi_request(self):
+        """ Processes the WSGI request.
+            
+            Returns response if it returned a successful 
+            query otherwise, a json error response.
+        
+        Returns:
+            response (`web.Response`, required):
+                Response object with differing status_code to represent
+                stauts of the request
+        """
         try:
             if self.login_required:
                 self.token_check()
@@ -109,12 +132,21 @@ class View(object):
         return response
 
     def process_request(self):
-
+        """ Calls the handler for varying `request` and leave the 
+            handling to it.
+        """
         if isinstance(self.request, (HTTPRequest, RESTRequest)):
             return self.process_lambda_request()
         return self.process_wsgi_request()
 
     def get_token(self):
+        """ Acquires token from cookies/headers and
+            returns the decrypted token
+        
+        Returns:
+            token (`contrib.auth.collections.Key`, required): token of Fauna
+
+        """
         from pfunk.contrib.auth.collections import Key
         enc_token = self.request.cookies.get(env('TOKEN_COOKIE_NAME', 'tk'))
 
@@ -126,6 +158,12 @@ class View(object):
         return token
 
     def token_check(self):
+        """ Checks the validity of token. Raise an
+            exception if token was not found
+        
+        Raises:
+            Unauthorized: If token is invalid or nonexistent
+        """
         if self.login_required:
             token = self.get_token()
             if token:
@@ -136,6 +174,13 @@ class View(object):
 
     @classmethod
     def as_view(cls, collection=None):
+        """ Make the function view-able by adding the 
+            ability to accept `request, context, kwargs`
+        
+        Args:
+            collection (`Collection`, required, defualt=None): 
+                Fauna `Collection` to create a view from
+        """
         c = cls(collection)
 
         def view(request, context, kwargs):
@@ -144,6 +189,7 @@ class View(object):
         return view
 
     def get_response(self):
+        """ Returns response from `get_response_class()` """
         return self.get_response_class()(
             payload='',
             headers=self.get_headers()
@@ -160,6 +206,35 @@ class View(object):
                    sync_expires: bool = True,
                    max_size: int = 4093,
                    samesite: str = None):
+        """ Set the cookie for the session 
+        
+        Args:
+            key (str, required): 
+                The key from Fauna
+            value (str, optional, default=""): 
+                Value of the cookie
+            max_age (int, optional, default=None): 
+                Max age of the cookie
+            expires (int, optional, default=None): 
+                Maximum lifetime of the cookie
+            path (str, optional, default="/"): 
+                Path that should exist in the request url
+            domain (str, optional, default=None):
+                Host to send to cookie to
+            secure (bool, optional, default=True): 
+                Send the cookie only if the request is made with `https` scheme
+            httponly (bool, optional, default=True): 
+                Forbids JS from accessing cookie
+            charset (str, optional, default="utf-8"): 
+                Type of character to use
+            sync_expires (bool, optional, default=True): 
+                Automatically set expires if max_age is defined but 
+                expires not
+            max_size (int, optional, default=4093): 
+                Warn if final header value exceeds the specified size
+            samesite (str, optional, default=None): 
+                Send the cookie with cross-origin request or not
+        """
         debug = env('DEBUG', True, var_type='boolean')
         if debug:
             secure = False
@@ -171,6 +246,9 @@ class View(object):
         self.set_cookie(key, value="", max_age=0, expires=0)
 
     def get_headers(self):
+        """ Acquires the headers from the cookie 
+            otherwise, just return the current headers
+        """
         if len(self.cookies.keys()) > 0:
             cookie_list = []
             for k, v in self.cookies.items():
@@ -201,6 +279,7 @@ class View(object):
 
 
 class RESTView(View):
+    """ Generic REST API view. """
     request_class = RESTRequest
 
     event_keys: list = ['resource', 'path', 'httpMethod', 'headers',
@@ -212,6 +291,7 @@ class RESTView(View):
 
 
 class HTTPView(View):
+    """ Generic HTTP view. """
     request_class = HTTPRequest
     event_keys: list = [
         'version', 'routeKey', 'rawPath', 'rawQueryString',
@@ -220,11 +300,23 @@ class HTTPView(View):
 
 
 class QuerysetMixin(object):
+    """ Mixin for adding functionality of querying to Fauna """
 
     def get_query(self):
+        """ Call the `collection`'s built-in "all" index with
+            the specied kwargs in `get_query_kwargs()`
+
+        Returns:
+
+        """
         return self.collection.all(**self.get_query_kwargs())
 
     def get_query_kwargs(self):
+        """ Acquires the addutional generic kwargs in a query 
+
+            This includes the  keys that are generic 
+            to queries. ['after, 'before', 'page_size']
+        """
         query_kwargs = self.request.query_params
         kwargs = {
             'after': query_kwargs.get('after'),
@@ -237,8 +329,10 @@ class QuerysetMixin(object):
 
 
 class ObjectMixin(object):
+    """ Generic GET mixin for a Fauna object. """
 
     def get_query(self):
+        """ Acuires  """
         return self.collection.get(self.request.kwargs.get('id'), **self.get_query_kwargs())
 
     def get_query_kwargs(self):
@@ -246,6 +340,7 @@ class ObjectMixin(object):
 
 
 class UpdateMixin(object):
+    """ Generic PUT mixin for a fauna object """
 
     def get_query_kwargs(self):
 
@@ -262,6 +357,12 @@ class UpdateMixin(object):
 
 
 class ActionMixin(object):
+    """ Mixin for specifying what action should an endpoint have 
+    
+    Attributes:
+        action (str, required):
+            action of the endpoint 
+    """
     action: str
 
     @classmethod
@@ -271,6 +372,7 @@ class ActionMixin(object):
 
 
 class IDMixin(ActionMixin):
+    """ Mixin for specifying a URL that accepts an ID """
 
     @classmethod
     def url(cls, collection):

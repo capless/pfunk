@@ -3,9 +3,15 @@ import json
 from werkzeug.http import parse_cookie
 
 
-
-
 class Request(object):
+    """ Base Request object for views
+    
+    Attributes:
+        event (str, required):
+            The event key to execute  
+        kwargs (optional):
+            additional keyword arguments
+    """
 
     def __init__(self, event, kwargs):
         self.raw_event = event

@@ -15,6 +15,17 @@ class JSONAuthView(JSONView, ABC):
 
 
 class LoginView(ActionMixin, JSONAuthView):
+    """ Creates a login view to enable user login
+
+    Sets the token in the cookie after successful
+    operation in addition to returning the token
+    value itself
+
+    Returns:
+        auth_token (dict):
+            token (str): auth token of the user
+            exp (str): expiration of the token  
+    """
     action = 'login'
     login_required = False
 
@@ -28,6 +39,10 @@ class LoginView(ActionMixin, JSONAuthView):
 
 
 class LogoutView(ActionMixin, JSONAuthView):
+    """ Creates a logout view to enable logout via endpoint 
+    
+    Invalidates the token and removes the cookie
+    """
     action = 'logout'
     login_required = True
 
@@ -37,6 +52,11 @@ class LogoutView(ActionMixin, JSONAuthView):
 
 
 class SignUpView(ActionMixin, JSONAuthView):
+    """ Creates a signup view to enable signing up of users 
+    
+    This will create an inactive user that needs to be
+    activated by following the email verification instructions
+    """
     action = 'sign-up'
     login_required = False
 
@@ -45,6 +65,10 @@ class SignUpView(ActionMixin, JSONAuthView):
 
 
 class VerifyEmailView(ActionMixin, JSONAuthView):
+    """ Creates a view that enables verification of a user 
+    
+    Activates the user from the given verification key
+    """
     action = 'verify'
     login_required = False
     http_methods = ['get']
@@ -71,6 +95,7 @@ class UpdatePasswordView(ActionMixin, JSONAuthView):
 
 
 class ForgotPasswordView(JSONAuthView):
+    """ Create a view to allow call of forgot password func """
     login_required = False
 
     def get_query(self):

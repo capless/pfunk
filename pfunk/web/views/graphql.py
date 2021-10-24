@@ -15,6 +15,13 @@ parser = GraphQLParser()
 class GQL(object):
 
     def __init__(self, body):
+        """ Converts query to a workable python object that
+            works with pfunk 
+        
+        Args:
+            body (dict, required):
+                The whole graphql query
+        """
         if isinstance(body, bytes):
             body = body.decode("utf-8")
         self.body = body
@@ -28,13 +35,19 @@ class GQL(object):
             self.process_mutation()
 
     def process_query(self):
+        """ Acquire the fields in a graphql query  """
         self.fields = [i.name for i in self.doc.selections[0].selections[0].selections]
 
     def process_mutation(self):
+        """ Acquire the values in a mutation query """
         self.fields = self.doc.selections[0].arguments[0].value
 
 
 class GraphQLView(JSONView):
+    """ Creates a GraphQL view. 
+    
+        Utilizes Fauna's builtin graphql endpoint.
+    """
     login_required = True
     http_methods = ['post']
     response_class = GraphQLResponse
@@ -51,6 +64,7 @@ class GraphQLView(JSONView):
         return resp.json()
 
     def process_graphql(self):
+        """ Transform request to a workable Graphql query """
         body = self.request.get_json().get('query')
         if not body:
             body = self.request.body

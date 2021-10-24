@@ -8,7 +8,7 @@ from valley.utils import import_util
 from werkzeug.serving import run_simple
 
 from pfunk.contrib.auth.collections import Group, PermissionGroup
-from pfunk.template import wsgi_template, project_template, collections_templates
+from pfunk.template import wsgi_template, project_template, collections_templates, key_template
 from pfunk.utils.deploy import Deploy
 
 
@@ -38,6 +38,7 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
                 'name': name,
                 'api_type': api_type,
                 'stages': {stage_name: {
+                    'key_module': f'{name}.{stage_name}_keys.KEYS',
                     'fauna_secret': fauna_key,
                     'bucket': bucket,
                     'default_from_email': email
@@ -103,11 +104,11 @@ def publish(stage_name: str, project_path: str, config_path: str):
 @click.argument('stage_name')
 def seed_keys(stage_name: str, config_path: str):
     config = load_config_file(config_path)
-    secret = config['stages'][stage_name]['fauna_secret']
     Key = import_util('pfunk.contrib.auth.collections.Key')
-    os.environ['FAUNA_SECRET'] = secret
-    for i in range(10):
-        Key.create_key()
+    keys = Key.create_keys()
+    name = config.get('name')
+    with open(f'{name}/{stage_name}_keys.py', 'w+') as f:
+        f.write(key_template.render(keys=keys))
 
 
 @pfunk.command()

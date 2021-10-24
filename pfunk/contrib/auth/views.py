@@ -33,7 +33,7 @@ class LogoutView(ActionMixin, JSONAuthView):
 
     def get_query(self):
         self.collection.logout(_token=self.request.token)
-        self.set_cookie(env('TOKEN_COOKIE_NAME', 'tk'), value="", max_age=0, expires=0)
+        self.delete_cookie(env('TOKEN_COOKIE_NAME', 'tk'))
 
 
 class SignUpView(ActionMixin, JSONAuthView):
@@ -57,6 +57,17 @@ class VerifyEmailView(ActionMixin, JSONAuthView):
         return Rule(f'/{collection.get_class_name()}/{cls.action}/<uuid:verification_key>/',
                     endpoint=cls.as_view(collection),
                     methods=cls.http_methods)
+
+
+class UpdatePasswordView(ActionMixin, JSONAuthView):
+    action = 'update-password'
+    login_required = True
+    http_methods = ['post']
+
+    def get_query(self):
+        kwargs = self.get_query_kwargs()
+        self.collection.update_password(kwargs['current_password'], kwargs['new_password'],
+                                               kwargs['new_password_confirm'], _token=self.request.token)
 
 
 class ForgotPasswordView(JSONAuthView):

@@ -46,7 +46,7 @@ class LogoutUser(AuthFunction):
     def get_body(self):
         return q.query(
             q.lambda_([],
-                      q.logout(False)
+                      q.logout(True)
                       )
         )
 

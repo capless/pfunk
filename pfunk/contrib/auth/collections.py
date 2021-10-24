@@ -9,12 +9,14 @@ from cryptography.fernet import Fernet
 from dateutil import tz
 from envs import env
 from faunadb.errors import BadRequest, NotFound
+from valley.exceptions import ValidationException
+from valley.utils import import_util
 from werkzeug.utils import cached_property
 
 from pfunk.client import q
 from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
-from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView
+from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
@@ -22,40 +24,40 @@ from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, Refe
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
 
-class Key(Collection):
-    signature_key = StringField(required=True, unique=True)
-    payload_key = StringField(required=True, unique=True)
-    use_crud_views = False
+try:
+    KEYS = import_util(env('KEY_MODULE', 'bad.import'))
+
+except ImportError:
+    KEYS = {}
+
+
+class Key(object):
 
     @classmethod
-    def create_key(cls):
+    def create_keys(cls):
         c = cls()
-        key_cnt = len(c.all())
-        if key_cnt >= 10:
-            over = key_cnt-10
-            for i in range(over):
-                k = c.get_key()
-                try:
-                    k.delete()
-                except NotFound:
-                    pass
-
-        return c.create(signature_key=Fernet.generate_key().decode(),
-                        payload_key=Fernet.generate_key().decode())
+        keys = {}
+        for i in range(10):
+            kid = str(uuid.uuid4())
+            k = {'signature_key': Fernet.generate_key().decode(), 'payload_key': Fernet.generate_key().decode(),
+                 'kid': kid}
+            keys[kid] = k
+        return keys
 
     @classmethod
-    @ttl_cache(maxsize=32, ttl=60)
     def get_keys(cls):
-        return cls.all()
+        return list(KEYS.values())
 
     @classmethod
     def get_key(cls):
+
         return random.choice(cls.get_keys())
 
     @classmethod
     def create_jwt(cls, secret_claims):
+
         key = cls.get_key()
-        pay_f = Fernet(key.payload_key)
+        pay_f = Fernet(key.get('payload_key'))
         gmt = tz.gettz('GMT')
         now = datetime.datetime.now(tz=gmt)
         exp = now + datetime.timedelta(days=1)
@@ -66,15 +68,15 @@ class Key(Collection):
             'iss': env('PROJECT_NAME', 'pfunk'),
             'til': pay_f.encrypt(json.dumps(secret_claims).encode()).decode()
         }
-        return jwt.encode(payload, key.signature_key, algorithm="HS256", headers={'kid': key.ref.id()}), exp
+        return jwt.encode(payload, key.get('signature_key'), algorithm="HS256", headers={'kid': key.get('kid')}), exp
 
     @classmethod
     def decrypt_jwt(cls, encoded):
         headers = jwt.get_unverified_header(encoded)
-        key = Key.get(headers.get('kid'))
-        decoded = jwt.decode(encoded, key.signature_key, algorithms="HS256", verify=True,
+        key = KEYS.get(headers.get('kid'))
+        decoded = jwt.decode(encoded, key.get('signature_key'), algorithms="HS256", verify=True,
                              options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
-        pay_f = Fernet(key.payload_key.encode())
+        pay_f = Fernet(key.get('payload_key').encode())
         k = pay_f.decrypt(decoded.get('til').encode())
         return json.loads(k.decode())
 
@@ -105,7 +107,7 @@ class BaseUser(Collection):
     non_public_fields = ['groups']
     use_email_verification = True
     # Views
-    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView]
+    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView]
     # Signals
     pre_create_signals = [attach_verification_key]
     post_create_signals = [send_verification_email]
@@ -115,6 +117,7 @@ class BaseUser(Collection):
     last_name = StringField(required=True)
     email = EmailField(required=True, unique=True)
     verification_key = StringField(required=False, unique=True)
+    forgot_password_key = StringField(required=False, unique=True)
     account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
 
     def __unicode__(self):
@@ -143,7 +146,6 @@ class BaseUser(Collection):
     @classmethod
     def api_login(cls, username, password, _token=None):
         token = cls.login(username=username, password=password, _token=_token)
-        print('Raw Token: ', token)
         user = cls.get_current_user(_token=token)
         claims = user.to_dict().copy()
         try:
@@ -166,31 +168,52 @@ class BaseUser(Collection):
     def attach_verification_key(self):
         self.verification_key = uuid.uuid4()
 
-    @classmethod
-    def verify_email(cls, verification_key):
-        user = cls.get_by('unique_User_verification_key', [verification_key])
-        user.verification_key = ''
-        user.account_status = 'ACTIVE'
-        user.save()
+    def attach_forgot_verification_key(self):
+        self.forgot_password_key = uuid.uuid4()
 
-    def send_verification_email(self, from_email=None):
+    @classmethod
+    def verify_email(cls, verification_key, verify_type='signup', password=None):
+        if verify_type == 'signup':
+            user = cls.get_by('unique_User_verification_key', [verification_key])
+            user.verification_key = ''
+            user.account_status = 'ACTIVE'
+            user.save()
+        elif verify_type == 'forgot' and password:
+            user = cls.get_by('unique_User_forgot_password_key', [verification_key])
+            user.forgot_password_key = ''
+            user.save(_credentials=password)
+
+    def send_verification_email(self, from_email=None, verification_type='signup'):
         project_name = env('PROJECT_NAME', '')
+        if verification_type == 'signup':
+            txt_template = 'auth/verification_email.txt'
+            html_template = 'auth/verification_email.html'
+            verification_key = self.verification_key
+        elif verification_type == 'forgot':
+            txt_template = 'auth/forgot_email.txt'
+            html_template = 'auth/forgot_email.html'
+            verification_key = self.forgot_password_key
         try:
             send_email(
-                txt_template='auth/verification_email.txt',
-                html_template='auth/verification_email.html',
+                txt_template=txt_template,
+                html_template=html_template,
                 to_emails=[self.email],
                 from_email=from_email or env('DEFAULT_FROM_EMAIL'),
                 subject=f'{project_name} Email Verification',
                 first_name=self.first_name,
                 last_name=self.last_name,
-                verification_key=self.verification_key
+                verification_key=verification_key
             )
-        except:
-            pass
+        except Exception as e:
+            import logging
+            logging.error(e)
+
     @classmethod
     def forgot_password(cls, email):
-        pass
+        user = cls.get_by('unique_User_email', email)
+        user.attach_forgot_verification_key()
+        user.send_verification_email(verification_type='forgot')
+
 
     @classmethod
     def signup(cls, _token=None, **kwargs):
@@ -203,11 +226,16 @@ class BaseUser(Collection):
         cls.create(**data, _token=_token)
 
     @classmethod
-    def update_password(cls, current_password, new_password, _token=None):
+    def update_password(cls, current_password, new_password, new_password_confirm, _token=None):
+        if new_password != new_password_confirm:
+            raise ValidationException('new_password: Password field and password confirm field do not match.')
         c = cls()
-        return c.client(_token=_token).query(
-            q.call("update_password", {'current_password': current_password, 'new_password': new_password})
-        )
+        try:
+            return c.client(_token=_token).query(
+                q.call("update_password", {'current_password': current_password, 'new_password': new_password})
+            )
+        except BadRequest:
+            raise ValidationException('current_password: Password update failed.')
 
     @classmethod
     def get_current_user(cls, _token=None):

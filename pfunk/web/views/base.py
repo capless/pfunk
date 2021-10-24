@@ -167,6 +167,9 @@ class View(object):
                                         secure=secure, httponly=httponly, charset=charset, sync_expires=sync_expires,
                                         max_size=max_size, samesite=samesite)
 
+    def delete_cookie(self, key: str):
+        self.set_cookie(key, value="", max_age=0, expires=0)
+
     def get_headers(self):
         if len(self.cookies.keys()) > 0:
             cookie_list = []

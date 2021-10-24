@@ -52,3 +52,7 @@ from pfunk import Collection
 
 # Write some collections here
 """)
+
+key_template = Template("""
+KEYS = {{keys}}
+""")

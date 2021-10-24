@@ -90,7 +90,8 @@ class Deploy(object):
             'STAGE_NAME': stage_name,
             'FAUNA_SECRET': stage_settings.get('fauna_secret'),
             'DEFAULT_FROM_EMAIL': stage_settings.get('default_from_email'),
-            'TEMPLATE_ROOT_DIR': 'templates'
+            'TEMPLATE_ROOT_DIR': f'/var/task/{self.project_name}/templates',
+            'KEY_MODULE': stage_settings.get('key_module')
         }
 
     def build_template(self, stage_name, bucket, zip_name, stage_settings):

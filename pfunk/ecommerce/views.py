@@ -1,22 +1,28 @@
 import collections
 import json
-from datetime import datetime
-from json import JSONDecodeError
-
 import requests
 import stripe
+import bleach
+from envs import env
+from datetime import datetime
+from json import JSONDecodeError
+from jinja2 import Environment, BaseLoader
 
 from ecommerce.models import Customer, Package
+from pfunk.contrib.email import ses
 from pfunk.exceptions import DocNotFound
 from pfunk.web.views.json import JSONView, ListView, DetailView
-from envs import env
+from pfunk.contrib.email.ses import SESBackend
+from pfunk.contrib.auth.collections import Group, User
 
 stripe.api_key = env('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY')
+STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+DOMAIN_NAME = env('DOMAIN_NAME')
 
 class PackageListView(ListView):
     model = Package
-    template_name = 'ecommerce/list.html'
     login_required = True
 
 
@@ -24,7 +30,6 @@ package_list_view = PackageListView.as_view()
 
 
 class CheckoutView(DetailView):
-    template_name = 'ecommerce/create.html'
     model = Package
     login_required = True
 
@@ -61,7 +66,6 @@ checkout_view = CheckoutView.as_view()
 
 
 class CheckoutSuccessView(DetailView):
-    template_name = 'ecommerce/success.html'
     model = Package
     login_required = True
 
@@ -84,7 +88,7 @@ success_url = CheckoutSuccessView.as_view()
 
 class BaseWebhookView(JSONView):
     http_method_names = ['post']
-    webhook_signing_secret = settings.STRIPE_WEBHOOK_SECRET
+    webhook_signing_secret = STRIPE_WEBHOOK_SECRET
 
     def event_action(self):
 
@@ -92,12 +96,8 @@ class BaseWebhookView(JSONView):
         action = getattr(self, event_type, None)
         if isinstance(action, collections.Callable):
             action()
-            return JsonResponse({'success': 'ok'})
-        return HttpResponse(status=404)
-
-    @method_decorator(csrf_exempt)
-    def dispatch(self, request, *args, **kwargs):
-        return super(BaseWebhookView, self).dispatch(request, *args, **kwargs)
+            return {'success': 'ok'}
+        raise super().not_found_class()
 
     def post(self, request, *args, **kwargs):
         self.request = request
@@ -131,14 +131,21 @@ class BaseWebhookView(JSONView):
         if not context:
             context = {'object': self.object, 'request_body': self.request.body}
         if template_name:
-            html_content = render_to_string(template_name, context or dict())
-            text_content = strip_tags(html_content)
+            rtemplate = Environment(loader=BaseLoader()).from_string(template_name)
+            html_content = rtemplate.render(context or dict())
+            text_content = bleach.clean(html_content, strip=True)
         else:
             text_content = "{}".format(self.request.body)
             html_content = "{}".format(self.request.body)
-        msg = EmailMultiAlternatives(subject, text_content, from_email, to_email_list)
-        msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=True)
+
+        msg = SESBackend()
+        msg.send_email(
+            subject=subject,
+            to_emails=to_email_list,
+            html_template=template_name,
+            txt_template=text_content,
+            from_email=from_email,
+        )
 
     def check_signing_secret(self):
         """
@@ -157,17 +164,28 @@ class BaseWebhookView(JSONView):
 
 
 class WebHookView(BaseWebhookView):
+    
+    def __init__(self, group=Group, user=User):
+        self.User = user
+        self.Group = group
 
     def checkout_session_completed(self):
-        u = User.objects.get(pk=self.object.metadata.user_id)
-        p = Package.objects.get(stripe_id=self.object.client_reference_id)
+        # TODO: Determine what should be the strucutre of this function
+        # If User > Group or Group > User, the current structure is Group > User
+        u = self.User.get(ref=self.object.metadata.user_id)
+        p = Package.get(stripe_id=self.object.client_reference_id)  # TODO: see if query like this is possible
 
-        project, created = Project.objects.get_or_create(
-            user=u, created_by=u, last_updated_by=u,
-            title=f'{u.username} - {p.title} Project ({datetime.now()})', package=p
-        )
-        self.send_html_email('Sugar Logo: New Logo Project', settings.DEFAULT_FROM_EMAIL, [u.email],
-                             'ecommerce/emails/new-project.html', {'project': project,
-                                                                   'domain_name': settings.DOMAIN_NAME})
+        try:
+            group = self.Group.get(
+                title=f'{p.title} Group ({datetime.now()})', package=p
+            )
+        except DocNotFound:
+            group = self.Group.create(
+                title=f'{p.title} Group ({datetime.now()})', package=p
+            )
+    
+        self.send_html_email('New Project', DEFAULT_FROM_EMAIL, [u.email],
+                            'ecommerce/emails/new-project.html', {'group': group,
+                                                                'domain_name': DOMAIN_NAME})
 
 webhook_view = WebHookView.as_view()

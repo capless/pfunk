@@ -162,30 +162,11 @@ class BaseWebhookView(JSONView):
     def get_transfer_data(self):
         return self.event_json['data']['object']
 
-
-class WebHookView(BaseWebhookView):
-    
-    def __init__(self, group=Group, user=User):
-        self.User = user
-        self.Group = group
-
     def checkout_session_completed(self):
-        # TODO: Determine what should be the strucutre of this function
-        # If User > Group or Group > User, the current structure is Group > User
-        u = self.User.get(ref=self.object.metadata.user_id)
-        p = Package.get(stripe_id=self.object.client_reference_id)  # TODO: see if query like this is possible
+        """ A method to override to implement custom actions 
+            after successful Stripe checkout
 
-        try:
-            group = self.Group.get(
-                title=f'{p.title} Group ({datetime.now()})', package=p
-            )
-        except DocNotFound:
-            group = self.Group.create(
-                title=f'{p.title} Group ({datetime.now()})', package=p
-            )
-    
-        self.send_html_email('New Project', DEFAULT_FROM_EMAIL, [u.email],
-                            'ecommerce/emails/new-project.html', {'group': group,
-                                                                'domain_name': DOMAIN_NAME})
-
-webhook_view = WebHookView.as_view()
+            Use this method by subclassing this class in your
+            custom claas
+        """
+        raise NotImplementedError

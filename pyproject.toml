@@ -23,6 +23,7 @@ click = "^8.0.1"
 boto3 = "^1.18.36"
 graphql-py = "^0.8.1"
 sammy = "^0.4.3"
+Authlib = "^0.15.5"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

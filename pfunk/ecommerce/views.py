@@ -21,15 +21,24 @@ STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 DOMAIN_NAME = env('DOMAIN_NAME')
 
+
 class PackageListView(ListView):
-    model = Package
+    """ Base package list view to list your stripe packages 
+
+        Use this as a base class and use your defined collections
+    """
     login_required = True
 
 
-package_list_view = PackageListView.as_view()
-
-
 class CheckoutView(DetailView):
+    """ Returns a Stripe Checkout View session
+
+        This is a session from Stripe itself, using this
+        is a better way of handling payments and showing
+        the different of options of payment. Use this as
+        a base class.
+    """
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         customer = Customer.objects.get_or_create_customer(self.request.user)
@@ -59,11 +68,11 @@ class CheckoutView(DetailView):
         return context
 
 
-checkout_view = CheckoutView.as_view()
-
-
 class CheckoutSuccessView(DetailView):
+    """ Defines action from the result of `CheckoutView` """
+
     def get_object(self, queryset=None):
+        """ Acquires the object from the `SessionView` """
         try:
             session_id = self.request.GET['session_id']
         except KeyError:
@@ -77,15 +86,21 @@ class CheckoutSuccessView(DetailView):
         return context
 
 
-success_url = CheckoutSuccessView.as_view()
-
-
 class BaseWebhookView(JSONView):
+    """ Base class to use for executing Stripe webhook actions """
     http_method_names = ['post']
     webhook_signing_secret = STRIPE_WEBHOOK_SECRET
 
     def event_action(self):
+        """ Transforms Stripe action to snake case for easier 
+            calling in child class
 
+            For example, the event type `checkout.session.completed`
+            will transform to `checkout_session_completed` which 
+            you can use in your child class as the function name
+            to execute the action you want if the event type was
+            that
+        """
         event_type = self.event.type.replace('.', '_')
         action = getattr(self, event_type, None)
         if isinstance(action, collections.Callable):
@@ -113,7 +128,8 @@ class BaseWebhookView(JSONView):
         :return: bool
         """
         try:
-            valid_ips = requests.get('https://stripe.com/files/ips/ips_webhooks.json').json()['WEBHOOKS']
+            valid_ips = requests.get(
+                'https://stripe.com/files/ips/ips_webhooks.json').json()['WEBHOOKS']
         except (KeyError, JSONDecodeError):
             return True
         try:
@@ -122,10 +138,19 @@ class BaseWebhookView(JSONView):
             return False
 
     def send_html_email(self, subject, from_email: str, to_email_list: list, template_name=None, context=None):
+        """ Sends an HTML email 
+
+            Uses `contrib.email` service which uses `boto3`
+            You can define these 2 in your environment variables:
+                SES_REGION_NAME (str, default: `us-east-1`): region name of AWS service
+                DEFAULT_FROM_EMAIL (str): default `from` email
+        """
         if not context:
-            context = {'object': self.object, 'request_body': self.request.body}
+            context = {'object': self.object,
+                       'request_body': self.request.body}
         if template_name:
-            rtemplate = Environment(loader=BaseLoader()).from_string(template_name)
+            rtemplate = Environment(
+                loader=BaseLoader()).from_string(template_name)
             html_content = rtemplate.render(context or dict())
             text_content = bleach.clean(html_content, strip=True)
         else:

@@ -10,7 +10,12 @@ stripe.api_key = env('STRIPE_API_KEY')
 
 
 class StripeCustomer(Collection):
-    """ Customer collection for Stripe """
+    """ Base Customer collection for Stripe 
+
+        This is only a base model made to give an idea how 
+        can you structure your collections. Override the 
+        fields and functions to match your system.
+    """
     user = ReferenceField('pfunk.contrib.auth.collections.User')
     customer_id =StringField(required=True)
     
@@ -36,7 +41,12 @@ class StripeCustomer(Collection):
 
 
 class StripePackage(Collection):
-    """ Collection that has the essential info about a stripe package """
+    """ Collection that has the essential info about a stripe package 
+    
+        This is only a base model made to give an idea how 
+        can you structure your collections. Override the 
+        fields and functions to match your system.
+    """
     stripe_id = StringField(required=True)
     price = FloatField(required=True)
     description = StringField(required=True)

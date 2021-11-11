@@ -30,9 +30,6 @@ package_list_view = PackageListView.as_view()
 
 
 class CheckoutView(DetailView):
-    model = Package
-    login_required = True
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         customer = Customer.objects.get_or_create_customer(self.request.user)
@@ -66,9 +63,6 @@ checkout_view = CheckoutView.as_view()
 
 
 class CheckoutSuccessView(DetailView):
-    model = Package
-    login_required = True
-
     def get_object(self, queryset=None):
         try:
             session_id = self.request.GET['session_id']

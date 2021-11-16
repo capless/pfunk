@@ -1,3 +1,4 @@
+import time
 from authlib.oauth2.rfc6749 import ClientMixin, TokenMixin, AuthorizationCodeMixin
 from authlib.oauth2.util import scope_to_list, list_to_scope
 
@@ -67,8 +68,8 @@ class OAuth2Token(Collection, TokenMixin):
     refresh_token = StringField(max_length=255)
     scope = StringField(default='')
     revoked = BooleanField(default=False)
-    issued_at = IntegerField(null=False, default=now_timestamp)
-    expires_in = IntegerField(null=False, default=0)
+    issued_at = IntegerField(null=False, default_value=now_timestamp)
+    expires_in = IntegerField(null=False, default_value=0)
 
     def get_client_id(self):
         return self.client_id
@@ -83,6 +84,23 @@ class OAuth2Token(Collection, TokenMixin):
         return self.issued_at + self.expires_in
 
 
-# TODO: Create `AuthorizationCode` model
 class AuthorizationCode(Collection, AuthorizationCodeMixin):
-    pass
+    user = ReferenceField(PFunkUser)
+    client_id = StringField()
+    code = StringField(unique=True)
+    redirect_uri = StringField()
+    response_type = StringField()
+    scope = StringField()
+    auth_time = IntegerField(default_value=now_timestamp)
+
+    def is_expired(self):
+        return self.auth_time + 300 < time.time()
+
+    def get_redirect_uri(self):
+        return self.redirect_uri
+
+    def get_scope(self):
+        return self.scope or ''
+
+    def get_auth_time(self):
+        return self.auth_time

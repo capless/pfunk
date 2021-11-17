@@ -47,7 +47,7 @@ class OAuth2Client(Collection, ClientMixin):
     def check_endpoint_auth_method(self, method, endpoint):
         if endpoint == 'token':
             return self.token_endpoint_auth_method == method
-        # TODO: developers can update this check method
+
         return True
 
     def check_response_type(self, response_type):
@@ -85,6 +85,7 @@ class OAuth2Token(Collection, TokenMixin):
 
 
 class AuthorizationCode(Collection, AuthorizationCodeMixin):
+    """ Authorization Code for after acquiring Access Token -> `OAuth2Token` """
     user = ReferenceField(PFunkUser)
     client_id = StringField()
     code = StringField(unique=True)

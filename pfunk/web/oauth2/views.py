@@ -24,22 +24,20 @@ class OAuthAuthorize(View):
             the form value and if it was allowed, return
             `server.create_authorization_response`
         """
-        grant = server.get_consent_grant(
-            self.request, end_user=self.request.user)
-        client = grant.client
-        scope = client.get_allowed_scope(grant.request.scope)
-        context = dict(grant=grant, client=client,
-                       scope=scope, user=self.request.user)
+        raise NotImplementedError
+        # grant = server.get_consent_grant(
+        #     self.request, end_user=self.request.user)
+        # client = grant.client
+        # scope = client.get_allowed_scope(grant.request.scope)
+        # context = dict(grant=grant, client=client,
+        #                scope=scope, user=self.request.user)
 
-        # TODO: (SEE FIRST IF RENDERING HTML IS ONE OF THE PLANS IN PFUNK OR IF IT IS EVER NEEDED AT ALL)
-        # TODO: Render an HTML
-        return render(self.request, 'authorize.html', context)
+        # return render(self.request, 'authorize.html', context)
 
-        # TODO: After receiving of form is the user confirmed, return the response
-        if is_user_confirmed(request):
-            return server.create_authorization_response(self.request, grant_user=request.user)
+        # if is_user_confirmed(request):
+        #     return server.create_authorization_response(self.request, grant_user=request.user)
 
-        return server.create_authorization_response(self.request, grant_user=None)
+        # return server.create_authorization_response(self.request, grant_user=None)
 
     def post(self, **kwargs):
         """ Return an OAuth token """

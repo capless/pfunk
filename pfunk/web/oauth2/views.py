@@ -44,8 +44,8 @@ class OAuthAuthorize(View):
         return server.create_token_response(self.request)
 
 
-class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
-    """ OAuth2 Authorization Code grant views """
+class AuthorizationCodeGrant(grants.AuthorizationCodeGrant, View):
+    """ OAuth2 Authorization Code grant views for acquiring Access Token """
 
     def save_authorization_code(self, code, request):
         """ Create Authorization code """
@@ -82,3 +82,55 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
     def authenticate_user(self, authorization_code):
         """ Return the `User` that is associated with the auth code """
         return authorization_code.user
+
+
+#############
+### TOKEN ###
+#############
+class RevokeToken(View):
+    """ View for revoking the last access/refresh token """
+
+    def post(self, **kwargs):
+        pass
+
+
+class IntrospectToken(View):
+    """ View for knowing the token's content """
+
+    def query_token(self, token, token_type_hint):
+        """ Query the token in the db and return it
+        
+        Args:
+            token (`pfunk.web.oauth2.models.OAuthToken`, required):
+                The token object that holds token contents
+            token_type_hint (str, required):
+                The type of the token `['access_token', 'refresh_token']`
+
+        Returns:
+            token (`pfunk.web.oauth2.models.OAuthToken'):
+                The token model acquired from db
+        """
+        pass
+
+    def introspect_token(self, token):
+        """ Return the contents of the token """
+        # return {
+        #     'active': True,
+        #     'client_id': token.client_id,
+        #     'token_type': token.token_type,
+        #     'username': get_token_username(token),
+        #     'scope': token.get_scope(),
+        #     'sub': get_token_user_sub(token),
+        #     'aud': token.client_id,
+        #     'iss': 'https://server.example.com/',
+        #     'exp': token.expires_at,
+        #     'iat': token.issued_at,
+        # }
+        pass
+
+    def check_permission(self, token, client, request):
+        # TODO: Determine what should be the factor of permissions, whether from Fauna roles or endpoint
+
+        # for example, we only allow internal client to access introspection endpoint
+        # return client.client_type == 'internal'
+        pass

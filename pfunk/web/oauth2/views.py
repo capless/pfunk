@@ -1,12 +1,13 @@
-from authlib.integrations.django_oauth2 import AuthorizationServer
 from authlib.oauth2.rfc6749 import grants
 from authlib.common.security import generate_token
 
 from pfunk.web.oauth2.models import OAuth2Client, OAuth2Token, AuthorizationCode
 from pfunk.web.views.base import View
 from pfunk.exceptions import DocNotFound
+from pfunk.web.oauth2.server import PfunkAuthorizationServer
 
-server = AuthorizationServer(OAuth2Client, OAuth2Token)
+# TODO: Determine if using the generic `AuthorizationServer`` is more flexible than Django implementation
+server = PfunkAuthorizationServer(OAuth2Client, OAuth2Token)
 
 # use ``server.create_authorization_response`` to handle authorization endpoint
 
@@ -84,9 +85,7 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant, View):
         return authorization_code.user
 
 
-#############
-### TOKEN ###
-#############
+# TODO: See if pfunk token will work better than migrating to this
 class RevokeToken(View):
     """ View for revoking the last access/refresh token """
 

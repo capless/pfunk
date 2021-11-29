@@ -1,6 +1,6 @@
 import time
 from authlib.oauth2.rfc6749 import ClientMixin, TokenMixin, AuthorizationCodeMixin
-from authlib.oauth2.util import scope_to_list, list_to_scope
+from authlib.oauth2.rfc6749.util import scope_to_list, list_to_scope
 
 from pfunk.fields import StringField, IntegerField, DateTimeField, ReferenceField, BooleanField
 from pfunk.collection import Collection

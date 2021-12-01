@@ -93,3 +93,64 @@ class HTTPRequest(BaseAPIGatewayRequest):
         return parse_cookie(';'.join(raw_cookies))
 
 
+# TODO: Convert this to pfunk-style oauth2 request
+class OAuth2Request(BaseAPIGatewayRequest):
+    def __init__(self, method, uri, body=None, headers=None):
+        InsecureTransportError.check(uri)
+        #: HTTP method
+        self.method = method
+        self.uri = uri
+        self.body = body
+        #: HTTP headers
+        self.headers = headers or {}
+
+        self.query = urlparse.urlparse(uri).query
+
+        self.args = dict(url_decode(self.query))
+        self.form = self.body or {}
+
+        #: dict of query and body params
+        data = {}
+        data.update(self.args)
+        data.update(self.form)
+        self.data = data
+
+        #: authenticate method
+        self.auth_method = None
+        #: authenticated user on this request
+        self.user = None
+        #: authorization_code or token model instance
+        self.credential = None
+        #: client which sending this request
+        self.client = None
+
+    @property
+    def client_id(self):
+        """The authorization server issues the registered client a client
+        identifier -- a unique string representing the registration
+        information provided by the client. The value is extracted from
+        request.
+
+        :return: string
+        """
+        return self.data.get('client_id')
+
+    @property
+    def response_type(self):
+        return self.data.get('response_type')
+
+    @property
+    def grant_type(self):
+        return self.data.get('grant_type')
+
+    @property
+    def redirect_uri(self):
+        return self.data.get('redirect_uri')
+
+    @property
+    def scope(self):
+        return self.data.get('scope')
+
+    @property
+    def state(self):
+        return self.data.get('state')

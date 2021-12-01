@@ -1,22 +1,28 @@
-from authlib.oauth2.rfc6749 import AuthorizationServer
-from authlib.common.errors import (
-    OAuth2Error,
-    InvalidScopeError,
-    UnsupportedResponseTypeError,
-    UnsupportedGrantTypeError,
-)
+from authlib.oauth2.rfc6749.authorization_server import AuthorizationServer as _AuthorizationServer,
+from authlib.oauth2.rfc6749.authenticate_client import ClientAuthentication
 from envs import env
 
-# TODO: Implement pfunk-style functions
+from pfunk.web.request import HTTPRequest, OAuth2Request
+from pfunk.web.oauth2.util import create_oauth_request
+from pfunk.web.response import Response
+# from pfunk.web.views.base import View
+
+# TODO: Test if request-response implementation is working
+# TODO: Decide whether token generators are needed just like the implmentation in django AuthServer
 # NOTE: The functions that does not need overriding was removed already
 # NOTE: All of docstrings are directly acquired from authlib framework. ONLY REWORK DOCS AFTER IT ACTUALLY WORKS
-class PfunkAuthorizationServer(AuthorizationServer):
+class AuthorizationServer(_AuthorizationServer):
     """Authorization server that handles Authorization Endpoint and Token
-    Endpoint.
+    Endpoint. 
+
+    This server accepts (and returns) own-implemented of `request` objects, that way, 
+    it can be integrated well with specific objectives. 
 
     :param scopes_supported: A list of supported scopes by this authorization server.
     """
-    def __init__(self, scopes_supported=None):
+    def __init__(self, client_model, token_model, scopes_supported=None):
+        self.client_model = client_model
+        self.token_model = token_model
         self.scopes_supported = scopes_supported
         self._token_generators = {}
         self._client_auth = None
@@ -29,19 +35,21 @@ class PfunkAuthorizationServer(AuthorizationServer):
         implement the methods described by
         :class:`~authlib.oauth2.rfc6749.ClientMixin`.
         """
-        raise NotImplementedError()
+        return self.client_model.get(client_id)
 
     def save_token(self, token, request):
         """Define function to save the generated token into database."""
-        raise NotImplementedError()
-
-    def authenticate_client(self, request, methods, endpoint='token'):
-        """Authenticate client via HTTP request information with the given
-        methods, such as ``client_secret_basic``, ``client_secret_post``.
-        """
-        if self._client_auth is None and self.query_client:
-            self._client_auth = ClientAuthentication(self.query_client)
-        return self._client_auth(request, methods, endpoint)
+        client = request.client
+        if request.user:
+            user_id = request.user
+        else:
+            user_id = client.user
+        token = self.token_model.save(
+            client_id=client.client_id,
+            user=user_id,
+            **token
+        )
+        return token
 
     def register_client_auth_method(self, method, func):
         """Add more client auth method. The default methods are:
@@ -70,6 +78,10 @@ class PfunkAuthorizationServer(AuthorizationServer):
 
         self._client_auth.register(method, func)
 
+    def get_error_uri(self, request, error):
+        """Return a URI for the given error, framework may implement this method."""
+        return None
+
     def create_oauth2_request(self, request):
         """This method MUST be implemented in framework integrations. It is
         used to create an OAuth2Request instance.
@@ -77,7 +89,7 @@ class PfunkAuthorizationServer(AuthorizationServer):
         :param request: the "request" instance in framework
         :return: OAuth2Request instance
         """
-        raise NotImplementedError()
+        return create_oauth_request(request, OAuth2Request)
 
     def create_json_request(self, request):
         """This method MUST be implemented in framework integrations. It is
@@ -86,138 +98,13 @@ class PfunkAuthorizationServer(AuthorizationServer):
         :param request: the "request" instance in framework
         :return: HttpRequest instance
         """
-        raise NotImplementedError()
+        req = create_oauth_request(request, HTTPRequest, True)
+        req.user = request.user
+        return req
 
     def handle_response(self, status, body, headers):
         """Return HTTP response. Framework MUST implement this function."""
-        raise NotImplementedError()
-
-    def validate_requested_scope(self, scope, state=None):
-        """Validate if requested scope is supported by Authorization Server.
-        Developers CAN re-write this method to meet your needs.
-        """
-        if scope and self.scopes_supported:
-            scopes = set(scope_to_list(scope))
-            if not set(self.scopes_supported).issuperset(scopes):
-                raise InvalidScopeError(state=state)
-
-    def register_grant(self, grant_cls, extensions=None):
-        """Register a grant class into the endpoint registry. Developers
-        can implement the grants in ``authlib.oauth2.rfc6749.grants`` and
-        register with this method::
-
-            class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
-                def authenticate_user(self, credential):
-                    # ...
-
-            authorization_server.register_grant(AuthorizationCodeGrant)
-
-        :param grant_cls: a grant class.
-        :param extensions: extensions for the grant class.
-        """
-        if hasattr(grant_cls, 'check_authorization_endpoint'):
-            self._authorization_grants.append((grant_cls, extensions))
-        if hasattr(grant_cls, 'check_token_endpoint'):
-            self._token_grants.append((grant_cls, extensions))
-
-    def register_endpoint(self, endpoint_cls):
-        """Add extra endpoint to authorization server. e.g.
-        RevocationEndpoint::
-
-            authorization_server.register_endpoint(RevocationEndpoint)
-
-        :param endpoint_cls: A endpoint class
-        """
-        self._endpoints[endpoint_cls.ENDPOINT_NAME] = endpoint_cls(self)
-
-    def get_authorization_grant(self, request):
-        """Find the authorization grant for current request.
-
-        :param request: OAuth2Request instance.
-        :return: grant instance
-        """
-        for (grant_cls, extensions) in self._authorization_grants:
-            if grant_cls.check_authorization_endpoint(request):
-                return _create_grant(grant_cls, extensions, request, self)
-        raise UnsupportedResponseTypeError(request.response_type)
-
-    def get_consent_grant(self, request=None, end_user=None):
-        """Validate current HTTP request for authorization page. This page
-        is designed for resource owner to grant or deny the authorization.
-        """
-        request = self.create_oauth2_request(request)
-        request.user = end_user
-
-        grant = self.get_authorization_grant(request)
-        grant.validate_consent_request()
-        return grant
-
-    def get_token_grant(self, request):
-        """Find the token grant for current request.
-
-        :param request: OAuth2Request instance.
-        :return: grant instance
-        """
-        for (grant_cls, extensions) in self._token_grants:
-            if grant_cls.check_token_endpoint(request):
-                return _create_grant(grant_cls, extensions, request, self)
-        raise UnsupportedGrantTypeError(request.grant_type)
-
-    def create_endpoint_response(self, name, request=None):
-        """Validate endpoint request and create endpoint response.
-
-        :param name: Endpoint name
-        :param request: HTTP request instance.
-        :return: Response
-        """
-        if name not in self._endpoints:
-            raise RuntimeError(f'There is no "{name}" endpoint.')
-
-        endpoint = self._endpoints[name]
-        request = endpoint.create_endpoint_request(request)
-        try:
-            return self.handle_response(*endpoint(request))
-        except OAuth2Error as error:
-            return self.handle_error_response(request, error)
-
-    def create_authorization_response(self, request=None, grant_user=None):
-        """Validate authorization request and create authorization response.
-
-        :param request: HTTP request instance.
-        :param grant_user: if granted, it is resource owner. If denied,
-            it is None.
-        :returns: Response
-        """
-        request = self.create_oauth2_request(request)
-        try:
-            grant = self.get_authorization_grant(request)
-        except UnsupportedResponseTypeError as error:
-            return self.handle_error_response(request, error)
-
-        try:
-            redirect_uri = grant.validate_authorization_request()
-            args = grant.create_authorization_response(redirect_uri, grant_user)
-            return self.handle_response(*args)
-        except OAuth2Error as error:
-            return self.handle_error_response(request, error)
-
-    def create_token_response(self, request=None):
-        """Validate token request and create token response.
-
-        :param request: HTTP request instance
-        """
-        request = self.create_oauth2_request(request)
-        try:
-            grant = self.get_token_grant(request)
-        except UnsupportedGrantTypeError as error:
-            return self.handle_error_response(request, error)
-
-        try:
-            grant.validate_token_request()
-            args = grant.create_token_response()
-            return self.handle_response(*args)
-        except OAuth2Error as error:
-            return self.handle_error_response(request, error)
-
-    def handle_error_response(self, request, error):
-        return self.handle_response(*error(self.get_error_uri(request, error)))
+        resp = Response(payload=body, headers=headers)
+        if status:
+            resp.status_code = status
+        return resp

@@ -59,6 +59,29 @@ class OAuth2Client(Collection, ClientMixin):
         return grant_type in allowed
 
 
+class AuthorizationCode(Collection, AuthorizationCodeMixin):
+    """ Authorization Code for acquiring Access Token -> `OAuth2Token` """
+    user = ReferenceField(PFunkUser)
+    client_id = StringField()
+    code = StringField(unique=True)
+    redirect_uri = StringField()
+    response_type = StringField()
+    scope = StringField()
+    auth_time = IntegerField(default_value=now_timestamp)
+
+    def is_expired(self):
+        return self.auth_time + 300 < time.time()
+
+    def get_redirect_uri(self):
+        return self.redirect_uri
+
+    def get_scope(self):
+        return self.scope or ''
+
+    def get_auth_time(self):
+        return self.auth_time
+
+
 class OAuth2Token(Collection, TokenMixin):
     """ Token class collection """
     user = ReferenceField(PFunkUser)
@@ -82,26 +105,3 @@ class OAuth2Token(Collection, TokenMixin):
 
     def get_expires_at(self):
         return self.issued_at + self.expires_in
-
-
-class AuthorizationCode(Collection, AuthorizationCodeMixin):
-    """ Authorization Code for after acquiring Access Token -> `OAuth2Token` """
-    user = ReferenceField(PFunkUser)
-    client_id = StringField()
-    code = StringField(unique=True)
-    redirect_uri = StringField()
-    response_type = StringField()
-    scope = StringField()
-    auth_time = IntegerField(default_value=now_timestamp)
-
-    def is_expired(self):
-        return self.auth_time + 300 < time.time()
-
-    def get_redirect_uri(self):
-        return self.redirect_uri
-
-    def get_scope(self):
-        return self.scope or ''
-
-    def get_auth_time(self):
-        return self.auth_time

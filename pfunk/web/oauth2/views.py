@@ -1,3 +1,4 @@
+from envs import env
 from authlib.oauth2.rfc6749 import grants
 from authlib.common.security import generate_token
 
@@ -6,10 +7,7 @@ from pfunk.web.views.base import View
 from pfunk.exceptions import DocNotFound
 from pfunk.web.oauth2.server import AuthorizationServer
 
-# TODO: Determine if using the generic `AuthorizationServer`` is more flexible than Django implementation
 server = AuthorizationServer(OAuth2Client, OAuth2Token)
-
-# use ``server.create_authorization_response`` to handle authorization endpoint
 
 
 class OAuthAuthorize(View):
@@ -46,7 +44,7 @@ class OAuthAuthorize(View):
 
 
 class AuthorizationCodeGrant(grants.AuthorizationCodeGrant, View):
-    """ OAuth2 Authorization Code grant views for acquiring Access Token """
+    """ OAuth2 Authorization Code grant views for auth code needed for acquiring access tokens """
 
     def save_authorization_code(self, code, request):
         """ Create Authorization code """
@@ -65,7 +63,7 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant, View):
     def query_authorization_code(self, code, client):
         """ Query auth code using the `code` & `client_id` """
         try:
-            # TODO: Before this query, an index should be created too
+            # NOTE: This index should be published first
             item = AuthorizationCode.get_by(
                 'auth_code_by_code',
                 terms=[code, client.client_id]
@@ -85,11 +83,11 @@ class AuthorizationCodeGrant(grants.AuthorizationCodeGrant, View):
         return authorization_code.user
 
 
-# TODO: See if pfunk token will work better than migrating to this
 class RevokeToken(View):
     """ View for revoking the last access/refresh token """
 
     def post(self, **kwargs):
+        """ Accept refresh token to revoke its access token """
         pass
 
 
@@ -98,7 +96,7 @@ class IntrospectToken(View):
 
     def query_token(self, token, token_type_hint):
         """ Query the token in the db and return it
-        
+
         Args:
             token (`pfunk.web.oauth2.models.OAuthToken`, required):
                 The token object that holds token contents
@@ -109,26 +107,37 @@ class IntrospectToken(View):
             token (`pfunk.web.oauth2.models.OAuthToken'):
                 The token model acquired from db
         """
-        pass
+        if token_type_hint == 'access_token':
+            term = 'access_token'
+        elif token_type_hint == 'refresh_token':
+            term = 'refresh_token'
+        else:
+            raise DocNotFound
+
+        token = OAuth2Token.get_by(
+            f'oauth2_token_by_{term}',
+            terms=[token]
+        )
+        return token
 
     def introspect_token(self, token):
         """ Return the contents of the token """
-        # return {
-        #     'active': True,
-        #     'client_id': token.client_id,
-        #     'token_type': token.token_type,
-        #     'username': get_token_username(token),
-        #     'scope': token.get_scope(),
-        #     'sub': get_token_user_sub(token),
-        #     'aud': token.client_id,
-        #     'iss': 'https://server.example.com/',
-        #     'exp': token.expires_at,
-        #     'iat': token.issued_at,
-        # }
-        pass
+        return {
+            'active': True,
+            'client_id': token.client_id,
+            'token_type': token.token_type,
+            # 'username': get_token_username(token),
+            'scope': token.get_scope(),
+            'sub': token.user.id(),   # return fauna ID
+            'aud': token.client_id,
+            'iss': env('PROJECT_NAME', 'pfunk'),
+            'exp': token.expires_at,
+            'iat': token.issued_at,
+        }
 
     def check_permission(self, token, client, request):
-        # TODO: Determine what should be the factor of permissions, whether from Fauna roles or endpoint
+        # NOTE: Regarding permissions, let faunadb exclaim the permissions rather than trying to work on it in an entirely different field
+        # TODO: Return permissions defined in faunadb and its corresponding collections
 
         # for example, we only allow internal client to access introspection endpoint
         # return client.client_type == 'internal'

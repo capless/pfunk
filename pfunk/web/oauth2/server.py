@@ -5,10 +5,10 @@ from envs import env
 from pfunk.web.request import HTTPRequest, OAuth2Request
 from pfunk.web.oauth2.util import create_oauth_request
 from pfunk.web.response import Response
-# from pfunk.web.views.base import View
+
 
 # TODO: Test if request-response implementation is working
-# TODO: Decide whether token generators are needed just like the implmentation in django AuthServer
+# TODO: Decide whether token generators are needed just like the implementation in django AuthServer
 # NOTE: The functions that does not need overriding was removed already
 # NOTE: All of docstrings are directly acquired from authlib framework. ONLY REWORK DOCS AFTER IT ACTUALLY WORKS
 class AuthorizationServer(_AuthorizationServer):
@@ -20,6 +20,7 @@ class AuthorizationServer(_AuthorizationServer):
 
     :param scopes_supported: A list of supported scopes by this authorization server.
     """
+
     def __init__(self, client_model, token_model, scopes_supported=None):
         self.client_model = client_model
         self.token_model = token_model

@@ -23,7 +23,7 @@ def create_oauth_request(request, request_cls, use_json=False):
 
 
 def get_token_username(token):
-    """ Returns the user's username attached with the token 
+    """ Returns the fauna user's username attached with the token 
     
     Args:
         token (`pfunk.web.oauth2.models.OAuthToken`, required):

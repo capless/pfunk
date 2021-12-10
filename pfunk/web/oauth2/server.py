@@ -1,7 +1,13 @@
-from authlib.oauth2.rfc6749.authorization_server import AuthorizationServer as _AuthorizationServer,
+from authlib.oauth2.rfc6749.authorization_server import AuthorizationServer as _AuthorizationServer
 from authlib.oauth2.rfc6749.authenticate_client import ClientAuthentication
+from authlib.oauth2.rfc6750 import BearerTokenGenerator
+from authlib.common.security import generate_token as _generate_token
 from envs import env
+import importlib
 
+from pfunk.web.oauth2.token import access_token_generator as _access_token_generator
+from pfunk.web.oauth2.token import refresh_token_generator as _refresh_token_generator
+from pfunk.web.oauth2.token import TOKEN_EXPIRES_IN
 from pfunk.web.request import HTTPRequest, OAuth2Request
 from pfunk.web.oauth2.util import create_oauth_request
 from pfunk.web.response import Response
@@ -109,3 +115,44 @@ class AuthorizationServer(_AuthorizationServer):
         if status:
             resp.status_code = status
         return resp
+
+    def create_bearer_token_generator(self, use_default=True):
+        """Default method to create BearerToken generator."""
+        conf = _access_token_generator() if use_default else True
+        access_token_generator = create_token_generator(conf, 42)
+
+        conf = _refresh_token_generator() if use_default else True
+        refresh_token_generator = create_token_generator(conf, 48)
+
+        conf = TOKEN_EXPIRES_IN
+        expires_generator = create_token_expires_in_generator(conf)
+
+        return BearerTokenGenerator(
+            access_token_generator=access_token_generator,
+            refresh_token_generator=refresh_token_generator,
+            expires_generator=expires_generator,
+        )
+
+
+def create_token_generator(token_generator_conf, length=42):
+    if callable(token_generator_conf):
+        return token_generator_conf
+
+    if isinstance(token_generator_conf, str):
+        return importlib.import_module(token_generator_conf)
+    elif token_generator_conf is True:
+        def token_generator(*args, **kwargs):
+            return _generate_token(length)
+        return token_generator
+
+
+def create_token_expires_in_generator(expires_in_conf=None):
+    data = {}
+    data.update(BearerTokenGenerator.GRANT_TYPES_EXPIRES_IN)
+    if expires_in_conf:
+        data.update(expires_in_conf)
+
+    def expires_in(client, grant_type):
+        return data.get(grant_type, BearerTokenGenerator.DEFAULT_EXPIRES_IN)
+
+    return expires_in

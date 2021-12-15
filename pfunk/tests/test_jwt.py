@@ -16,16 +16,24 @@ class AuthToken(CollectionTestCase):
                                 groups=[self.group])
 
     def test_generate_token(self):
-        # TODO: generation of token should work
-        token = User.api_login('test', 'abc123')
-        print(token)
-        assert(True) 
+        # generation of token should work
+        token = Key.create_jwt('secret')
+        api_login_token = User.api_login('test', 'abc123')
+
+        self.assertIsNotNone(token) 
+        self.assertIsNotNone(api_login_token) 
 
     def test_decrypt_token(self):
-        # TODO: the encrypted token should match the decrypted one
-        token = User.api_login('test', 'abc123')
+        secret = {
+            'token': 'token',
+            'permissions': ['read'],
+            'user': { 'username': 'test' }
+        }
+        token = Key.create_jwt(secret)
         decrypted_token = Key.decrypt_jwt(token)
+        # the value should be the same
+        self.assertEqual(secret, decrypted_token)
 
     def test_import_keys(self):
         # TODO: There should be no errors in importing the keys needed
-        pass
+        assert(True)

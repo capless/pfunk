@@ -50,6 +50,7 @@ class LogoutUser(AuthFunction):
                       )
         )
 
+
 class UpdatePassword(AuthFunction):
     def get_body(self):
         return q.query(q.lambda_(["input"],

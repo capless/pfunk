@@ -4,7 +4,6 @@ import random
 import uuid
 
 import jwt
-from cachetools.func import ttl_cache
 from cryptography.fernet import Fernet
 from dateutil import tz
 from envs import env
@@ -189,6 +188,7 @@ class BaseUser(Collection):
 
     def attach_forgot_verification_key(self):
         self.forgot_password_key = uuid.uuid4()
+        self.save()
 
     @classmethod
     def verify_email(cls, verification_key, verify_type='signup', password=None):

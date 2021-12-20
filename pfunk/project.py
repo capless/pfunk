@@ -16,7 +16,7 @@ from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.http import HTTP_STATUS_CODES
 from werkzeug.routing import Map
 from werkzeug.utils import cached_property
-from pfunk.web.events import Event
+
 from pfunk.web.request import HTTPRequest, RESTRequest, WSGIRequest
 from pfunk.web.response import HttpNotFoundResponse, JSONMethodNotAllowedResponse
 from .collection import Collection
@@ -61,27 +61,6 @@ class Project(Schema):
         self.enums = set()
         self.indexes = set()
         self.functions = set()
-
-    def add_event_type(self, event_type):
-        """
-        Add event type to the project
-        Args:
-            event_type: Event
-
-        Returns:
-
-        """
-        if issubclass(event_type, Event):
-            self.event_types.add(event_type)
-        elif issubclass(event_type, str):
-            try:
-                et = import_util(event_type)
-            except ImportError:
-                et = None
-            if issubclass(et, Event):
-                self.event_types.add(et)
-        else:
-            raise ValueError('Event Type has to be one of the following: Event')
 
     def add_resource(self, resource) -> None:
         """

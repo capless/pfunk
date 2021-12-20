@@ -578,4 +578,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
     @property
     def urls(self):
+        """
+        Returns list of URLs
+        Returns: list
+
+        """
         return [i.url(self) for i in self.collection_views]

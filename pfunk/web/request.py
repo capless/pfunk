@@ -22,14 +22,30 @@ class Request(object):
         self.jwt: str = None
         
     def get_cookies(self, raw_cookies):
+        """
+        Returns dict of cookies
+        Args:
+            raw_cookies:
+
+        Returns: dict
+
+        """
         return raw_cookies
 
     def get_json(self):
+        """
+        Get JSON response body
+        Returns: dict
+
+        """
         if self.headers.get('content-type') == 'application/json':
             return json.loads(self.body)
 
 
 class BaseAPIGatewayRequest(Request):
+    """
+    Base API Gateway Request
+    """
 
     def __init__(self, event, kwargs=None):
         super(BaseAPIGatewayRequest, self).__init__(event, kwargs)
@@ -40,7 +56,9 @@ class BaseAPIGatewayRequest(Request):
 
 
 class WSGIRequest(Request):
-
+    """
+    WSGI Request
+    """
     def __init__(self, event, kwargs=None):
         super(WSGIRequest, self).__init__(event, kwargs=kwargs)
         self.method = event.method
@@ -53,6 +71,9 @@ class WSGIRequest(Request):
 
 
 class RESTRequest(BaseAPIGatewayRequest):
+    """
+    REST Request: For REST API Gateway
+    """
 
     def __init__(self, event, kwargs=None):
         super(RESTRequest, self).__init__(event, kwargs=kwargs)
@@ -74,7 +95,9 @@ class RESTRequest(BaseAPIGatewayRequest):
 
 
 class HTTPRequest(BaseAPIGatewayRequest):
-
+    """
+    HTTP Request: For HTTP API Gateway
+    """
     def __init__(self, event, kwargs=None):
         super(HTTPRequest, self).__init__(event, kwargs=kwargs)
         self.raw_event = event

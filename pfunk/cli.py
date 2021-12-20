@@ -30,6 +30,19 @@ def load_config_file(filename):
 @click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
 def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str):
+    """
+    Creates a PFunk project
+    Args:
+        name: Project name
+        api_type: API Gateway type (web, rest, none)
+        fauna_key: Fauna secret key
+        bucket: S3 Bucket
+        email: Default from Email
+        stage_name: Application stage
+
+    Returns:
+
+    """
     if not os.path.exists(f'pfunk.json'):
         if not os.path.exists(name):
             os.mkdir(name)
@@ -60,6 +73,16 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
 @click.option('--fauna_key', prompt=True, help='Fauna Key')
 @click.argument('stage_name')
 def add_stage(stage_name: str, fauna_key: str, filename: str):
+    """
+    Adds stage to the project
+    Args:
+        stage_name: Stage name
+        fauna_key: Fauna secret key
+        filename: Configuration file name (default: pfunk.json)
+
+    Returns:
+
+    """
     if os.path.isfile(filename):
         with open(filename, 'r') as f:
             config = json.load(f)
@@ -77,6 +100,19 @@ def add_stage(stage_name: str, fauna_key: str, filename: str):
 @click.option('--port', default=3434)
 @click.option('--hostname', default='localhost')
 def local(hostname: str, port: int, wsgi: str, config_file: str, use_debugger: bool, use_reloader: bool):
+    """
+    Run local WSGI based server to test the web service.
+    Args:
+        hostname: Hostname to use (default: localhost)
+        port: Post that will be used
+        wsgi: WSGI module (dot notated path to module)
+        config_file: PFunk config file (default: pfunk.json)
+        use_debugger: Specifies if the server should show debugging info. (default: True)
+        use_reloader: Specifies if the server should auto reload on error (default: True)
+
+    Returns:
+
+    """
     config = load_config_file(config_file)
     sys.path.insert(0, os.getcwd())
     wsgi_path = wsgi or f'{config.get("name")}.wsgi.app'
@@ -89,6 +125,16 @@ def local(hostname: str, port: int, wsgi: str, config_file: str, use_debugger: b
 @click.option('--project_path', help='Project module path')
 @click.argument('stage_name')
 def publish(stage_name: str, project_path: str, config_path: str):
+    """
+    Publish GraphQL schema to Fauna
+    Args:
+        stage_name: Stage to publish to
+        project_path: Project module path
+        config_path: Path to the project config file. (default: pfunk.json)
+
+    Returns:
+
+    """
     config = load_config_file(config_path)
     sys.path.insert(0, os.getcwd())
     if not project_path:
@@ -103,6 +149,15 @@ def publish(stage_name: str, project_path: str, config_path: str):
 @click.option('--config_path', help='Configuration file path', default='pfunk.json')
 @click.argument('stage_name')
 def seed_keys(stage_name: str, config_path: str):
+    """
+    Seed encryption keys
+    Args:
+        stage_name: Stage that the keys should be associated with
+        config_path: Configuration path
+
+    Returns:
+
+    """
     config = load_config_file(config_path)
     Key = import_util('pfunk.contrib.auth.collections.Key')
     keys = Key.create_keys()
@@ -123,6 +178,22 @@ def seed_keys(stage_name: str, config_path: str):
 @click.argument('stage_name')
 def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_name: str, email: str, password: str, username: str,
                       project_path: str, config_path: str):
+    """
+    Create an admin user in the project's Fauna user collection.
+    Args:
+        stage_name: Stage name
+        group_slug: slug of the group that the user should be assigned to
+        last_name: Last name of user
+        first_name: First name of user
+        email: Email address of user
+        password: Password for the user
+        username: Username for the user
+        project_path: Project path
+        config_path: Config path
+
+    Returns:
+
+    """
     config = load_config_file(config_path)
     secret = config['stages'][stage_name]['fauna_secret']
     User = import_util('pfunk.contrib.auth.collections.User')
@@ -152,6 +223,15 @@ def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_na
 @click.option('--config_path', help='Configuration file path')
 @click.argument('stage_name')
 def deploy(stage_name: str, config_path: str):
+    """
+    Publish the GraphQL schema and API to Lambda and API Gateway (if applicable)
+    Args:
+        stage_name: Stage name
+        config_path: Config path
+
+    Returns:
+
+    """
     try:
         d = Deploy(config_path=config_path)
     except FileNotFoundError:

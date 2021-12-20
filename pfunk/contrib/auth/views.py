@@ -84,6 +84,9 @@ class VerifyEmailView(ActionMixin, JSONAuthView):
 
 
 class UpdatePasswordView(ActionMixin, JSONAuthView):
+    """ Create a view that allows user to update their password  
+        with the use of current password
+    """
     action = 'update-password'
     login_required = True
     http_methods = ['post']

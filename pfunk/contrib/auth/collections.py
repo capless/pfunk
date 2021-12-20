@@ -237,6 +237,9 @@ class BaseUser(Collection):
 
     @classmethod
     def forgot_password(cls, email):
+        """ Sends forgot password email to let user 
+            use that link to reset their password
+        """
         user = cls.get_by('unique_User_email', email)
         user.attach_forgot_verification_key()
         user.send_verification_email(verification_type='forgot')
@@ -402,23 +405,24 @@ class User(BaseUser):
         return perm_list
 
     def add_permissions(self, group, permissions: list, _token=None):
-        """ Adds permission for the user
-
-        Adds permission by extending the list of permission
-        in the many-to-many collection of the user, i.e. in
+        """ Adds permission for the user 
+        
+        Adds permission by extending the list of permission 
+        in the many-to-many collection of the user, i.e. in 
         the `UserGroup` collection.
 
         Args:
-            group (str, required):
+            group (str, required): 
                 Group collection of the User
             permissions (list, required):
-                Permissions to give
+                Permissions to give, `['create', 'read', 'delete', 'write']`
+                Just add the operation you need
             _token (str, required):
                 auth token of the user
-
+        
         Returns:
             UserGroup (`contrib.auth.collections.UserGroup`):
-                `UserGroup` instance which has the added permissions
+                `UserGroup` instance which has the added permissions 
                 of the user
         """
         perm_list = []

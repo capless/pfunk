@@ -1,12 +1,7 @@
 from werkzeug.test import Client
-from werkzeug.testapp import test_app
-from faunadb.errors import PermissionDenied
 
-from pfunk.contrib.auth.collections import PermissionGroup
-from pfunk.tests import User, Group, Sport, Person, House
-from pfunk.exceptions import LoginFailed
+from pfunk.tests import User, Group 
 from pfunk.testcase import CollectionTestCase
-from pfunk.contrib.auth.views import LoginView
 
 
 class TestWebSignup(CollectionTestCase):

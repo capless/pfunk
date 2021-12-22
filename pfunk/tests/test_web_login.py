@@ -22,23 +22,37 @@ class TestWebLogin(CollectionTestCase):
         self.c = Client(self.app)
 
     def test_login(self):
-        res = self.c.post('/user/login/', 
-            json={"username": "test", "password": "abc123"})
+        """ Tests `pfunk.contrib.auth.views.LoginView` to return a JWT """
+        res = self.c.post('/user/login/',
+                          json={"username": "test", "password": "abc123"})
 
-        self.assertIsNotNone(res.headers['Set-Cookie']) # check if response has cookies
+        # check if response has cookies
+        self.assertIsNotNone(res.headers['Set-Cookie'])
         self.assertTrue(res.json['success'])
 
     def test_wrong_login(self):
-        res = self.c.post('/user/login/', 
-            json={"username": "test", "password": "abc123"})
+        """ Tests `pfunk.contrib.auth.views.LoginView` to return an exception when credentials are wrong """
+        res = self.c.post('/user/login/',
+                          json={"username": "test", "password": "abc123"})
 
         self.assertRaises(LoginFailed)
 
-
     def test_logout(self):
+        """ Tests `pfunk.contrib.auth.views.LogoutView` invalidate token login and remove cookie """
         token, exp = User.api_login("test", "abc123")
-        # BUG: Invalid header padding, there may be something wrong with passing of token to logout view
-        res = self.c.post('/user/logout/',
-            json={"token": token}, headers={"Authorization": f"Bearer {token}"})
-        print(res.json)
-        pass
+        res = self.c.post('/user/logout/', headers={
+            "Authorization": token,
+            "Content-Type": "application/json"
+        })
+
+        self.assertTrue(res.json['success'])
+
+    def test_wrong_logout(self):
+        """ Tests `pfunk.contrib.auth.views.LogoutView` to return an exception trying to logout a nonexistent token """
+        token = ''
+        res = self.c.post('/user/logout/', headers={
+            "Authorization": token,
+            "Content-Type": "application/json"
+        })
+        expected = {'success': False, 'data': 'Unauthorized'}
+        self.assertDictEqual(expected, res.json)

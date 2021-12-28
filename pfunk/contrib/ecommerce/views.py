@@ -8,7 +8,7 @@ from datetime import datetime
 from json import JSONDecodeError
 from jinja2 import Environment, BaseLoader
 
-from ecommerce.models import Customer, Package
+from pfunk.contrib.ecommerce.collections import StripeCustomer, StripePackage
 from pfunk.contrib.email import ses
 from pfunk.exceptions import DocNotFound
 from pfunk.web.views.json import JSONView, ListView, DetailView
@@ -41,7 +41,7 @@ class CheckoutView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        customer = Customer.objects.get_or_create_customer(self.request.user)
+        customer = StripeCustomer.objects.get_or_create_customer(self.request.user)
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             customer=customer.customer_id,

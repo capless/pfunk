@@ -172,7 +172,6 @@ class Project(Schema):
             col.publish()
         if resp.status_code != 200:
             print(resp.content)
-        print(f'GraphQL Response Code: {resp.status_code}')
         return resp.status_code
 
     def unpublish(self) -> None:

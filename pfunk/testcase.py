@@ -30,6 +30,7 @@ class PFunkTestCase(unittest.TestCase):
         )
 
 
+
 class CollectionTestCase(PFunkTestCase):
     collections = []
 

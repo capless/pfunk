@@ -1,5 +1,8 @@
 """
 .. include:: ../README.md
+.. include:: ../TUTORIAL.md
+.. include:: ../CLI.md
+.. include:: ../CONTRIBUTE.md
 """
 __docformat__ = "google"
 from .collection import Collection, Enum

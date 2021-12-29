@@ -1,6 +1,7 @@
+from faunadb.errors import PermissionDenied
+
 from pfunk.contrib.auth.collections import Key
-from pfunk.contrib.auth.collections import PermissionGroup
-from pfunk.tests import User, Group, Sport, Person, House
+from pfunk.tests import User, Group
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import CollectionTestCase
 from pfunk.contrib.auth.collections import Key
@@ -8,24 +9,37 @@ from pfunk.contrib.auth.collections import Key
 
 class AuthToken(CollectionTestCase):
     collections = [User, Group]
+
     def setUp(self) -> None:
         super(AuthToken, self).setUp()
         self.group = Group.create(name='Power Users', slug='power-users')
-        self.user = User.create(username='test', email='tlasso@example.org', first_name='Ted',
-                                last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
+        self.user = User.create(username='test', email='tlasso@example.org', first_name='Mr. Auth',
+                                last_name='Broski', _credentials='abc123', account_status='ACTIVE',
                                 groups=[self.group])
 
     def test_generate_token(self):
-        # TODO: generation of token should work
-        token = User.api_login('test', 'abc123')
-        print(token)
-        assert(True) 
+        token = Key.create_jwt('secret')
+        api_login_token = User.api_login('test', 'abc123')
+
+        self.assertIsNotNone(token)
+        self.assertIsNotNone(api_login_token)
 
     def test_decrypt_token(self):
-        # TODO: the encrypted token should match the decrypted one
-        token = User.api_login('test', 'abc123')
-        decrypted_token = Key.decrypt_jwt(token)
+        claims = {
+            'token': 'token',
+            'permissions': ['read'],
+            'user': {'username': 'test'}
+        }
+        # `create_jwt` returns both jwt and exp, only get the jwt
+        token = Key.create_jwt(claims)[0]
+        decrypted_token = Key.decrypt_jwt(encoded=token)
 
-    def test_import_keys(self):
-        # TODO: There should be no errors in importing the keys needed
-        pass
+        # the value should be the same
+        self.assertEqual(claims, decrypted_token)
+
+    def test_api_login(self):
+        token = User.api_login('test', 'abc123')
+        self.assertIsNotNone(token)
+
+        with self.assertRaises(LoginFailed):
+            User.login('test', 'wrongpass')

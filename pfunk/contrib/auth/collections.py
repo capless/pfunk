@@ -15,7 +15,7 @@ from werkzeug.utils import cached_property
 from pfunk.client import q
 from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
-from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView
+from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed, DocNotFound
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
@@ -113,7 +113,7 @@ class BaseUser(Collection):
     non_public_fields = ['groups']
     use_email_verification = True
     # Views
-    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView]
+    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView]
     # Signals
     pre_create_signals = [attach_verification_key]
     post_create_signals = [send_verification_email]

@@ -97,12 +97,14 @@ class UpdatePasswordView(ActionMixin, JSONAuthView):
                                                kwargs['new_password_confirm'], _token=self.request.token)
 
 
-class ForgotPasswordView(JSONAuthView):
+class ForgotPasswordView(ActionMixin, JSONAuthView):
     """ Create a view to allow call of forgot password func """
+    action = 'forgot-password'
     login_required = False
+    http_methods = ['post']
 
     def get_query(self):
-        return self.collection.forgot_passsword(**self.get_query_kwargs())
+        return self.collection.forgot_password(**self.get_query_kwargs())
 
 
 class WebhookView(JSONView):

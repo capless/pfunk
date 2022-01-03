@@ -1,6 +1,7 @@
 from abc import ABC
 
 from envs import env
+from werkzeug.http import http_date
 from werkzeug.routing import Rule
 
 from pfunk.web.views.base import ActionMixin
@@ -31,7 +32,8 @@ class LoginView(ActionMixin, JSONAuthView):
 
     def get_query(self):
         token, exp = self.collection.api_login(**self.get_query_kwargs())
-        self.set_cookie(env('TOKEN_COOKIE_NAME', 'tk'), value=token, max_age=exp.timestamp())
+        self.set_cookie(env('TOKEN_COOKIE_NAME', 'tk'),
+                        value=token, max_age=exp.timestamp())
         return {
             'token': token,
             'exp': exp
@@ -94,7 +96,7 @@ class UpdatePasswordView(ActionMixin, JSONAuthView):
     def get_query(self):
         kwargs = self.get_query_kwargs()
         self.collection.update_password(kwargs['current_password'], kwargs['new_password'],
-                                               kwargs['new_password_confirm'], _token=self.request.token)
+                                        kwargs['new_password_confirm'], _token=self.request.token)
 
 
 class ForgotPasswordView(ActionMixin, JSONAuthView):
@@ -107,7 +109,20 @@ class ForgotPasswordView(ActionMixin, JSONAuthView):
         return self.collection.forgot_password(**self.get_query_kwargs())
 
 
+class ForgotPasswordChangeView(ActionMixin, JSONAuthView):
+    """ Accepts a hashed key from the forgot-password email, validates it if it matches the user's and change the password """
+    action = 'forgot-password'
+    login_required = False
+    http_methods = ['put']
+
+    def get_query(self):
+        # TODO: figure out how to acquire user, if whether by index or something else
+        kwargs = self.get_query_kwargs()
+        user = self.collection.get_by('', kwargs['key'])
+        if kwargs['key'] == self.collection.forgot_password_key:
+            self.collection._credential = kwargs['password']
+            return self.collection.save()
+
+
 class WebhookView(JSONView):
     pass
-
-

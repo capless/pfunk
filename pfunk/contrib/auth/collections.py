@@ -15,7 +15,7 @@ from werkzeug.utils import cached_property
 from pfunk.client import q
 from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
-from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView
+from pfunk.contrib.auth.views import ForgotPasswordChangeView, LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed, DocNotFound
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
@@ -113,7 +113,7 @@ class BaseUser(Collection):
     non_public_fields = ['groups']
     use_email_verification = True
     # Views
-    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView]
+    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView, ForgotPasswordChangeView]
     # Signals
     pre_create_signals = [attach_verification_key]
     post_create_signals = [send_verification_email]
@@ -184,10 +184,10 @@ class BaseUser(Collection):
         """ Attaches the verification key to user
             to enable one-time activate
         """
-        self.verification_key = uuid.uuid4()
+        self.verification_key = str(uuid.uuid4())
 
     def attach_forgot_verification_key(self):
-        self.forgot_password_key = uuid.uuid4()
+        self.forgot_password_key = str(uuid.uuid4())
         self.save()
 
     @classmethod

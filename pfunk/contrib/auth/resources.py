@@ -2,10 +2,6 @@ from pfunk.client import q
 from pfunk.resources import Function, Role, Index
 
 
-class UserByKey(Index):
-    pass
-
-
 class AuthFunction(Function):
 
     def get_role(self):

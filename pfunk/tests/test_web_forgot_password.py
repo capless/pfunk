@@ -1,4 +1,3 @@
-from re import S
 from werkzeug.test import Client
 
 from pfunk.tests import User, Group

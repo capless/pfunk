@@ -116,12 +116,11 @@ class ForgotPasswordChangeView(ActionMixin, JSONAuthView):
     http_methods = ['put']
 
     def get_query(self):
-        # TODO: figure out how to acquire user, if whether by index or something else
         kwargs = self.get_query_kwargs()
-        user = self.collection.get_by('', kwargs['key'])
-        if kwargs['key'] == self.collection.forgot_password_key:
-            self.collection._credential = kwargs['password']
-            return self.collection.save()
+        return self.collection.verify_email(
+            str(kwargs['verification_key']), 
+            verify_type='forgot', 
+            password=kwargs['password'])
 
 
 class WebhookView(JSONView):

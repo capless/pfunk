@@ -244,7 +244,6 @@ class BaseUser(Collection):
         user.attach_forgot_verification_key()
         user.send_verification_email(verification_type='forgot')
 
-
     @classmethod
     def signup(cls, _token=None, **kwargs):
         """ Creates a user

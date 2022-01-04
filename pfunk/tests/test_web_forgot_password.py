@@ -30,32 +30,28 @@ class TestWebForgotPassword(CollectionTestCase):
     
     def test_submit_key_for_forgot_pass(self):
         """ Submits the key from the forgot password email to initiate password reset """
-        # TODO: create endpoint for accepting the verification key and initiating password reset
         
         res = self.c.put(f'/user/forgot-password/',
                           json={
-                              "key": self.key,
-                              "password": "forgotten_password"},
+                              "verification_key": self.key,
+                              "password": "new_updated_pass"},
                           headers={
                               "Content-Type": "application/json"})
 
-        new_login = User.api_login("test", "forgotten_password")
+        new_login = User.api_login("test", "new_updated_pass")
         self.assertTrue(res.json['success'])
         self.assertIsNotNone(new_login)
 
-    # def test_submit_wrong_key_for_forgot_pass(self):
-    #     # TODO: create endpoint for accepting the verification key and initiating password reset
-    #     key = ''
-    #     res = self.c.put(f'/user/forgot-password/',
-    #                       json={
-    #                           "key": key,
-    #                           "password": "forgotten_password"},
-    #                       headers={
-    #                           "Content-Type": "application/json"})
-    #     expected = {
-    #         'success': False,
-    #         'data': 'wrong verification key'
-    #     }
+    def test_submit_wrong_key_for_forgot_pass(self):
+        """ Submit a wrong key for verification of reset password. Should return `Not Found` """
+        key = 'wrong-key'
+        res = self.c.put(f'/user/forgot-password/',
+                          json={
+                              "verification_key": key,
+                              "password": "forgotten_password"},
+                          headers={
+                              "Content-Type": "application/json"})
+        expected = {'data': 'Not Found', 'success': False}
 
-    #     self.assertFalse(res.json['success'])
-    #     self.assertDictEqual(res.json, expected)
+        self.assertFalse(res.json['success'])
+        self.assertDictEqual(res.json, expected)

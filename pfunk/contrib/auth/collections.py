@@ -273,6 +273,8 @@ class BaseUser(Collection):
                 current password of the user
             new_password (str, required):
                 new password for the user
+            new_password_confirm (str, required):
+                new password confirm
             _token (str, required):
                 auth token of the user
 

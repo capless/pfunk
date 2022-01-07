@@ -30,6 +30,7 @@ class AuthCrudTest(CollectionTestCase):
     def test_update(self):
         self.assertEqual(self.user.username, 'test')
         self.user.username = 'test-c'
+        self.user.attach_verification_key()
         self.user.save()
         u = User.get(self.user.ref.id())
         self.assertEqual(u.username, 'test-c')

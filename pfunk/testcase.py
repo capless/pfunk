@@ -10,6 +10,7 @@ class PFunkTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         os.environ['PFUNK_TEST_MODE'] = 'True'
+        os.environ['TEMPLATE_ROOT_DIR'] = '/tmp'
         self.client = FaunaClient(secret='secret')
         self.db_name = str(uuid.uuid4())
         self.client.query(

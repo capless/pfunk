@@ -184,7 +184,7 @@ class BaseUser(Collection):
         """ Attaches the verification key to user
             to enable one-time activate
         """
-        self.verification_key = uuid.uuid4()
+        self.verification_key = str(uuid.uuid4())
 
     def attach_forgot_verification_key(self):
         self.forgot_password_key = uuid.uuid4()
@@ -340,6 +340,9 @@ class UserGroups(Collection):
     groupID = ReferenceField(Group)
     permissions = ListField()
 
+    def __unicode__(self):
+        return f"{self.userID}, {self.groupID}, {self.permissions}"
+
 
 class PermissionGroup(object):
     """ List of permission that a user/object has
@@ -432,12 +435,10 @@ class User(BaseUser):
             perm_list.extend(i.permissions)
 
         try:
-            user_group = UserGroups.get_by('users_groups_by_group_and_user')
+            user_group = UserGroups.get_by('users_groups_by_group_and_user', terms=[group.ref, self.ref])
         except DocNotFound:
-            user_group = UserGroups.create('users_groups_by_group_and_user')
-
-        ug = UserGroups(userID=self, groupID=group, permissions=perm_list)
-        if user_group:
-            ug.ref = user_group
-        ug.save()
-        return ug
+            user_group = UserGroups.create(userID=self.ref, groupID=group.ref, permissions=perm_list)
+        if user_group.permissions != perm_list:
+            user_group.permissions = perm_list
+        user_group.save()
+        return user_group

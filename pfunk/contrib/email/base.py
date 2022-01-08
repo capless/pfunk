@@ -1,3 +1,4 @@
+import warnings
 
 from envs import env
 from valley.utils import import_util
@@ -77,6 +78,8 @@ def send_email(subject: str, to_emails: list, html_template: str = None, txt_tem
     """
     email_backend = import_util(backend or env('EMAIL_BACKEND', 'pfunk.contrib.email.ses.SESBackend'))
 
-    email_backend().send_email(subject=subject, to_emails=to_emails, html_template=html_template,
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=ResourceWarning)
+        email_backend().send_email(subject=subject, to_emails=to_emails, html_template=html_template,
                               txt_template=txt_template, from_email=from_email, cc_emails=cc_emails,
                               bcc_emails=bcc_emails, fail_silently=fail_silently, **kwargs)

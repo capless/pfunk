@@ -176,7 +176,6 @@ class Index(object):
             the same name.
         """
         for k, v in kwargs.items():
-            print(k, v)
             if k in self._accept_kwargs:
                 setattr(self, k, v)
 

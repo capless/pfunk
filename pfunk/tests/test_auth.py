@@ -29,7 +29,7 @@ class AuthTestCase(CollectionTestCase):
 
     def test_update_password(self):
         token = User.login('test', 'abc123')
-        self.user.update_password('abc123', '123abc', _token=token)
+        self.user.update_password('abc123', '123abc', '123abc', _token=token)
         # If the update doesn't work the login call will result in an error
         User.login('test', '123abc')
 

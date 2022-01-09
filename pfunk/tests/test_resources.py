@@ -23,7 +23,6 @@ class IndexTestCase(unittest.TestCase):
                 'name':'simple-index',
                 'source': q.collection('Project'),
                 'terms': ['name', 'slug'],
-                'unique': True,
-                'serialized': True
+                'unique': True
             }
         )

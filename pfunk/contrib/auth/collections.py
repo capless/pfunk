@@ -272,6 +272,8 @@ class BaseUser(Collection):
                 current password of the user
             new_password (str, required):
                 new password for the user
+            new_password_confirm (str, required):
+                new password confirm
             _token (str, required):
                 auth token of the user
 
@@ -336,6 +338,9 @@ class UserGroups(Collection):
     userID = ReferenceField('pfunk.contrib.auth.collections.User')
     groupID = ReferenceField(Group)
     permissions = ListField()
+
+    def __unicode__(self):
+        return f"{self.userID}, {self.groupID}, {self.permissions}"
 
 
 class PermissionGroup(object):
@@ -429,12 +434,10 @@ class User(BaseUser):
             perm_list.extend(i.permissions)
 
         try:
-            user_group = UserGroups.get_by('users_groups_by_group_and_user')
+            user_group = UserGroups.get_by('users_groups_by_group_and_user', terms=[group.ref, self.ref])
         except DocNotFound:
-            user_group = UserGroups.create('users_groups_by_group_and_user')
-
-        ug = UserGroups(userID=self, groupID=group, permissions=perm_list)
-        if user_group:
-            ug.ref = user_group
-        ug.save()
-        return ug
+            user_group = UserGroups.create(userID=self.ref, groupID=group.ref, permissions=perm_list)
+        if user_group.permissions != perm_list:
+            user_group.permissions = perm_list
+        user_group.save()
+        return user_group

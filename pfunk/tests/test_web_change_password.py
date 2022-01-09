@@ -1,11 +1,8 @@
-from re import S
-from werkzeug.test import Client
-
 from pfunk.tests import User, Group
-from pfunk.testcase import CollectionTestCase
+from pfunk.testcase import APITestCase
 
 
-class TestWebChangePassword(CollectionTestCase):
+class TestWebChangePassword(APITestCase):
     collections = [User, Group]
 
     def setUp(self) -> None:
@@ -14,8 +11,7 @@ class TestWebChangePassword(CollectionTestCase):
         self.user = User.create(username='test', email='tlasso@example.org', first_name='Ted',
                                 last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                 groups=[self.group])
-        self.app = self.project.wsgi_app
-        self.c = Client(self.app)
+
         self.token, self.exp = User.api_login("test", "abc123")
 
     def test_update_password(self):

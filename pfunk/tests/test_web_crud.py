@@ -2,11 +2,11 @@ from werkzeug.test import Client
 
 from pfunk.tests import User, Group
 from pfunk.exceptions import LoginFailed
-from pfunk.testcase import CollectionTestCase
+from pfunk.testcase import APITestCase
 from pfunk.tests import House
 
 
-class TestWebCrud(CollectionTestCase):
+class TestWebCrud(APITestCase):
     collections = [User, Group, House]
 
     def setUp(self) -> None:

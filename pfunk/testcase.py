@@ -52,12 +52,13 @@ class APITestCase(CollectionTestCase):
         super(APITestCase, self).setUp()
         self.app = self.project.wsgi_app
         self.c = Client(self.app)
+        os.environ.setdefault('KEY_MODULE', 'pfunk.tests.unittest_keys.KEYS')
         Key = import_util('pfunk.contrib.auth.collections.Key')
         keys = Key.create_keys()
         self.keys_path = 'pfunk/tests/unittest_keys.py'
         with open(self.keys_path, 'w+') as f:
             f.write(key_template.render(keys=keys))
-        os.environ.setdefault('KEY_MODULE', 'pfunk.tests.unittest_keys')
+
 
     def tearDown(self) -> None:
         super(APITestCase, self).tearDown()

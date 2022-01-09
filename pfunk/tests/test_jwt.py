@@ -3,11 +3,11 @@ from faunadb.errors import PermissionDenied
 from pfunk.contrib.auth.collections import Key
 from pfunk.tests import User, Group
 from pfunk.exceptions import LoginFailed
-from pfunk.testcase import CollectionTestCase
+from pfunk.testcase import APITestCase
 from pfunk.contrib.auth.collections import Key
 
 
-class AuthToken(CollectionTestCase):
+class AuthToken(APITestCase):
     collections = [User, Group]
 
     def setUp(self) -> None:

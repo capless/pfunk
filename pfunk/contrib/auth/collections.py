@@ -23,11 +23,7 @@ from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, Refe
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
 
-try:
-    KEYS = import_util(env('KEY_MODULE', 'bad.import'))
 
-except ImportError:
-    KEYS = {}
 
 
 class Key(object):
@@ -44,8 +40,17 @@ class Key(object):
         return keys
 
     @classmethod
+    def import_keys(cls):
+        try:
+            keys = import_util(env('KEY_MODULE', 'bad.import'))
+        except ImportError:
+            keys = {}
+        return keys
+
+    @classmethod
     def get_keys(cls):
-        return list(KEYS.values())
+        keys = cls.import_keys()
+        return list(keys.values())
 
     @classmethod
     def get_key(cls):
@@ -72,7 +77,8 @@ class Key(object):
     @classmethod
     def decrypt_jwt(cls, encoded):
         headers = jwt.get_unverified_header(encoded)
-        key = KEYS.get(headers.get('kid'))
+        keys = cls.import_keys()
+        key = keys.get(headers.get('kid'))
         decoded = jwt.decode(encoded, key.get('signature_key'), algorithms="HS256", verify=True,
                              options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
         pay_f = Fernet(key.get('payload_key').encode())

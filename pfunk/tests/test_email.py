@@ -41,7 +41,6 @@ class TestEmailBackend(CollectionTestCase):
     def test_get_body(self):
         with tempfile.NamedTemporaryFile(suffix='.html') as tmp:
             rendered = self.backend.get_body_kwargs()
-            print(rendered)
 
         self.assertIsNotNone(rendered)
 

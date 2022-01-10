@@ -162,9 +162,10 @@ def seed_keys(stage_name: str, config_path: str):
     Key = import_util('pfunk.contrib.auth.collections.Key')
     keys = Key.create_keys()
     name = config.get('name')
-    with open(f'{name}/{stage_name}_keys.py', 'w+') as f:
+    keys_path = f'{name}/{stage_name}_keys.py'
+    with open(keys_path, 'w+') as f:
         f.write(key_template.render(keys=keys))
-
+    return keys_path
 
 @pfunk.command()
 @click.option('--config_path', help='Configuration file path', default='pfunk.json')

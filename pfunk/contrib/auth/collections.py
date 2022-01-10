@@ -15,7 +15,7 @@ from werkzeug.utils import cached_property
 from pfunk.client import q
 from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
-from pfunk.contrib.auth.views import LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView
+from pfunk.contrib.auth.views import ForgotPasswordChangeView, LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed, DocNotFound
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
@@ -23,11 +23,7 @@ from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, Refe
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
 
-try:
-    KEYS = import_util(env('KEY_MODULE', 'bad.import'))
 
-except ImportError:
-    KEYS = {}
 
 
 class Key(object):
@@ -44,8 +40,17 @@ class Key(object):
         return keys
 
     @classmethod
+    def import_keys(cls):
+        try:
+            keys = import_util(env('KEY_MODULE', 'bad.import'))
+        except ImportError:
+            keys = {}
+        return keys
+
+    @classmethod
     def get_keys(cls):
-        return list(KEYS.values())
+        keys = cls.import_keys()
+        return list(keys.values())
 
     @classmethod
     def get_key(cls):
@@ -72,7 +77,8 @@ class Key(object):
     @classmethod
     def decrypt_jwt(cls, encoded):
         headers = jwt.get_unverified_header(encoded)
-        key = KEYS.get(headers.get('kid'))
+        keys = cls.import_keys()
+        key = keys.get(headers.get('kid'))
         decoded = jwt.decode(encoded, key.get('signature_key'), algorithms="HS256", verify=True,
                              options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
         pay_f = Fernet(key.get('payload_key').encode())
@@ -113,7 +119,7 @@ class BaseUser(Collection):
     non_public_fields = ['groups']
     use_email_verification = True
     # Views
-    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView]
+    collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView, ForgotPasswordChangeView]
     # Signals
     pre_create_signals = [attach_verification_key]
     post_create_signals = [send_verification_email]
@@ -187,7 +193,7 @@ class BaseUser(Collection):
         self.verification_key = str(uuid.uuid4())
 
     def attach_forgot_verification_key(self):
-        self.forgot_password_key = uuid.uuid4()
+        self.forgot_password_key = str(uuid.uuid4())
         self.save()
 
     @classmethod
@@ -243,7 +249,6 @@ class BaseUser(Collection):
         user = cls.get_by('unique_User_email', email)
         user.attach_forgot_verification_key()
         user.send_verification_email(verification_type='forgot')
-
 
     @classmethod
     def signup(cls, _token=None, **kwargs):

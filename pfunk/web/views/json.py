@@ -29,7 +29,7 @@ class JSONView(HTTPView):
 class CreateView(UpdateMixin, ActionMixin, JSONView):
     """ Define a `Create` view that allows `creation` of an entity in the collection """
     action = 'create'
-    http_methods = ['put']
+    http_methods = ['post']
     login_required = True
 
     def get_query(self):
@@ -64,7 +64,7 @@ class CreateView(UpdateMixin, ActionMixin, JSONView):
 class UpdateView(UpdateMixin, IDMixin, JSONView):
     """ Define a view to allow `Update` operations """
     action = 'update'
-    http_methods = ['post']
+    http_methods = ['put']
     login_required = True
 
     def get_query(self):
@@ -88,8 +88,7 @@ class DeleteView(ObjectMixin, IDMixin, JSONView):
     login_required = True
 
     def get_query(self):
-        return self.collection.delete_from_id(self.request.kwargs.get('id'), _token=self.request.token,
-                                              **self.get_query_kwargs())
+        return self.collection.delete_from_id(self.request.kwargs.get('id'), _token=self.request.token)
 
 
 class ListView(QuerysetMixin, ActionMixin, JSONView):

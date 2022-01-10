@@ -32,7 +32,7 @@ class SESBackend(EmailBackend):
         # Create Boto3 Client
         client = boto3.client("ses", region_name=self.region_name)
 
-        client.send_email(
+        res = client.send_email(
             Source=from_email or env('DEFAULT_FROM_EMAIL'),
             Destination={
                 'ToAddresses': to_emails,
@@ -48,3 +48,4 @@ class SESBackend(EmailBackend):
             }
         )
         
+        return res

@@ -1,5 +1,5 @@
 from pfunk.client import q
-from pfunk.resources import Function, Role
+from pfunk.resources import Function, Role, Index
 
 
 class AuthFunction(Function):

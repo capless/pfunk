@@ -8,12 +8,12 @@ from datetime import datetime
 from json import JSONDecodeError
 from jinja2 import Environment, BaseLoader
 
-from pfunk.contrib.ecommerce.collections import StripeCustomer, StripePackage
 from pfunk.contrib.email import ses
 from pfunk.exceptions import DocNotFound
-from pfunk.web.views.json import JSONView, ListView, DetailView
+from pfunk.web.views.json import JSONView, ListView, DetailView, CreateView
 from pfunk.contrib.email.ses import SESBackend
 from pfunk.contrib.auth.collections import Group, User
+from pfunk.web.views.base import ActionMixin
 
 stripe.api_key = env('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY')
@@ -22,12 +22,14 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 DOMAIN_NAME = env('DOMAIN_NAME')
 
 
-class PackageListView(ListView):
-    """ Base package list view to list your stripe packages 
+class ListStripePackage(ListView):
+    """ Listing of available packages should be public """
+    login_required = False
 
-        Use this as a base class and use your defined collections
-    """
-    login_required = True
+
+class DetailStripePackage(DetailView):
+    """ Detail of available packages should be public """
+    login_required = False
 
 
 class CheckoutView(DetailView):
@@ -41,7 +43,8 @@ class CheckoutView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        customer = StripeCustomer.objects.get_or_create_customer(self.request.user)
+        customer = self.collection.objects.get_or_create_customer(
+            self.request.user)   # `StripeCustomer` collection
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             customer=customer.customer_id,
@@ -86,8 +89,9 @@ class CheckoutSuccessView(DetailView):
         return context
 
 
-class BaseWebhookView(JSONView):
+class BaseWebhookView(JSONView, ActionMixin):
     """ Base class to use for executing Stripe webhook actions """
+    action = 'webhook'
     http_method_names = ['post']
     webhook_signing_secret = STRIPE_WEBHOOK_SECRET
 

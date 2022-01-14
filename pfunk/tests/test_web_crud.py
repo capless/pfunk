@@ -34,6 +34,8 @@ class TestWebCrud(APITestCase):
         self.assertTrue(res.json['success'])
 
     def test_create(self):
+        self.assertNotIn("the street somewhere", [
+            house.address for house in House.all()])
         res = self.c.post('/house/create/',
                           json={
                               "address": "the street somewhere",
@@ -46,6 +48,8 @@ class TestWebCrud(APITestCase):
                       house.address for house in House.all()])
 
     def test_update(self):
+        self.assertNotIn("the updated street somewhere", [
+            house.address for house in House.all()])
         res = self.c.put(f'/house/update/{self.house.ref.id()}/',
                          json={
                              "address": "the updated street somewhere",

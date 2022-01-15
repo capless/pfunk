@@ -57,7 +57,7 @@ class TestWebStripe(APITestCase):
                               "Content-Type": "application/json"
                           })
 
-        print(res.json)
+
 
     # TODO: Fix `forbidden` error in stripe views
     def test_update_package(self):
@@ -73,7 +73,7 @@ class TestWebStripe(APITestCase):
                               "Content-Type": "application/json"
                           })
 
-        print(res.json)
+
 
     # TODO: Fix `forbidden` error in stripe views
     def test_delete_package(self):
@@ -83,4 +83,4 @@ class TestWebStripe(APITestCase):
                               "Content-Type": "application/json"
                           })
 
-        print(res.json)
+        

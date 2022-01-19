@@ -22,7 +22,10 @@ class StripePackage(Collection):
         fields and functions to match your system.
 
         Read and detail views are naturally public. Write operations
-        requires authentication from admin group.
+        requires authentication from admin group. While it grealty
+        depends on your app, it is recommended to have this only 
+        modified by the admins and use `StripeCustomer` model to
+        attach a `stripe_id` to a model that is bound for payment.
     """
     use_crud_views = False
     collection_roles = [GenericGroupBasedRole]
@@ -47,11 +50,13 @@ class StripeCustomer(Collection):
         This is only a base model made to give an idea how 
         can you structure your collections. Override the 
         fields and functions to match your system.
+
+        Should be used as the
     """
-    collection_roles = [GenericUserBasedRole]
     user = ReferenceField(User)
-    customer_id = StringField(required=True)
-    package = ReferenceField(StripePackage)
+    collection_roles = [GenericUserBasedRole]
+    stripe_id = StringField(required=True, unique=True)
+    description = StringField()
 
     def __unicode__(self):
         return self.customer_id

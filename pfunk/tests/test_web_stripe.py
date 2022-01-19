@@ -7,8 +7,7 @@ from pfunk.testcase import APITestCase
 
 
 class TestWebStripe(APITestCase):
-    # TODO: Add `StripeCustomer`
-    collections = [User, Group, StripePackage]
+    collections = [User, Group, StripePackage, StripeCustomer]
 
     def setUp(self) -> None:
         super(TestWebStripe, self).setUp()
@@ -18,7 +17,8 @@ class TestWebStripe(APITestCase):
                                 groups=[self.group])
         self.stripe_pkg = StripePackage.create(group=self.group,
                                                stripe_id='100', price='10', description='unit testing...', name='unit test package')
-        # self.stripe_customer = StripeCustomer.create(user=self.user, customer_id='100', package=self.stripe_pkg)
+        self.stripe_cus = StripeCustomer.create(
+            user=self.user, stripe_id='100', description="information")
 
         self.token, self.exp = User.api_login("test", "abc123")
         self.app = self.project.wsgi_app
@@ -95,4 +95,77 @@ class TestWebStripe(APITestCase):
         self.assertNotIn(
             self.stripe_pkg.ref.id(),
             [pkg.ref.id() for pkg in StripePackage.all()]
+        )
+
+    def test_create_customer(self):
+        new_description = 'created description'
+        self.assertNotIn(new_description, [
+            cus.description for cus in StripeCustomer.all()])
+        res = self.c.post(f'/stripecustomer/create/',
+                          json={
+                              "user": self.user.ref.id(),
+                              "stripe_id": 201,
+                              "description": new_description
+                          },
+                          headers={
+                              "Authorization": self.token,
+                              "Content-Type": "application/json"
+                          })
+
+        self.assertTrue(res.json['success'])
+        self.assertIn(new_description, [
+                      cus.description for cus in StripeCustomer.all()])
+
+    def test_list_customers(self):
+        res = self.c.get('/stripecustomer/list/', headers={
+            "Authorization": self.token,
+            "Content-Type": "application/json"
+        })
+
+        self.assertTrue(res.json['success'])
+        self.assertEqual(
+            res.json['data']['data'][0]['data']['description'],
+            'information')
+
+    def test_get_customer(self):
+        res = self.c.get(f'/stripecustomer/detail/{self.stripe_cus.ref.id()}/', headers={
+            "Authorization": self.token,
+            "Content-Type": "application/json"
+        })
+
+        self.assertTrue(res.json['success'])
+        self.assertEqual(
+            res.json['data']['data']['description'],
+            'information')
+
+    def test_update_customer(self):
+        updated_description = 'an updated description'
+        self.assertNotIn(updated_description, [
+            cus.description for cus in StripeCustomer.all()])
+        res = self.c.put(f'/stripecustomer/update/{self.stripe_cus.ref.id()}/',
+                         json={
+                             "description": updated_description
+                         },
+                         headers={
+                             "Authorization": self.token,
+                             "Content-Type": "application/json"
+                         })
+
+        self.assertTrue(res.json['success'])
+        self.assertEqual(
+            res.json['data']['data']['description'],
+            updated_description)
+
+    def test_delete_customer(self):
+        updated_description = 'an updated description'
+        res = self.c.delete(f'/stripecustomer/delete/{self.stripe_cus.ref.id()}/',
+                            headers={
+                                "Authorization": self.token,
+                                "Content-Type": "application/json"
+                            })
+
+        self.assertTrue(res.json['success'])
+        self.assertNotIn(
+            self.stripe_cus.ref.id(),
+            [cus.ref.id() for cus in StripeCustomer.all()]
         )

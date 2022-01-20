@@ -15,6 +15,7 @@ from pfunk.contrib.email.ses import SESBackend
 from pfunk.contrib.auth.collections import Group, User
 from pfunk.web.views.base import ActionMixin
 
+
 stripe.api_key = env('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY')
 STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET')
@@ -110,7 +111,7 @@ class BaseWebhookView(JSONView, ActionMixin):
         if isinstance(action, collections.Callable):
             action()
             return {'success': 'ok'}
-        raise super().not_found_class()
+        raise NotImplementedError
 
     def post(self, request, *args, **kwargs):
         self.request = request
@@ -137,7 +138,7 @@ class BaseWebhookView(JSONView, ActionMixin):
         except (KeyError, JSONDecodeError):
             return True
         try:
-            return self.request.META['REMOTE_ADDR'] in valid_ips
+            return self.request.source_ip in valid_ips
         except KeyError:
             return False
 

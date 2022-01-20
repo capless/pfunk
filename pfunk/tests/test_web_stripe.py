@@ -1,10 +1,13 @@
 from werkzeug.test import Client
+from types import SimpleNamespace
+from unittest import mock
 
 from pfunk.tests import User, Group
 from pfunk.contrib.auth.collections import PermissionGroup
 from pfunk.contrib.ecommerce.collections import StripePackage, StripeCustomer
 from pfunk.testcase import APITestCase
-
+from pfunk.contrib.ecommerce.views import BaseWebhookView
+from pfunk.web.request import HTTPRequest
 
 class TestWebStripe(APITestCase):
     collections = [User, Group, StripePackage, StripeCustomer]
@@ -169,3 +172,68 @@ class TestWebStripe(APITestCase):
             self.stripe_cus.ref.id(),
             [cus.ref.id() for cus in StripeCustomer.all()]
         )
+
+
+class TestStripeWebhook(APITestCase):
+    collections = [User, Group]
+
+    def setUp(self) -> None:
+        super(TestStripeWebhook, self).setUp()
+        self.group = Group.create(name='Power Users', slug='power-users')
+        self.user = User.create(username='test', email='tlasso@example.org', first_name='Ted',
+                                last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
+                                groups=[self.group])
+        self.token, self.exp = User.api_login("test", "abc123")
+        self.app = self.project.wsgi_app
+        self.view = BaseWebhookView()
+        stripe_req_body = {
+            "id": "evt_1CiPtv2eZvKYlo2CcUZsDcO6",
+            "object": "event",
+            "api_version": "2018-05-21",
+            "created": 1530291411,
+            "data": {
+                "object": {}
+            },
+            "livemode": False,
+            "pending_webhooks": 0,
+            "request": {
+                "id": None,
+                "idempotency_key": None
+            },
+            "type": "source.chargeable"
+        }
+        event = {
+            'body': stripe_req_body,
+            'requestContext': {
+                'web': {
+                    'method': 'post',
+                    'path': '/webhook',
+                    'source_ip': '192.168.1.30'
+                }
+            }
+        }
+        self.view.request = HTTPRequest(event=event)
+        self.c = Client(self.app)
+
+    def test_event_action(self):
+        # event_dict = {'type': 'checkout.session.completed'}
+        with self.assertRaises(NotImplementedError):
+            self.view.event = SimpleNamespace(**self.view.request.body)
+            res = self.view.event_action()
+
+    def test_check_ip(self):
+        res = self.view.check_ip()
+        self.assertFalse(res)
+
+    @mock.patch('boto3.client')
+    def test_send_html_email(self, mocked):
+        pass
+
+    def test_check_signing_secret(self):
+        pass
+
+    def test_get_transfer_data(self):
+        pass
+
+    def test_receive_post_req(self):
+        pass

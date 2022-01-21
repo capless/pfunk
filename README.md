@@ -11,6 +11,7 @@ Includes GraphQL and generic ABAC auth workflow integrations.
 - Create a GraphQL endpoint and a schema validating ORM with the same code.
 - Authentication collections, indexes, user-defined functions, and roles included.
 - Generic CRUD user-defined functions included
+- Create a REST API to integrate Fauna and Non-Fauna related tasks
 - Schema validation based on the [Valley](https://github.com/capless/valley) library.
 
 ## Full Documentation
@@ -66,7 +67,7 @@ class AbstractGroupCollection(Collection):
     # Here we are defining the roles that should be 
     # created for this collection (by proxy this role will be applied 
     # to its subclasses. We could however change the list of roles below.
-    _roles = [GenericGroupBasedRole]
+    collection_roles = [GenericGroupBasedRole]
     title = StringField(required=True)
     group = ReferenceField(Group, required=True)
     
@@ -113,7 +114,7 @@ project.add_resources([User, Group, Product, Story, Sprint])
 ```
 ### Auth Workflows
 
-In the example above, the ```_roles``` list on the ```Collection``` classes attaches generic roles to the 
+In the example above, the ```collection_roles``` list on the ```Collection``` classes attaches generic roles to the 
 collection.  Currently, you can choose a **group based** workflow, **user based**, or a **mix** of the two.
 
 #### User Based Role

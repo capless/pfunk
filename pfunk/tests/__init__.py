@@ -14,7 +14,7 @@ class SimpleIndex(Index):
 
 
 class Sport(Collection):
-    _use_crud_functions = True
+    use_crud_functions = True
     name = StringField(required=True)
     slug = SlugField()
 
@@ -26,8 +26,8 @@ class Sport(Collection):
 
 
 class Person(Collection):
-    _roles = [GenericGroupBasedRole]
-    _verbose_plural_name = 'people'
+    collection_roles = [GenericGroupBasedRole]
+    verbose_plural_name = 'people'
     first_name = StringField(required=True)
     last_name = StringField(required=True)
     gender_pronoun = EnumField(GENDER_PRONOUN)
@@ -39,7 +39,7 @@ class Person(Collection):
 
 
 class House(Collection):
-    _roles = [GenericUserBasedRole]
+    collection_roles = [GenericUserBasedRole]
     address = StringField(required=True)
     user = ReferenceField(User)
 

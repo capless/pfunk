@@ -8,15 +8,17 @@ services:
       context: .
     expose:
       - "8010"
+      - "3434"
     depends_on:
       - fauna
     ports:
       - 8010:8888
+      - 3434:3434
     volumes:
       - ./:/code/
     env_file: .env
     working_dir: /code/
-    command: /root/.cache/pypoetry/virtualenvs/pfunk-MATOk_fk-py3.7/bin/jupyter notebook --port=8888 --ip=0.0.0.0 --allow-root
+    command: /root/.cache/pypoetry/virtualenvs/pfunk-MATOk_fk-py3.9/bin/jupyter notebook --port=8888 --ip=0.0.0.0 --allow-root
 
   fauna:
     restart: always

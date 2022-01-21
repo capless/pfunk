@@ -1,20 +1,21 @@
-from typing import Optional
-
 from envs import env
-from .client import FaunaClient
 from faunadb.errors import BadRequest
-from valley.schema import BaseSchema
 from valley.contrib import Schema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
+from valley.properties import BaseProperty, CharProperty, ListProperty
+from valley.schema import BaseSchema
 from valley.utils import import_util
 
+from pfunk.client import FaunaClient
+from pfunk.web.views.json import DetailView, CreateView, UpdateView, DeleteView, ListView
 from .client import q
-from valley.properties import BaseProperty, CharProperty, ListProperty
-
 from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate, AllFunction
+from .exceptions import DocNotFound
+from .queryset import Queryset
 from .resources import Index
 
 __all__ = ['Enum', 'Collection']
+
 
 class PFunkDeclaredVars(DeclaredVars):
     base_field_class = BaseProperty
@@ -38,20 +39,38 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     This class is analogous to a model in Django.
     """
     BUILTIN_DOC_ATTRS: list = []
-    _functions: list = []
-    """Functions that are attached to this collection"""
-    _indexes: list = []
-    """Indexes that are attached to this collection"""
-    _roles: list = []
-    _lazied: bool = False
-    _all_index: bool = True
-    _use_crud_functions: bool = False
-    _crud_functions: list = [GenericCreate, GenericDelete, GenericUpdate, AllFunction]
-    _non_public_fields: list = []
-    _verbose_plural_name: str = None
-    _collection_name: str = None
+    collection_functions: list = []
+    """Functions that are attached to this collection."""
+    collection_indexes: list = []
+    """Indexes that are attached to this collection."""
+    collection_roles: list = []
+    """Roles that are attached to this collection."""
+    all_index: bool = True
+    """Specifies whether to create the all index."""
+    use_crud_functions: bool = False
+    """Specifies whether to create the CRUD functions"""
+    crud_functions: list = [GenericCreate, GenericDelete, GenericUpdate, AllFunction]
+    """Specifies the CRUD functions used if the `use_crud_functions` variable is `True`"""
+    use_crud_views: bool = True
+    """Specifies whether to use the CRUD views."""
+    crud_views: list = [CreateView, UpdateView, ListView, DeleteView, DetailView]
+    """Specifies the base events used if the `use_base_events` variable is `True`"""
+    require_auth: bool = True
+    """Determines wheter to require authentication and authorization"""
+    non_public_fields: list = []
+    """Specifies all fields that are not public."""
+    verbose_plural_name: str = None
+    """Overrides the default plural collection name."""
+    collection_name: str = None
+    """Overrides the default collection name."""
+    collection_views: list = []
+    """Events that are attached to this collection."""
+    protected_vars: list = ['functions', 'indexes', 'roles', 'lazied', 'all_index', 'use_crud_functions',
+                            'use_base_events', 'base_events', 'non_public_fields', 'verbose_plural_name',
+                            'collection_name']
+    """List of class variables that are not allowed a field names. """
 
-    def __init__(self, _ref:str=None, _lazied:bool=False, **kwargs) -> None:
+    def __init__(self, _ref: object = None, _lazied: bool = False, **kwargs) -> None:
         """
         Args:
             _ref: Fauna ref instance (faunadb.objects.Ref)
@@ -61,16 +80,23 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
 
         super(Collection, self).__init__(**kwargs)
+        intersected_var_names = set(self.protected_vars).intersection(self._base_properties.keys())
+        if len(intersected_var_names) != 0:
+            raise ValueError(f'You are using protected var names in your schema: {intersected_var_names}')
+
         if _ref:
             self.ref = _ref
         self._lazied = _lazied
-        self._indexes = set(self._indexes)
-        self._roles = set(self._roles)
-        self._functions = set(self._functions)
-        if self._use_crud_functions:
-            for i in self._crud_functions:
-                self._functions.add(i)
+        self.collection_indexes = set(self.collection_indexes)
+        self.collection_roles = set(self.collection_roles)
+        self.collection_functions = set(self.collection_functions)
+        if self.use_crud_views:
+            self.collection_views.extend(self.crud_views)
+        self.collection_views = set(self.collection_views)
 
+        if self.use_crud_functions:
+            for i in self.crud_functions:
+                self.collection_functions.add(i)
 
     def get_fields(self) -> dict:
         """
@@ -79,7 +105,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: dict
 
         """
-        return {k: q.select(k, q.var("input")) for k,v in self._base_properties.items() if k not in self._non_public_fields}
+        return {k: q.select(k, q.var("input")) for k, v in self._base_properties.items() if
+                k not in self.non_public_fields}
 
     def get_collection_name(self) -> str:
         """
@@ -88,7 +115,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: str
 
         """
-        return self._collection_name or self.get_class_name().capitalize()
+        return self.collection_name or self.get_class_name().capitalize()
 
     def get_enums(self) -> list:
         """
@@ -116,8 +143,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         """
 
-        if cls._verbose_plural_name:
-            return cls._verbose_plural_name
+        if cls.verbose_plural_name:
+            return cls.verbose_plural_name
         return f"{cls.get_class_name()}s"
 
     def all_index_name(self) -> str:
@@ -140,7 +167,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         return f"all_{self.get_verbose_plural_name()}_function"
 
-    def call_function(self, func_name:str, _validate:bool=False, _token:str=None, **kwargs):
+    def call_function(self, func_name: str, _validate: bool = False, _token: str = None, **kwargs):
         """
         Call a Fauna user defined function (UDF).
         Args:
@@ -205,13 +232,13 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
         if not test_mode:
-            print(f'Published {cls.get_class_name()} functions successfully!')  #pragma: no cover
+            print(f'Published {cls.get_class_name()} functions successfully!')  # pragma: no cover
         cls.publish_indexes()
         if not test_mode:
-            print(f'Published {cls.get_class_name()} indexes successfully!') #pragma: no cover
+            print(f'Published {cls.get_class_name()} indexes successfully!')  # pragma: no cover
         cls.publish_roles()
         if not test_mode:
-            print(f'Published {cls.get_class_name()} roles successfully!') #pragma: no cover
+            print(f'Published {cls.get_class_name()} roles successfully!')  # pragma: no cover
 
     @classmethod
     def publish_functions(cls) -> None:
@@ -221,10 +248,10 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
         """
         c = cls()
-        if c._use_crud_functions:
-            for f in c._crud_functions:
-                c._functions.add(f)
-        for i in c._functions:
+        if c.use_crud_functions:
+            for f in c.crud_functions:
+                c.collection_functions.add(f)
+        for i in c.collection_functions:
             i(c).publish()
 
     @classmethod
@@ -235,7 +262,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
         """
         c = cls()
-        for i in cls._roles:
+        for i in cls.collection_roles:
             i(c).publish()
 
     @classmethod
@@ -248,7 +275,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         c = cls()
         c.get_unique_together()
 
-        for i in cls._indexes:
+        for i in cls.collection_indexes:
             try:
                 i().publish(c.client())
             except BadRequest as e:
@@ -280,7 +307,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         except AttributeError:
             return None
 
-
         for i in meta_unique_together:
             fields = '_'.join(i)
             name = f'{self.get_class_name()}_unique_{fields}'
@@ -288,13 +314,14 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             unique = True
             source = self.get_collection_name()
 
-            Indy = type(self.get_collection_name().capitalize()+''.join([f.capitalize() for f in i])+'Index', (Index, ), {
-                'name': name,
-                'terms': terms,
-                'unique': unique,
-                'source': source
-            })
-            self._indexes.add(Indy)
+            Indy = type(self.get_collection_name().capitalize() + ''.join([f.capitalize() for f in i]) + 'Index',
+                        (Index,), {
+                            'name': name,
+                            'terms': terms,
+                            'unique': unique,
+                            'source': source
+                        })
+            self.collection_indexes.add(Indy)
 
     def get_db_values(self) -> tuple:
         """
@@ -311,6 +338,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             else:
                 relational_data[prop.relation_name] = v
         return data, relational_data
+
+    def get_foreign_fields_by_type(self, cls_str):
+        cls = import_util(cls_str)
+        return {k: {'foreign_class': v.foreign_class, 'field_type': v.__class__.__name__} for k, v in
+                self._base_properties.items() if isinstance(v, cls)}
 
     def _save_related(self, relational_data, _token=None) -> None:
         """
@@ -331,15 +363,32 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                         q.create(
                             q.collection(k),
                             {
-                               "data": {
-                                   f"{self.get_class_name()}ID": self.ref,
-                                   f"{i.get_class_name()}ID": i.ref
-                               }
+                                "data": {
+                                    f"{self.get_class_name()}ID": self.ref,
+                                    f"{i.get_class_name()}ID": i.ref
+                                }
                             }
                         )
                     )
                 except BadRequest:
                     pass
+
+    def call_signals(self, name):
+        signals = getattr(self, name) or []
+        for i in signals:
+            i(self)
+
+    def get_data_dict(self, _credentials=None):
+        data, relational_data = self.get_db_values()
+
+        data_dict = dict()
+        data_dict['data'] = data
+
+        if _credentials:
+            data_dict['credentials'] = {
+                'password': _credentials
+            }
+        return data_dict, relational_data
 
     def save(self, _credentials=None, _token=None) -> None:
         """
@@ -351,33 +400,32 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
 
         """
-
+        self.call_signals('pre_validate_signals')
         self.validate()
-        data, relational_data = self.get_db_values()
-
-        data_dict = dict()
-        data_dict['data'] = data
-
-        if _credentials:
-            data_dict['credentials'] = {
-                'password': _credentials
-            }
 
         if not self.ref:
+            self.call_signals('pre_create_signals')
+            data_dict, relational_data = self.get_data_dict(_credentials=_credentials)
             resp = self.client(_token=_token).query(
                 q.create(
                     q.collection(self.get_collection_name()),
                     data_dict
                 ))
             self.ref = resp['ref']
+            self.call_signals('post_create_signals')
         else:
+            data_dict, relational_data = self.get_data_dict(_credentials=_credentials)
+            self.call_signals('pre_update_signals')
             self.client(_token=_token).query(
                 q.update(
                     self.ref,
                     data_dict
                 )
             )
+
+        self.call_signals('pre_save_related_signals')
         self._save_related(relational_data, _token=_token)
+        self.call_signals('post_save_signals')
 
     def _get(self, ref, _token=None):
         """
@@ -393,8 +441,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         resp = self.client(_token=_token).query(q.get(q.ref(q.collection(self.get_collection_name()), ref)))
         ref = resp['ref']
         data = resp['data']
-
-        self._data = data
+        self._data = self.process_schema_kwargs(data)
         self.ref = ref
         return self
 
@@ -410,35 +457,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         """
         return cls()._get(ref, _token=_token)
-
-    @classmethod
-    def get_by(cls, name, *args, _token=None) -> list:
-        """
-        Calls an index that is expected to return only one result.
-        Args:
-            name: Name of the index
-            *args: Arguments to pass to the index.
-            _token: Token (secret) used to make call
-
-        Returns: list
-
-        """
-
-        c = cls()
-        raw_qs = c.client(_token=_token).query(
-            q.paginate(q.match(q.index(name), *args)))
-        return c.process_qs(raw_qs.get('data'))[0]
-
-    def process_qs(self, data) -> list:
-        """
-        Processes list of documents. Converts list of dicts returned by Fauna to list of Collection objects.
-        Args:
-            data: list of documents
-
-        Returns: list
-
-        """
-        return [self.__class__(_ref=i, _lazied=True) for i in data]
 
     @classmethod
     def all(cls, page_size=100, after=None, before=None, ts=None, events=False, sources=False, _token=None) -> list:
@@ -457,12 +475,20 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
 
         """
 
-        return cls.get_index(cls().all_index_name(), page_size=page_size, after=after, before=before, ts=ts, events=events,
-                       sources=sources, _token=_token)
+        return cls.get_index(cls().all_index_name(), page_size=page_size, after=after, before=before, ts=ts,
+                             events=events,
+                             sources=sources, _token=_token)
+
+    @classmethod
+    def get_by(cls, index_name, terms=[], use_map=True):
+        try:
+            return cls.get_index(index_name, terms=terms, use_map=use_map)[0]
+        except IndexError:
+            raise DocNotFound('Document not found.')
 
     @classmethod
     def get_index(cls, index_name, terms=[], page_size=100, after=None, before=None, ts=None, events=False,
-                  sources=False, _token=None):
+                  sources=False, use_map=True, _token=None):
         """
         Call an index
         Args:
@@ -481,11 +507,25 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
 
         c = cls()
-        return [cls(_ref=i.get('ref'), **i.get('data')) for i in c.client(_token=_token).query(
-            q.map_(
-                q.lambda_(['ref'],
-                          q.get(q.var('ref'))
-                          ),
+        if use_map:
+            query_response = c.client(_token=_token).query(
+                q.map_(
+                    q.lambda_(['ref'],
+                              q.get(q.var('ref'))
+                              ),
+                    q.paginate(
+                        q.match(q.index(index_name), terms),
+                        size=page_size,
+                        after=after,
+                        before=before,
+                        ts=ts,
+                        events=events
+                    )
+                )
+            )
+            lazied = False
+        else:
+            query_response = c.client(_token=_token).query(
                 q.paginate(
                     q.match(q.index(index_name), terms),
                     size=page_size,
@@ -495,7 +535,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                     events=events
                 )
             )
-        ).get('data')]
+            lazied = True
+
+        return Queryset(query_response, cls, lazied)
 
     def delete(self, _token=None) -> None:
         """
@@ -506,5 +548,39 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: None
 
         """
-
+        self.call_signals('pre_delete_signals')
         self.client(_token=_token).query(q.delete(self.ref))
+        self.call_signals('post_delete_signals')
+
+    @classmethod
+    def delete_from_id(cls, id: str, _token=None) -> None:
+        c = cls()
+        c.call_signals('pre_delete_signals')
+        c.client(_token=_token).query(q.delete(q.ref(q.collection(c.get_collection_name()), id)))
+        c.call_signals('post_delete_signals')
+
+    ########
+    # JSON #
+    ########
+
+    def to_dict(self):
+        field_data = self._data.copy()
+        ref = {'id': self.ref.id(), 'collection': self.ref.collection().id()}
+        obj = {
+            'ref': ref,
+            'data': field_data
+        }
+        return obj
+
+    #######
+    # API #
+    #######
+
+    @property
+    def urls(self):
+        """
+        Returns list of URLs
+        Returns: list
+
+        """
+        return [i.url(self) for i in self.collection_views]

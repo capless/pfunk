@@ -11,6 +11,7 @@ Includes GraphQL and generic ABAC auth workflow integrations.
 - Create a GraphQL endpoint and a schema validating ORM with the same code.
 - Authentication collections, indexes, user-defined functions, and roles included.
 - Generic CRUD user-defined functions included
+- Create a REST API to integrate Fauna and Non-Fauna related tasks
 - Schema validation based on the [Valley](https://github.com/capless/valley) library.
 
 ## Full Documentation

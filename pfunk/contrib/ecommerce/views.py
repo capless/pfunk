@@ -6,6 +6,7 @@ import bleach
 from envs import env
 from datetime import datetime
 from json import JSONDecodeError
+from werkzeug.routing import Rule
 from jinja2 import Environment, BaseLoader
 
 from pfunk.contrib.email import ses
@@ -72,29 +73,50 @@ class CheckoutView(DetailView):
         return context
 
 
-class CheckoutSuccessView(DetailView):
+class CheckoutSuccessView(DetailView, ActionMixin):
     """ Defines action from the result of `CheckoutView` """
+    action = 'checkout-success'
+    http_method_names = ['get']
 
-    def get_object(self, queryset=None):
+    @classmethod
+    def url(cls, collection):
+        return Rule(f'/{collection.get_class_name()}/{cls.action}/<string:id>/', endpoint=cls.as_view(collection),
+                    methods=cls.http_methods)
+
+    def get_query(self, *args, **kwargs):
         """ Acquires the object from the `SessionView` """
-        try:
-            session_id = self.request.GET['session_id']
-        except KeyError:
-            raise DocNotFound
+        session_id = self.request.kwargs.get('id')
         self.stripe_session = stripe.checkout.Session.retrieve(session_id)
-        return self.model.objects.get(stripe_id=self.stripe_session.client_reference_id)
+        # NOTE: Chose listing instead of indexing under the assumption of limited  paid packages. Override if needed
+        pkg = [pkg for pkg in self.collection.all() if pkg.stripe_id ==
+               self.stripe_session.client_reference_id]
+        if pkg:
+            return pkg
+        raise DocNotFound
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['stripe_session'] = self.stripe_session
-        return context
 
-
-class BaseWebhookView(JSONView, ActionMixin):
+class BaseWebhookView(CreateView, ActionMixin):
     """ Base class to use for executing Stripe webhook actions """
+    login_required = False
     action = 'webhook'
     http_method_names = ['post']
     webhook_signing_secret = STRIPE_WEBHOOK_SECRET
+
+    def get_query(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        self.event = self.check_signing_secret()
+        try:
+            self.event_json = json.loads(self.request.body)
+        except TypeError:
+            self.event_json = self.request.body
+
+        try:
+            self.object = self.event.data.object
+        except AttributeError:
+            self.object = None
+
+        return self.event_action()
 
     def event_action(self):
         """ Transforms Stripe action to snake case for easier 
@@ -107,25 +129,12 @@ class BaseWebhookView(JSONView, ActionMixin):
             that
         """
         event_type = self.event.type.replace('.', '_')
-        action = getattr(self, event_type, None)
-        if isinstance(action, collections.Callable):
-            action()
-            return {'success': 'ok'}
+        if event_type is str:
+            action = getattr(self, event_type, None)
+            if isinstance(action, collections.Callable):
+                action()
+                return {'success': 'ok'}
         raise NotImplementedError
-
-    def post(self, request, *args, **kwargs):
-        self.request = request
-        self.args = args
-        self.kwargs = kwargs
-        self.event = self.check_signing_secret()
-        self.event_json = json.loads(self.request.body)
-
-        try:
-            self.object = self.event.data.object
-        except AttributeError:
-            self.object = None
-
-        return self.event_action()
 
     def check_ip(self):
         """
@@ -151,8 +160,7 @@ class BaseWebhookView(JSONView, ActionMixin):
                 DEFAULT_FROM_EMAIL (str): default `from` email
         """
         if not context:
-            context = {'object': self.object,
-                       'request_body': self.request.body}
+            context = {'request_body': self.request.body}
         if template_name:
             rtemplate = Environment(
                 loader=BaseLoader()).from_string(template_name)
@@ -173,13 +181,15 @@ class BaseWebhookView(JSONView, ActionMixin):
 
     def check_signing_secret(self):
         """
-        Make sure the request's Stripe signature to make sure it matches our signing secret.
-        :return: HttpResponse or Stripe Event Object
+        Make sure the request's Stripe signature to make sure it matches our signing secret 
+        then returns the event 
+        
+        :return: Stripe Event Object
         """
         # If we are running tests we can't verify the signature but we need the event objects
 
         event = stripe.Webhook.construct_event(
-            self.request.body, self.request.META['HTTP_STRIPE_SIGNATURE'], self.webhook_signing_secret
+            self.request.body, self.request.headers['HTTP_STRIPE_SIGNATURE'], self.webhook_signing_secret
         )
         return event
 
@@ -188,8 +198,9 @@ class BaseWebhookView(JSONView, ActionMixin):
 
     def checkout_session_completed(self):
         """ A method to override to implement custom actions 
-            after successful Stripe checkout
+            after successful Stripe checkout. 
 
+            This is a Stripe event.
             Use this method by subclassing this class in your
             custom claas
         """

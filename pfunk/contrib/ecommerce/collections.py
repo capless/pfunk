@@ -7,7 +7,7 @@ from pfunk.exceptions import DocNotFound
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField, FloatField
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole, Public, UserRole
 from pfunk.contrib.ecommerce.resources import StripePublic
-from pfunk.contrib.ecommerce.views import ListStripePackage, DetailStripePackage
+from pfunk.contrib.ecommerce.views import BaseWebhookView, ListStripePackage, DetailStripePackage, CheckoutSuccessView
 from pfunk.web.views.json import CreateView, UpdateView, DeleteView
 
 
@@ -29,7 +29,8 @@ class StripePackage(Collection):
     """
     use_crud_views = False
     collection_roles = [GenericGroupBasedRole]
-    collection_views = [ListStripePackage, DetailStripePackage, CreateView, UpdateView, DeleteView]
+    collection_views = [ListStripePackage, DetailStripePackage,
+                        CheckoutSuccessView, CreateView, UpdateView, DeleteView]
     stripe_id = StringField(required=True)
     name = StringField(required=True)
     price = FloatField(required=True)
@@ -50,13 +51,12 @@ class StripeCustomer(Collection):
         This is only a base model made to give an idea how 
         can you structure your collections. Override the 
         fields and functions to match your system.
-
-        Should be used as the
     """
     user = ReferenceField(User)
     collection_roles = [GenericUserBasedRole]
     stripe_id = StringField(required=True, unique=True)
     description = StringField()
+    collection_views = [BaseWebhookView]
 
     def __unicode__(self):
         return self.customer_id

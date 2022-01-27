@@ -1,10 +1,11 @@
+from http.client import responses
 import logging
 
 import requests
 from io import BytesIO
 
 from envs import env
-
+import swaggyp as sw
 from faunadb.client import FaunaClient
 from jinja2 import Template
 from valley.contrib import Schema
@@ -254,3 +255,39 @@ class Project(Schema):
 
         start_response(status_str, response.wsgi_headers)
         return [str.encode(response.body)]
+
+    def generate_swagger(self):
+        """ Gebnerates swagger doc """
+        
+        rules = [GraphQLView.url()]
+        for i in self.collections:
+            col = i()
+            rules.extend(col.urls)
+        _map = Map(
+            rules=rules,
+            strict_slashes=True
+        )
+
+        paths = []
+        for route in _map.iter_rules():    
+            rule = route.rule
+            methods = route.methods
+            args = route.arguments
+            
+            # TODO: Figure out a way to acquire response in collection view
+            rsp = sw.Response(status_code=200,description='test')
+
+            # TODO: figure out a way to acquire endpoint summary and description
+            op = sw.Operation(
+                    http_method=list(methods)[0],
+                    summary='Test',
+                    description='test',
+                    responses=[rsp])
+            p = sw.Path(endpoint=rule,operations=[op])
+            paths.append(p)
+        
+        # print(operations)
+        
+        info = sw.Info(title='PFunk',description='Test site',version='dev')
+        t = sw.SwaggerTemplate(host='pfunk',basePath='/',info=info,paths=paths,schemes=['https'])
+        print(t.to_yaml())

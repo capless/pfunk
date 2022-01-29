@@ -51,8 +51,8 @@ class BaseAPIGatewayRequest(Request):
         super(BaseAPIGatewayRequest, self).__init__(event, kwargs)
         self.is_base64_encoded = event.get('isBase64Encoded')
         self.body = event.get('body')
-        self.headers = event.get('headers', {})
-        self.query_params = event.get('queryStringParameters')
+        self.headers = event.get('headers') or dict()
+        self.query_params = event.get('queryStringParameters') or dict()
 
 
 class WSGIRequest(Request):

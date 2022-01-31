@@ -25,7 +25,7 @@ class TestWebStripeCrud(APITestCase):
         self.stripe_pkg = StripePackage.create(group=self.group,
                                                stripe_id='100', price='10', description='unit testing...', name='unit test package')
         self.stripe_cus = StripeCustomer.create(
-            user=self.user, stripe_id='100', description="information")
+            user=self.user, stripe_id='100')
 
         self.token, self.exp = User.api_login("test", "abc123")
         self.app = self.project.wsgi_app
@@ -105,14 +105,13 @@ class TestWebStripeCrud(APITestCase):
         )
 
     def test_create_customer(self):
-        new_description = 'created description'
-        self.assertNotIn(new_description, [
-            cus.description for cus in StripeCustomer.all()])
+        stripe_id = '201'
+        self.assertNotIn(stripe_id, [
+            cus.stripe_id for cus in StripeCustomer.all()])
         res = self.c.post(f'/stripecustomer/create/',
                           json={
                               "user": self.user.ref.id(),
-                              "stripe_id": 201,
-                              "description": new_description
+                              "stripe_id": stripe_id
                           },
                           headers={
                               "Authorization": self.token,
@@ -120,8 +119,8 @@ class TestWebStripeCrud(APITestCase):
                           })
 
         self.assertTrue(res.json['success'])
-        self.assertIn(new_description, [
-                      cus.description for cus in StripeCustomer.all()])
+        self.assertIn(stripe_id, [
+                      cus.stripe_id for cus in StripeCustomer.all()])
 
     def test_list_customers(self):
         res = self.c.get('/stripecustomer/list/', headers={
@@ -131,8 +130,8 @@ class TestWebStripeCrud(APITestCase):
 
         self.assertTrue(res.json['success'])
         self.assertEqual(
-            res.json['data']['data'][0]['data']['description'],
-            'information')
+            res.json['data']['data'][0]['data']['stripe_id'],
+            '100')
 
     def test_get_customer(self):
         res = self.c.get(f'/stripecustomer/detail/{self.stripe_cus.ref.id()}/', headers={
@@ -142,16 +141,16 @@ class TestWebStripeCrud(APITestCase):
 
         self.assertTrue(res.json['success'])
         self.assertEqual(
-            res.json['data']['data']['description'],
-            'information')
+            res.json['data']['data']['stripe_id'],
+            '100')
 
     def test_update_customer(self):
-        updated_description = 'an updated description'
-        self.assertNotIn(updated_description, [
-            cus.description for cus in StripeCustomer.all()])
+        updated_stripe_id = '101'
+        self.assertNotIn(updated_stripe_id, [
+            cus.stripe_id for cus in StripeCustomer.all()])
         res = self.c.put(f'/stripecustomer/update/{self.stripe_cus.ref.id()}/',
                          json={
-                             "description": updated_description
+                             "stripe_id": updated_stripe_id
                          },
                          headers={
                              "Authorization": self.token,
@@ -160,11 +159,10 @@ class TestWebStripeCrud(APITestCase):
 
         self.assertTrue(res.json['success'])
         self.assertEqual(
-            res.json['data']['data']['description'],
-            updated_description)
+            res.json['data']['data']['stripe_id'],
+            updated_stripe_id)
 
     def test_delete_customer(self):
-        updated_description = 'an updated description'
         res = self.c.delete(f'/stripecustomer/delete/{self.stripe_cus.ref.id()}/',
                             headers={
                                 "Authorization": self.token,

@@ -55,7 +55,6 @@ class StripeCustomer(Collection):
     user = ReferenceField(User)
     collection_roles = [GenericUserBasedRole]
     stripe_id = StringField(required=True, unique=True)
-    description = StringField()
     collection_views = [BaseWebhookView]
 
     def __unicode__(self):

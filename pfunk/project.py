@@ -257,37 +257,40 @@ class Project(Schema):
         return [str.encode(response.body)]
 
     def generate_swagger(self):
-        """ Gebnerates swagger doc """
-        
+        """ Generates swagger doc """
+
+        paths = []
         rules = [GraphQLView.url()]
         for i in self.collections:
             col = i()
             rules.extend(col.urls)
-        _map = Map(
-            rules=rules,
-            strict_slashes=True
-        )
 
-        paths = []
-        for route in _map.iter_rules():    
-            rule = route.rule
-            methods = route.methods
-            args = route.arguments
-            
-            # TODO: Figure out a way to acquire response in collection view
-            rsp = sw.Response(status_code=200,description='test')
+            for view in col.collection_views:
+                route = view.url(col)
+                rule = route.rule
+                methods = route.methods
+                args = route.arguments
 
-            # TODO: figure out a way to acquire endpoint summary and description
-            op = sw.Operation(
+                # TODO: Figure out a way to acquire response in collection view.
+                # NOTE: I thought of using the view's `get_query' function and do a mocked call to return a matching response
+                rsp = sw.Response(status_code=200, description='test')
+
+                op = sw.Operation(
                     http_method=list(methods)[0],
-                    summary='Test',
-                    description='test',
+                    summary=f'({list(methods)[0]}) -> {col.__class__.__name__}',
+                    description=view.__doc__,
                     responses=[rsp])
-            p = sw.Path(endpoint=rule,operations=[op])
-            paths.append(p)
-        
-        # print(operations)
-        
-        info = sw.Info(title='PFunk',description='Test site',version='dev')
-        t = sw.SwaggerTemplate(host='pfunk',basePath='/',info=info,paths=paths,schemes=['https'])
+                p = sw.Path(endpoint=rule, operations=[op])
+                paths.append(p)
+
+        info = sw.Info(
+            title='PFunk',
+            description='Test site',
+            version='dev')
+        t = sw.SwaggerTemplate(
+            host='PFunk',
+            basePath='/',
+            info=info,
+            paths=paths,
+            schemes=['https'])
         print(t.to_yaml())

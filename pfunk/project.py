@@ -257,7 +257,24 @@ class Project(Schema):
         return [str.encode(response.body)]
 
     def generate_swagger(self):
-        """ Generates swagger doc """
+        """ Generates swagger doc. Details are going to be acquired from the collections 
+        
+            The acquisition of the information needed for docs are as follows:
+                Response: 
+                    Description (str): View's `get_query` docstrings
+                    Status Code (int): 
+                        Acquired from `response_class` class variable of a view
+                        Error status_codes are acquired too in class variables
+                Operation:
+                    HTTP Methods (arr): Defined `http_methods` in a view.
+                    Summary (str): ({http_method}) -> {collection_name}
+                    Description (str): Docstring of the view
+                Path:
+                    Endpoint (str): Path of the function. You can see it in `url` method of a view.
+            
+            Returns:
+                Generated YAML file
+        """
 
         paths = []
         rules = [GraphQLView.url()]
@@ -271,15 +288,30 @@ class Project(Schema):
                 methods = route.methods
                 args = route.arguments
 
-                # TODO: Figure out a way to acquire response in collection view.
-                # NOTE: I thought of using the view's `get_query' function and do a mocked call to return a matching response
-                rsp = sw.Response(status_code=200, description='test')
+                rsp = sw.Response(
+                    status_code=view.response_class.status_code, 
+                    description=view.get_query.__doc__)
+                not_found_rsp = sw.Response(
+                    status_code=view.not_found_class.status_code, 
+                    description=view.not_found_class.default_payload)
+                bad_req_rsp = sw.Response(
+                    status_code=view.bad_request_class.status_code, 
+                    description=view.bad_request_class.default_payload)
+                method_not_allowed_rsp = sw.Response(
+                    status_code=view.method_not_allowed_class.status_code, 
+                    description=view.method_not_allowed_class.default_payload)
+                unauthorized_rsp = sw.Response(
+                    status_code=view.unauthorized_class.status_code, 
+                    description=view.unauthorized_class.default_payload)
+                forbidden_rsp = sw.Response(
+                    status_code=view.forbidden_class.status_code, 
+                    description=view.forbidden_class.default_payload)
 
                 op = sw.Operation(
                     http_method=list(methods)[0],
                     summary=f'({list(methods)[0]}) -> {col.__class__.__name__}',
                     description=view.__doc__,
-                    responses=[rsp])
+                    responses=[rsp, not_found_rsp, bad_req_rsp, method_not_allowed_rsp, unauthorized_rsp, forbidden_rsp])
                 p = sw.Path(endpoint=rule, operations=[op])
                 paths.append(p)
 

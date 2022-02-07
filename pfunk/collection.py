@@ -275,12 +275,18 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         c = cls()
         c.get_unique_together()
 
-        for i in cls.collection_indexes:
+        for i in c.collection_indexes:
             try:
                 i().publish(c.client())
             except BadRequest as e:
                 for err in e.errors:
                     print(f'Error ({i.__name__.lower()}): ', err.description)
+
+    @classmethod
+    def get_indexes(cls) -> None:
+        c = cls()
+        c.get_unique_together()
+        return c.collection_indexes
 
     @classmethod
     def unpublish(cls) -> None:

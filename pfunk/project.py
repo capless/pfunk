@@ -52,6 +52,7 @@ class Project(Schema):
     _collections: list = ForeignList(Collection, required=False)
 
     extra_graphql: str = None
+    extra_graphql_queries: str = None
 
     def __init__(self, **kwargs):
         super(Project, self).__init__(**kwargs)
@@ -122,6 +123,16 @@ class Project(Schema):
             return Template(self.extra_graphql).render(**self.get_extra_graphql_context())
         return ''
 
+    def get_extra_graphql_queries(self) -> str:
+        """
+        Get the rendered "Extra GraphQL Queries" template
+
+        Returns: str
+        """
+        if self.extra_graphql_queries:
+            return Template(self.extra_graphql_queries).render(**self.get_extra_graphql_context())
+        return ''
+
     def get_extra_graphql_context(self) -> dict:
         """
         Returns a dict of context variables to be used when rendering the "Extra GraphQL"
@@ -139,7 +150,8 @@ class Project(Schema):
         self.get_enums()
         return graphql_template.render(collection_list=self.collections, enum_list=self.enums,
                                        index_list=self.indexes, function_list=self._func,
-                                       extra_graphql=self.get_extra_graphql())
+                                       extra_graphql=self.get_extra_graphql(),
+                                       extra_graphql_queries=self.get_extra_graphql_queries())
 
     def publish(self, mode: str = 'merge') -> int:
         """

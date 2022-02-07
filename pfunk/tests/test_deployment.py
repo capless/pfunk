@@ -35,8 +35,7 @@ class DeploymentTestCase(PFunkTestCase):
         indexes = self.client.query(
             q.paginate(q.indexes(q.database(self.db_name)))
         ).get('data')
-
-        self.assertEqual(12, len(indexes))
+        self.assertEqual(13, len(indexes))
         # Add User and Group to the project
         self.project.add_resources([User, Group])
         # Publish twice more to make sure there are no errors with create_or_update_role or create_or_update_function

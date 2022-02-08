@@ -288,32 +288,38 @@ class Project(Schema):
                 methods = route.methods
                 args = route.arguments
 
-                rsp = sw.Response(
-                    status_code=view.response_class.status_code, 
-                    description=view.get_query.__doc__)
-                not_found_rsp = sw.Response(
-                    status_code=view.not_found_class.status_code, 
-                    description=view.not_found_class.default_payload)
-                bad_req_rsp = sw.Response(
-                    status_code=view.bad_request_class.status_code, 
-                    description=view.bad_request_class.default_payload)
-                method_not_allowed_rsp = sw.Response(
-                    status_code=view.method_not_allowed_class.status_code, 
-                    description=view.method_not_allowed_class.default_payload)
-                unauthorized_rsp = sw.Response(
-                    status_code=view.unauthorized_class.status_code, 
-                    description=view.unauthorized_class.default_payload)
-                forbidden_rsp = sw.Response(
-                    status_code=view.forbidden_class.status_code, 
-                    description=view.forbidden_class.default_payload)
+                responses = []
+                response_classes = [
+                    'response_class',
+                    'not_found_class',
+                    'bad_request_class',
+                    'method_not_allowed_class',
+                    'unauthorized_class',
+                    'forbidden_class'
+                ]
+                for rsp_cls in response_classes:
+                    if rsp_cls == 'response_class':
+                        responses.append(
+                            sw.Response(
+                                status_code=view.response_class.status_code, 
+                                description=view.get_query.__doc__)
+                        )
+                    else:
+                        responses.append(
+                            sw.Response(
+                                status_code=getattr(view, rsp_cls).status_code, 
+                                description=getattr(view, rsp_cls).default_payload)
+                        )
 
-                op = sw.Operation(
-                    http_method=list(methods)[0],
-                    summary=f'({list(methods)[0]}) -> {col.__class__.__name__}',
-                    description=view.__doc__,
-                    responses=[rsp, not_found_rsp, bad_req_rsp, method_not_allowed_rsp, unauthorized_rsp, forbidden_rsp])
-                p = sw.Path(endpoint=rule, operations=[op])
-                paths.append(p)
+                view_methods = list(methods)
+                for method in view_methods:
+                    op = sw.Operation(
+                        http_method=method.lower(),
+                        summary=f'({method}) -> {col.__class__.__name__}',
+                        description=view.__doc__,
+                        responses=responses)
+                    p = sw.Path(endpoint=rule, operations=[op])
+                    paths.append(p)
 
         info = sw.Info(
             title='PFunk',

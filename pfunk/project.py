@@ -1,5 +1,7 @@
 from http.client import responses
 import logging
+import os
+import json
 
 import requests
 from io import BytesIO
@@ -275,6 +277,17 @@ class Project(Schema):
             Returns:
                 Generated YAML file
         """
+        if not os.path.exists(f'pfunk.json'):
+           raise Exception('Missing JSON Config file.')
+        else:
+            with open(f'pfunk.json', 'r') as f:
+                data = json.loads(f.read())
+                proj_title = data.get('name')
+                proj_desc = data.get('description', 'A Pfunk project')
+                proj_ver = data.get('ver', '1.0')
+                host = data.get('host', 'pfunk.com')
+                basePath = data.get('basePath', '/')
+                schemes = ['https']
 
         paths = []
         rules = [GraphQLView.url()]
@@ -322,13 +335,13 @@ class Project(Schema):
                     paths.append(p)
 
         info = sw.Info(
-            title='PFunk',
-            description='Test site',
-            version='dev')
+            title=proj_title,
+            description=proj_desc,
+            version=proj_ver)
         t = sw.SwaggerTemplate(
-            host='PFunk',
-            basePath='/',
+            host=host,
+            basePath=basePath,
             info=info,
             paths=paths,
-            schemes=['https'])
+            schemes=schemes)
         print(t.to_yaml())

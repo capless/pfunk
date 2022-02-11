@@ -30,3 +30,4 @@ class ProjectTestCase(unittest.TestCase):
     def test_swagger(self):
         self.project.add_resource(Person)
         self.project.generate_swagger()
+        self.assertTrue(True) # if there are no exceptions, then it passed

@@ -344,4 +344,7 @@ class Project(Schema):
             info=info,
             paths=paths,
             schemes=schemes)
+
+        with open(f'swagger.yaml', 'x') as swag_doc:
+            swag_doc.write(t.to_yaml())
         print(t.to_yaml())

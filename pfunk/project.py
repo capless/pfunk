@@ -326,6 +326,9 @@ class Project(Schema):
 
                 view_methods = list(methods)
                 for method in view_methods:
+                    if method == 'HEAD':
+                        # Skip HEAD operations 
+                        continue
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
@@ -345,6 +348,10 @@ class Project(Schema):
             paths=paths,
             schemes=schemes)
 
-        with open(f'swagger.yaml', 'x') as swag_doc:
-            swag_doc.write(t.to_yaml())
-        print(t.to_yaml())
+        if not os.path.exists(f'swagger.yaml'):
+            with open(f'swagger.yaml', 'x') as swag_doc:
+                swag_doc.write(t.to_yaml())
+        else:
+            print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')   
+            print(t.to_yaml())
+            return None

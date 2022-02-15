@@ -27,9 +27,11 @@ def load_config_file(filename):
 @click.option('--email', prompt=True, help='Default From Email')
 @click.option('--bucket', prompt=True, help='S3 Bucket')
 @click.option('--fauna_key', prompt=True, help='Fauna Key')
+@click.option('--host', prompt=True, help='Host')
+@click.option('--description', prompt=True, help='Project Description')
 @click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
-def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str):
+def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str, description: str, host: str):
     """
     Creates a PFunk project
     Args:
@@ -50,6 +52,8 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
             json.dump({
                 'name': name,
                 'api_type': api_type,
+                'description': description,
+                'host': host,
                 'stages': {stage_name: {
                     'key_module': f'{name}.{stage_name}_keys.KEYS',
                     'fauna_secret': fauna_key,

@@ -2,12 +2,15 @@ import click
 import json
 import os
 import sys
+import datetime
 
 from jinja2 import TemplateNotFound
 from valley.utils import import_util
 from werkzeug.serving import run_simple
+from pfunk.client import FaunaClient, q
 
 from pfunk.contrib.auth.collections import Group, PermissionGroup
+from pfunk.exceptions import DocNotFound
 from pfunk.template import wsgi_template, project_template, collections_templates, key_template
 from pfunk.utils.deploy import Deploy
 
@@ -23,6 +26,8 @@ def load_config_file(filename):
     return config
 
 @pfunk.command()
+@click.option('--generate_local_key', prompt=True, help='Specifies whether to generate a local database and key',
+              default=False)
 @click.option('--stage_name', prompt=True, help='Application stage', default='dev')
 @click.option('--email', prompt=True, help='Default From Email')
 @click.option('--bucket', prompt=True, help='S3 Bucket')
@@ -32,6 +37,7 @@ def load_config_file(filename):
 @click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
 def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str, description: str, host: str):
+
     """
     Creates a PFunk project
     Args:
@@ -68,6 +74,17 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
             f.write(project_template.render())
         with open(f'{name}/collections.py', 'x') as f:
             f.write(collections_templates.render())
+        if generate_local_key:
+            client = FaunaClient(secret='secret')
+            db_name = f'{name}-local'
+            client.query(
+                q.create_database({'name': db_name})
+            )
+            key = client.query(
+                q.create_key({'database': q.database(db_name), 'role': 'admin'})
+            )
+            click.secho(f'Fauna Local Secret (copy into your .env or pipenv file): {key}', fg='green')
+
     else:
         click.echo('There is already a project file in this directory.')
 
@@ -125,10 +142,11 @@ def local(hostname: str, port: int, wsgi: str, config_file: str, use_debugger: b
 
 
 @pfunk.command()
+@click.option('--publish_locally', prompt=True, help='Specifies whether to publish the schema locally.', default=False)
 @click.option('--config_path', help='Configuration file path', default='pfunk.json')
 @click.option('--project_path', help='Project module path')
 @click.argument('stage_name')
-def publish(stage_name: str, project_path: str, config_path: str):
+def publish(stage_name: str, project_path: str, config_path: str, publish_locally: bool):
     """
     Publish GraphQL schema to Fauna
     Args:
@@ -144,8 +162,10 @@ def publish(stage_name: str, project_path: str, config_path: str):
     if not project_path:
         project_path = f'{config.get("name")}.project.project'
     project = import_util(project_path)
-    secret = config['stages'][stage_name]['fauna_secret']
-    os.environ['FAUNA_SECRET'] = secret
+    if not publish_locally:
+
+        secret = config['stages'][stage_name]['fauna_secret']
+        os.environ['FAUNA_SECRET'] = secret
     project.publish()
 
 
@@ -172,6 +192,7 @@ def seed_keys(stage_name: str, config_path: str):
     return keys_path
 
 @pfunk.command()
+@click.option('--local_user', help='Specifies whether the user is local.', prompt=True, default=False)
 @click.option('--config_path', help='Configuration file path', default='pfunk.json')
 @click.option('--project_path', help='Project module path')
 @click.option('--username', prompt=True, help='Username')
@@ -182,7 +203,7 @@ def seed_keys(stage_name: str, config_path: str):
 @click.option('--group_slug', prompt=True, help='User Group Slug', default=None)
 @click.argument('stage_name')
 def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_name: str, email: str, password: str, username: str,
-                      project_path: str, config_path: str):
+                      project_path: str, config_path: str, local_user: bool):
     """
     Create an admin user in the project's Fauna user collection.
     Args:
@@ -195,6 +216,7 @@ def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_na
         username: Username for the user
         project_path: Project path
         config_path: Config path
+        local_user: Specifies whether to create the user locally.
 
     Returns:
 
@@ -202,7 +224,8 @@ def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_na
     config = load_config_file(config_path)
     secret = config['stages'][stage_name]['fauna_secret']
     User = import_util('pfunk.contrib.auth.collections.User')
-    os.environ['FAUNA_SECRET'] = secret
+    if not local_user:
+        os.environ['FAUNA_SECRET'] = secret
 
     user = User.create(
         username=username,
@@ -214,7 +237,10 @@ def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_na
     )
 
     if group_slug:
-        group = Group.get_by('unique_Group_slug', group_slug)
+        try:
+            group = Group.get_by('unique_Group_slug', group_slug)
+        except DocNotFound:
+            group = Group.create(name=group_slug, slug=group_slug)
         if not project_path:
             project_path = f'{config.get("name")}.project.project'
         sys.path.insert(0, os.getcwd())

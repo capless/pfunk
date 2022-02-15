@@ -8,6 +8,7 @@ from cryptography.fernet import Fernet
 from dateutil import tz
 from envs import env
 from faunadb.errors import BadRequest, NotFound
+from jwt import ExpiredSignatureError
 from valley.exceptions import ValidationException
 from valley.utils import import_util
 from werkzeug.utils import cached_property
@@ -17,7 +18,7 @@ from pfunk.collection import Collection, Enum
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
 from pfunk.contrib.auth.views import ForgotPasswordChangeView, LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView
 from pfunk.contrib.email.base import send_email
-from pfunk.exceptions import LoginFailed, DocNotFound
+from pfunk.exceptions import LoginFailed, DocNotFound, Unauthorized
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField
 
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
@@ -79,8 +80,11 @@ class Key(object):
         headers = jwt.get_unverified_header(encoded)
         keys = cls.import_keys()
         key = keys.get(headers.get('kid'))
-        decoded = jwt.decode(encoded, key.get('signature_key'), algorithms="HS256", verify=True,
+        try:
+            decoded = jwt.decode(encoded, key.get('signature_key'), algorithms="HS256", verify=True,
                              options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
+        except ExpiredSignatureError:
+            raise Unauthorized('Unauthorized')
         pay_f = Fernet(key.get('payload_key').encode())
         k = pay_f.decrypt(decoded.get('til').encode())
         return json.loads(k.decode())
@@ -341,8 +345,8 @@ class UserGroups(Collection):
             List of permissions, `['create', 'read', 'delete', 'write']`
     """
     collection_name = 'users_groups'
-    userID = ReferenceField('pfunk.contrib.auth.collections.User')
-    groupID = ReferenceField(Group)
+    userID = ReferenceField(env('USER_COLLECTION', 'pfunk.contrib.auth.collections.User'))
+    groupID = ReferenceField(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.Group'))
     permissions = ListField()
 
     def __unicode__(self):

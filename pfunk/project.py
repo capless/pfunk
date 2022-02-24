@@ -17,7 +17,7 @@ from valley.utils import import_util
 from werkzeug import Request as WerkzeugRequest
 from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.http import HTTP_STATUS_CODES
-from werkzeug.routing import Map
+from werkzeug.routing import Map, parse_rule
 from werkzeug.utils import cached_property
 
 from pfunk.web.request import HTTPRequest, RESTRequest, WSGIRequest
@@ -300,6 +300,14 @@ class Project(Schema):
                 rule = route.rule
                 methods = route.methods
                 args = route.arguments
+                
+                if args is None:
+                    # if `defaults` weren't used in URL building, use the argument defined in the URL string
+                    for converter, arguments, variable in parse_rule(rule):
+                        if variable.startswith('/') or converter is None:
+                            continue
+                        args = variable
+                        arg_type = converter
 
                 responses = []
                 response_classes = [
@@ -329,11 +337,21 @@ class Project(Schema):
                     if method == 'HEAD':
                         # Skip HEAD operations 
                         continue
+
+                    # BUG: `Parameter` class can't be found on swaggyp module
+                    params = sw.Parameter(
+                        name=arg_type,
+                        _in='path',
+                        description='',
+                        required=False,
+                        allowEmptyValue=False
+                    )
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
                         description=view.__doc__,
-                        responses=responses)
+                        responses=responses,
+                        parameters=[params])
                     p = sw.Path(endpoint=rule, operations=[op])
                     paths.append(p)
 
@@ -353,5 +371,5 @@ class Project(Schema):
                 swag_doc.write(t.to_yaml())
         else:
             print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')   
-            print(t.to_yaml())
+            # print(t.to_yaml())
             return None

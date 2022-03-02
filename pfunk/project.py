@@ -42,6 +42,12 @@ API_EVENT_TYPES = {
     ]
 }
 
+GRAPHQL_TO_YAML_TYPES = {
+    "String": "string",
+    "Int": "integer",
+    "Float": "integer",
+    "Boolean": "boolean"
+}
 
 class Project(Schema):
     """
@@ -362,8 +368,9 @@ class Project(Schema):
             # Define model definitions by iterating through collection's fields for its properties
             col_properties = {}
             for property, field_type in col._base_properties.items():
-                print(property)
-                col_properties[property] = {"type": field_type.GRAPHQL_FIELD_TYPE.lower()}
+                # TODO: Figure out what to do on graphql type -> IDs (relations)
+                col_properties[property] = {
+                    "type": GRAPHQL_TO_YAML_TYPES.get(field_type.GRAPHQL_FIELD_TYPE)}
             model_schema = sw.SwagSchema(properties=col_properties)
             model = sw.Definition(name=col.name, schema=model_schema)
             definitions.append(model)
@@ -386,5 +393,5 @@ class Project(Schema):
                 swag_doc.write(t.to_yaml())
         else:
             print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')   
-            # print(t.to_yaml())
+            print(t.to_yaml())
             return None

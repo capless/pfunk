@@ -2,16 +2,13 @@ from http.client import responses
 import logging
 import os
 import json
-
 import requests
 from io import BytesIO
-
 from envs import env
 import swaggyp as sw
 from faunadb.client import FaunaClient
 from jinja2 import Template
 from valley.contrib import Schema
-
 from valley.properties import CharProperty, ForeignProperty
 from valley.utils import import_util
 from werkzeug import Request as WerkzeugRequest
@@ -290,6 +287,7 @@ class Project(Schema):
                 schemes = ['https']
 
         paths = []
+        definitions = []
         rules = [GraphQLView.url()]
         for i in self.collections:
             col = i()
@@ -338,22 +336,38 @@ class Project(Schema):
                         # Skip HEAD operations 
                         continue
 
-                    # BUG: `Parameter` class can't be found on swaggyp module
-                    params = sw.Parameter(
-                        name=arg_type,
-                        _in='path',
-                        description='',
-                        required=False,
-                        allowEmptyValue=False
-                    )
+                    # # BUG: `Parameter` class can't be found on swaggyp module
+                    # params = sw.Parameter(
+                    #     name=arg_type,
+                    #     _in='path',
+                    #     description='',
+                    #     required=False,
+                    #     allowEmptyValue=False
+                    # )
+                    # op = sw.Operation(
+                    #     http_method=method.lower(),
+                    #     summary=f'({method}) -> {col.__class__.__name__}',
+                    #     description=view.__doc__,
+                    #     responses=responses,
+                    #     parameters=[params])
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
                         description=view.__doc__,
-                        responses=responses,
-                        parameters=[params])
+                        responses=responses)
                     p = sw.Path(endpoint=rule, operations=[op])
                     paths.append(p)
+
+                
+            # Define model definitions by iterating through collection's fields for its properties
+            col_properties = {}
+            for property, field_type in col._base_properties.items():
+                print(property)
+                col_properties[property] = {"type": field_type.GRAPHQL_FIELD_TYPE.lower()}
+            model_schema = sw.SwagSchema(properties=col_properties)
+            model = sw.Definition(name=col.name, schema=model_schema)
+            definitions.append(model)
+
 
         info = sw.Info(
             title=proj_title,
@@ -364,7 +378,8 @@ class Project(Schema):
             basePath=basePath,
             info=info,
             paths=paths,
-            schemes=schemes)
+            schemes=schemes,
+            definitions=definitions)
 
         if not os.path.exists(f'swagger.yaml'):
             with open(f'swagger.yaml', 'x') as swag_doc:

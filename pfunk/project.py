@@ -49,6 +49,14 @@ GRAPHQL_TO_YAML_TYPES = {
     "Boolean": "boolean"
 }
 
+WERKZEUG_URL_TO_YAML_TYPES = {
+    "int": "integer",
+    "string": "string",
+    "float": "integer",
+    "path": "string",
+    "uuid": "string"
+}
+
 class Project(Schema):
     """
     Project configuration class.
@@ -304,14 +312,18 @@ class Project(Schema):
                 rule = route.rule
                 methods = route.methods
                 args = route.arguments
+                arg_type = None
                 
-                if args is None:
+                if args is None or len(args) == 0:
                     # if `defaults` weren't used in URL building, use the argument defined in the URL string
                     for converter, arguments, variable in parse_rule(rule):
                         if variable.startswith('/') or converter is None:
                             continue
                         args = variable
                         arg_type = converter
+                print(f'PATH: {route}')
+                print(f'ARGS: {args}')
+                print(f'ARG_TYPE: {arg_type}\n')
 
                 responses = []
                 response_classes = [
@@ -342,25 +354,21 @@ class Project(Schema):
                         # Skip HEAD operations 
                         continue
 
-                    # # BUG: `Parameter` class can't be found on swaggyp module
-                    # params = sw.Parameter(
-                    #     name=arg_type,
-                    #     _in='path',
-                    #     description='',
-                    #     required=False,
-                    #     allowEmptyValue=False
-                    # )
-                    # op = sw.Operation(
-                    #     http_method=method.lower(),
-                    #     summary=f'({method}) -> {col.__class__.__name__}',
-                    #     description=view.__doc__,
-                    #     responses=responses,
-                    #     parameters=[params])
+                    # BUG: `Parameter` class can't be found on swaggyp module
+                    params = sw.Parameter(
+                        name=args,
+                        _type=WERKZEUG_URL_TO_YAML_TYPES[arg_type],
+                        _in='path',
+                        description='',
+                        required=True,
+                        allowEmptyValue=False
+                    )
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
                         description=view.__doc__,
-                        responses=responses)
+                        responses=responses,
+                        parameters=[params])
                     p = sw.Path(endpoint=rule, operations=[op])
                     paths.append(p)
 

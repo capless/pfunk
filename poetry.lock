@@ -998,14 +998,18 @@ requests = {version = ">=2.20", markers = "python_version >= \"3.0\""}
 [[package]]
 name = "swaggyp"
 version = "0.1.0"
-description = "Python library for generating Swagger templates based on valley "
+description = "Python library for generating Swagger templates based on valley"
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
 pyyaml = ">=3.12"
-valley = ">=1.5.1"
+valley = ">=1.5.2"
+
+[package.source]
+type = "file"
+url = ".ignore/dist/swaggyp-0.1.0-py2.py3-none-any.whl"
 
 [[package]]
 name = "terminado"
@@ -1141,7 +1145,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "1d1b15d220f03648b1e636035cc1eed50d9db5c0b1845ad008400a4f8b2614a4"
+content-hash = "d14555ad92eb971be6fe1a8f67dae4421d661f2674d8d389325cc05719bca19f"
 
 [metadata.files]
 appnope = [
@@ -1737,8 +1741,7 @@ stripe = [
     {file = "stripe-2.61.0.tar.gz", hash = "sha256:8131addd3512a22c4c539dda2d869a8f488e06f1b02d1f3a5f0f4848fc56184e"},
 ]
 swaggyp = [
-    {file = "swaggyp-0.1.0-py2.py3-none-any.whl", hash = "sha256:4c95967632c22fc821e6c1ac69a2be2e37467629c436ccca7946ad073b445268"},
-    {file = "swaggyp-0.1.0.tar.gz", hash = "sha256:f72fe0855a8ce4e968030ada1448d876e054bb7c8e444f1c16295b5943696f5f"},
+    {file = "swaggyp-0.1.0-py2.py3-none-any.whl", hash = "sha256:1411a7688d613513874febbd754504e0a45e48c1a0985b34b0653d285dbbc43d"},
 ]
 terminado = [
     {file = "terminado-0.9.4-py3-none-any.whl", hash = "sha256:daed77f9fad7b32558fa84b226a76f45a02242c20813502f36c4e1ade6d8f1ad"},

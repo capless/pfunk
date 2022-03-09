@@ -353,22 +353,31 @@ class Project(Schema):
                     if method == 'HEAD':
                         # Skip HEAD operations 
                         continue
-
+    
                     # BUG: `Parameter` class can't be found on swaggyp module
-                    params = sw.Parameter(
-                        name=args,
-                        _type=WERKZEUG_URL_TO_YAML_TYPES[arg_type],
-                        _in='path',
-                        description='',
-                        required=True,
-                        allowEmptyValue=False
-                    )
-                    op = sw.Operation(
-                        http_method=method.lower(),
-                        summary=f'({method}) -> {col.__class__.__name__}',
-                        description=view.__doc__,
-                        responses=responses,
-                        parameters=[params])
+                    # BUG: Swagger semantic error, param name doesn't match the param in URL:
+                    # it is formatted as `<int: id>` (werkzeug) instead of `{id}` for swagger
+                    if arg_type:
+                        params = sw.Parameter(
+                            name=args,
+                            _type=WERKZEUG_URL_TO_YAML_TYPES.get(arg_type),
+                            _in='path',
+                            description='',
+                            required=True,
+                            allowEmptyValue=False
+                        )
+                        op = sw.Operation(
+                            http_method=method.lower(),
+                            summary=f'({method}) -> {col.__class__.__name__}',
+                            description=view.__doc__,
+                            responses=responses,
+                            parameters=[params])
+                    else:  
+                        op = sw.Operation(
+                            http_method=method.lower(),
+                            summary=f'({method}) -> {col.__class__.__name__}',
+                            description=view.__doc__,
+                            responses=responses)
                     p = sw.Path(endpoint=rule, operations=[op])
                     paths.append(p)
 
@@ -380,7 +389,8 @@ class Project(Schema):
                 col_properties[property] = {
                     "type": GRAPHQL_TO_YAML_TYPES.get(field_type.GRAPHQL_FIELD_TYPE)}
             model_schema = sw.SwagSchema(properties=col_properties)
-            model = sw.Definition(name=col.name, schema=model_schema)
+            print(f'COLLECTION NAME: {type(col).__name__}')
+            model = sw.Definition(name=type(col).__name__, schema=model_schema)
             definitions.append(model)
 
 

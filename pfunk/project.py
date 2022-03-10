@@ -72,6 +72,7 @@ WERKZEUG_URL_TO_YAML_TYPES = {
     "uuid": "string"
 }
 
+
 class Project(Schema):
     """
     Project configuration class.
@@ -342,22 +343,22 @@ class Project(Schema):
                     if rsp_cls == 'response_class':
                         responses.append(
                             sw.Response(
-                                status_code=view.response_class.status_code, 
+                                status_code=view.response_class.status_code,
                                 description=view.get_query.__doc__ or 'Fill the docstrings to show description')
                         )
                     else:
                         responses.append(
                             sw.Response(
-                                status_code=getattr(view, rsp_cls).status_code, 
+                                status_code=getattr(view, rsp_cls).status_code,
                                 description=getattr(view, rsp_cls).default_payload)
                         )
 
                 view_methods = list(methods)
                 for method in view_methods:
                     if method == 'HEAD':
-                        # Skip HEAD operations 
+                        # Skip HEAD operations
                         continue
-                
+
                     if args is None or len(args) == 0:
                         # if `defaults` weren't used in URL building, use the argument defined in the URL string
                         for converter, arguments, variable in parse_rule(rule):
@@ -384,7 +385,7 @@ class Project(Schema):
                             description=view.__doc__,
                             responses=responses,
                             parameters=[params])
-                    else:  
+                    else:
                         op = sw.Operation(
                             http_method=method.lower(),
                             summary=f'({method}) -> {col.__class__.__name__}',
@@ -393,18 +394,18 @@ class Project(Schema):
                     p = sw.Path(endpoint=swagger_rule, operations=[op])
                     paths.append(p)
 
-                
             # Define model definitions by iterating through collection's fields for its properties
             col_properties = {}
             for property, field_type in col._base_properties.items():
                 # Get pfunk field specifier
-                field_type_class = field_type.__class__.__name__  
-        
+                field_type_class = field_type.__class__.__name__
+
                 if field_type_class in ['ReferenceField', 'ManyToManyField']:
                     # Acquire the class that the collection is referencing to
                     foreign_class = field_type.get_foreign_class().__name__
                     ref_field = PFUNK_TO_YAML_TYPES.get(field_type_class)
-                    col_properties[property] = {"$ref": ref_field + foreign_class}
+                    col_properties[property] = {
+                        "$ref": ref_field + foreign_class}
                 else:
                     col_properties[property] = {
                         "type": PFUNK_TO_YAML_TYPES.get(field_type_class)}
@@ -428,6 +429,6 @@ class Project(Schema):
             with open(f'swagger.yaml', 'x') as swag_doc:
                 swag_doc.write(t.to_yaml())
         else:
-            print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')   
+            print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')
             print(t.to_yaml())
             return None

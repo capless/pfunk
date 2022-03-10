@@ -1,6 +1,7 @@
 from http.client import responses
 import logging
 import os
+import re
 import json
 import requests
 from io import BytesIO
@@ -47,6 +48,20 @@ GRAPHQL_TO_YAML_TYPES = {
     "Int": "integer",
     "Float": "integer",
     "Boolean": "boolean"
+}
+
+PFUNK_TO_YAML_TYPES = {
+    "StringField": "string",
+    "SlugField": "string",
+    "EmailField": "string",
+    "EnumField": "string",
+    "ManyToManyField": "#/definitions/",
+    "ReferenceField": "#/definitions/",
+    "ForeignList": "#/definitions/",
+    "IntegerField": "integer",
+    "FloatField": "integer",
+    "BooleanField": "boolean",
+    "ListField": "array"
 }
 
 WERKZEUG_URL_TO_YAML_TYPES = {
@@ -313,17 +328,6 @@ class Project(Schema):
                 methods = route.methods
                 args = route.arguments
                 arg_type = None
-                
-                if args is None or len(args) == 0:
-                    # if `defaults` weren't used in URL building, use the argument defined in the URL string
-                    for converter, arguments, variable in parse_rule(rule):
-                        if variable.startswith('/') or converter is None:
-                            continue
-                        args = variable
-                        arg_type = converter
-                print(f'PATH: {route}')
-                print(f'ARGS: {args}')
-                print(f'ARG_TYPE: {arg_type}\n')
 
                 responses = []
                 response_classes = [
@@ -339,7 +343,7 @@ class Project(Schema):
                         responses.append(
                             sw.Response(
                                 status_code=view.response_class.status_code, 
-                                description=view.get_query.__doc__)
+                                description=view.get_query.__doc__ or 'Fill the docstrings to show description')
                         )
                     else:
                         responses.append(
@@ -353,10 +357,18 @@ class Project(Schema):
                     if method == 'HEAD':
                         # Skip HEAD operations 
                         continue
-    
+                
+                    if args is None or len(args) == 0:
+                        # if `defaults` weren't used in URL building, use the argument defined in the URL string
+                        for converter, arguments, variable in parse_rule(rule):
+                            if variable.startswith('/') or converter is None:
+                                continue
+                            args = variable
+                            arg_type = converter
+
                     # BUG: `Parameter` class can't be found on swaggyp module
-                    # BUG: Swagger semantic error, param name doesn't match the param in URL:
-                    # it is formatted as `<int: id>` (werkzeug) instead of `{id}` for swagger
+                    # Replace werkzeug params (<int: id>) to swagger-style params ({id})
+                    swagger_rule = re.sub('<\w+:\w+>', f'{{{args}}}', rule)
                     if arg_type:
                         params = sw.Parameter(
                             name=args,
@@ -378,21 +390,27 @@ class Project(Schema):
                             summary=f'({method}) -> {col.__class__.__name__}',
                             description=view.__doc__,
                             responses=responses)
-                    p = sw.Path(endpoint=rule, operations=[op])
+                    p = sw.Path(endpoint=swagger_rule, operations=[op])
                     paths.append(p)
 
                 
             # Define model definitions by iterating through collection's fields for its properties
             col_properties = {}
             for property, field_type in col._base_properties.items():
-                # TODO: Figure out what to do on graphql type -> IDs (relations)
-                col_properties[property] = {
-                    "type": GRAPHQL_TO_YAML_TYPES.get(field_type.GRAPHQL_FIELD_TYPE)}
+                # Get pfunk field specifier
+                field_type_class = field_type.__class__.__name__  
+        
+                if field_type_class in ['ReferenceField', 'ManyToManyField']:
+                    # Acquire the class that the collection is referencing to
+                    foreign_class = field_type.get_foreign_class().__name__
+                    ref_field = PFUNK_TO_YAML_TYPES.get(field_type_class)
+                    col_properties[property] = {"$ref": ref_field + foreign_class}
+                else:
+                    col_properties[property] = {
+                        "type": PFUNK_TO_YAML_TYPES.get(field_type_class)}
             model_schema = sw.SwagSchema(properties=col_properties)
-            print(f'COLLECTION NAME: {type(col).__name__}')
             model = sw.Definition(name=type(col).__name__, schema=model_schema)
             definitions.append(model)
-
 
         info = sw.Info(
             title=proj_title,

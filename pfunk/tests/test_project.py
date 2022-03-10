@@ -1,6 +1,6 @@
 import unittest
 from pfunk.project import Project
-from pfunk.tests import Person, Sport, GENDER_PRONOUN
+from pfunk.tests import Person, Sport, GENDER_PRONOUN, Group, User
 
 
 class ProjectTestCase(unittest.TestCase):
@@ -28,6 +28,6 @@ class ProjectTestCase(unittest.TestCase):
     #     self.assertTrue('allPeople: [Person] @index(name: "all_people")' in gql)
 
     def test_swagger(self):
-        self.project.add_resource(Person)
+        self.project.add_resources([Person, Sport, Group, User])
         self.project.generate_swagger()
         self.assertTrue(True) # if there are no exceptions, then it passed

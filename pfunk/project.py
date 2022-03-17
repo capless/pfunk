@@ -1,8 +1,4 @@
-from http.client import responses
 import logging
-import os
-import re
-import json
 import requests
 from io import BytesIO
 from envs import env
@@ -15,7 +11,7 @@ from valley.utils import import_util
 from werkzeug import Request as WerkzeugRequest
 from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.http import HTTP_STATUS_CODES
-from werkzeug.routing import Map, parse_rule
+from werkzeug.routing import Map
 from werkzeug.utils import cached_property
 
 from pfunk.web.request import HTTPRequest, RESTRequest, WSGIRequest
@@ -25,6 +21,7 @@ from .fields import ForeignList
 from .template import graphql_template
 from .utils.publishing import BearerAuth
 from .web.views.graphql import GraphQLView
+from .utils.swagger import SwaggerDoc
 
 logger = logging.getLogger('pfunk')
 
@@ -286,149 +283,8 @@ class Project(Schema):
         return [str.encode(response.body)]
 
     def generate_swagger(self):
-        """ Generates swagger doc. Details are going to be acquired from the collections 
-        
-            The acquisition of the information needed for docs are as follows:
-                Response: 
-                    Description (str): View's `get_query` docstrings
-                    Status Code (int): 
-                        Acquired from `response_class` class variable of a view
-                        Error status_codes are acquired too in class variables
-                Operation:
-                    HTTP Methods (arr): Defined `http_methods` in a view.
-                    Summary (str): ({http_method}) -> {collection_name}
-                    Description (str): Docstring of the view
-                Path:
-                    Endpoint (str): Path of the function. You can see it in `url` method of a view.
-            
-            Returns:
-                Generated YAML file
-        """
-        if not os.path.exists(f'pfunk.json'):
-           raise Exception('Missing JSON Config file.')
-        else:
-            with open(f'pfunk.json', 'r') as f:
-                data = json.loads(f.read())
-                proj_title = data.get('name')
-                proj_desc = data.get('description', 'A Pfunk project')
-                proj_ver = data.get('ver', '1.0')
-                host = data.get('host', 'pfunk.com')
-                basePath = data.get('basePath', '/')
-                schemes = ['https']
-
-        paths = []
-        definitions = []
-        rules = [GraphQLView.url()]
-        for i in self.collections:
-            col = i()
-            rules.extend(col.urls)
-
-            for view in col.collection_views:
-                route = view.url(col)
-                rule = route.rule
-                methods = route.methods
-                args = route.arguments
-                arg_type = None
-
-                responses = []
-                response_classes = [
-                    'response_class',
-                    'not_found_class',
-                    'bad_request_class',
-                    'method_not_allowed_class',
-                    'unauthorized_class',
-                    'forbidden_class'
-                ]
-                for rsp_cls in response_classes:
-                    if rsp_cls == 'response_class':
-                        responses.append(
-                            sw.Response(
-                                status_code=view.response_class.status_code,
-                                description=view.get_query.__doc__ or 'Fill the docstrings to show description')
-                        )
-                    else:
-                        responses.append(
-                            sw.Response(
-                                status_code=getattr(view, rsp_cls).status_code,
-                                description=getattr(view, rsp_cls).default_payload)
-                        )
-
-                view_methods = list(methods)
-                for method in view_methods:
-                    if method == 'HEAD':
-                        # Skip HEAD operations
-                        continue
-
-                    if args is None or len(args) == 0:
-                        # if `defaults` weren't used in URL building, use the argument defined in the URL string
-                        for converter, arguments, variable in parse_rule(rule):
-                            if variable.startswith('/') or converter is None:
-                                continue
-                            args = variable
-                            arg_type = converter
-
-                    # BUG: `Parameter` class can't be found on swaggyp module
-                    # Replace werkzeug params (<int: id>) to swagger-style params ({id})
-                    swagger_rule = re.sub('<\w+:\w+>', f'{{{args}}}', rule)
-                    if arg_type:
-                        params = sw.Parameter(
-                            name=args,
-                            _type=WERKZEUG_URL_TO_YAML_TYPES.get(arg_type),
-                            _in='path',
-                            description='',
-                            required=True,
-                            allowEmptyValue=False
-                        )
-                        op = sw.Operation(
-                            http_method=method.lower(),
-                            summary=f'({method}) -> {col.__class__.__name__}',
-                            description=view.__doc__,
-                            responses=responses,
-                            parameters=[params])
-                    else:
-                        op = sw.Operation(
-                            http_method=method.lower(),
-                            summary=f'({method}) -> {col.__class__.__name__}',
-                            description=view.__doc__,
-                            responses=responses)
-                    p = sw.Path(endpoint=swagger_rule, operations=[op])
-                    paths.append(p)
-
-            # Define model definitions by iterating through collection's fields for its properties
-            col_properties = {}
-            for property, field_type in col._base_properties.items():
-                # Get pfunk field specifier
-                field_type_class = field_type.__class__.__name__
-
-                if field_type_class in ['ReferenceField', 'ManyToManyField']:
-                    # Acquire the class that the collection is referencing to
-                    foreign_class = field_type.get_foreign_class().__name__
-                    ref_field = PFUNK_TO_YAML_TYPES.get(field_type_class)
-                    col_properties[property] = {
-                        "$ref": ref_field + foreign_class}
-                else:
-                    col_properties[property] = {
-                        "type": PFUNK_TO_YAML_TYPES.get(field_type_class)}
-            model_schema = sw.SwagSchema(properties=col_properties)
-            model = sw.Definition(name=type(col).__name__, schema=model_schema)
-            definitions.append(model)
-
-        info = sw.Info(
-            title=proj_title,
-            description=proj_desc,
-            version=proj_ver)
-        t = sw.SwaggerTemplate(
-            host=host,
-            basePath=basePath,
-            info=info,
-            paths=paths,
-            schemes=schemes,
-            definitions=definitions)
-
-        if not os.path.exists(f'swagger.yaml'):
-            with open(f'swagger.yaml', 'x') as swag_doc:
-                swag_doc.write(t.to_yaml())
-        else:
-            print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')
-            print(t.to_yaml())
-            return None
+        swag = SwaggerDoc(
+            collections=self.collections,
+            rules=[GraphQLView.url()])
+        swag_file = swag.generate_swagger()
+        return swag_file

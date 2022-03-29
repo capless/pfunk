@@ -53,6 +53,9 @@ class SwaggerDoc(object):
                     Description (str): Docstring of the view
                 Path:
                     Endpoint (str): Path of the function. You can see it in `url` method of a view.
+                Model:
+                    Name (str): The class name of the `collection`
+                    Properties (str): The fields of the collection and their type
             
             Returns:
                 Generated YAML file
@@ -75,6 +78,11 @@ class SwaggerDoc(object):
         return re.sub('<\w+:\w+>', f'{{{replacement}}}', to_replace)
 
     def write_to_yaml(self):
+        """ Using the class' variables, write it to a swagger (yaml) file 
+        
+            It will create `swagger.yaml` file in current directory, if 
+            there is already one, it will print the yaml file instead.
+        """
         if not os.path.exists(f'pfunk.json'):
            raise Exception('Missing JSON Config file.')
         else:
@@ -108,6 +116,22 @@ class SwaggerDoc(object):
             return t.to_yaml()
 
     def get_operations(self, col: Collection):
+        """ Acquires all of the endpoint in the collections and make it 
+            as an `operation` for swagger doc
+
+            Appends all of the acquired paths here in `self.paths` 
+            array class variable
+ 
+        Args:
+            col (`pfunk.collection.Collection`, required): 
+                The collection that has views
+        
+        Returns:
+            paths ([`swaggyp.Path`], required):
+                An array of `Path` that can be consumed using 
+                `swaggyp.SwaggerTemplate` to show 
+                available paths 
+        """
         for view in col.collection_views:
             route = view.url(col)
             rule = route.rule
@@ -171,6 +195,24 @@ class SwaggerDoc(object):
         return self.paths
 
     def get_model_definitions(self, col: Collection):
+        """ Acquires collection's name, fields, and relationships to
+            convert it to a swagger `Definition` 
+
+            Converts `ReferenceField` and `ManyToManyField` to 
+            reference other definitions as a characterization
+            of relationships defined on models
+            
+        Args:
+            col (`pfunk.collection.Collection`, required): 
+                The collection that has views
+        
+        Returns:
+            definitions ([`swaggyp.Definition`], required):
+                An array of `Definition` that can be consumed using 
+                `swaggyp.SwaggerTemplate` to show 
+                available models 
+        
+        """
         # Define model definitions by iterating through collection's fields for its properties
         col_properties = {}
         for property, field_type in col._base_properties.items():
@@ -192,6 +234,7 @@ class SwaggerDoc(object):
         return self.definitions
 
     def generate_swagger(self):
+        """ One-function-to-call needed function to generate a swagger documentation """
         for i in self.collections:
             col = i()
             self.get_operations(col)

@@ -1,14 +1,11 @@
 import logging
-
 import requests
 from io import BytesIO
-
 from envs import env
-
+import swaggyp as sw
 from faunadb.client import FaunaClient
 from jinja2 import Template
 from valley.contrib import Schema
-
 from valley.properties import CharProperty, ForeignProperty
 from valley.utils import import_util
 from werkzeug import Request as WerkzeugRequest
@@ -24,6 +21,7 @@ from .fields import ForeignList
 from .template import graphql_template
 from .utils.publishing import BearerAuth
 from .web.views.graphql import GraphQLView
+from .utils.swagger import SwaggerDoc
 
 logger = logging.getLogger('pfunk')
 
@@ -40,6 +38,35 @@ API_EVENT_TYPES = {
         'version', 'routeKey', 'rawPath', 'rawQueryString',
         'headers', 'requestContext', 'isBase64Encoded'
     ]
+}
+
+GRAPHQL_TO_YAML_TYPES = {
+    "String": "string",
+    "Int": "integer",
+    "Float": "integer",
+    "Boolean": "boolean"
+}
+
+PFUNK_TO_YAML_TYPES = {
+    "StringField": "string",
+    "SlugField": "string",
+    "EmailField": "string",
+    "EnumField": "string",
+    "ManyToManyField": "#/definitions/",
+    "ReferenceField": "#/definitions/",
+    "ForeignList": "#/definitions/",
+    "IntegerField": "integer",
+    "FloatField": "integer",
+    "BooleanField": "boolean",
+    "ListField": "array"
+}
+
+WERKZEUG_URL_TO_YAML_TYPES = {
+    "int": "integer",
+    "string": "string",
+    "float": "integer",
+    "path": "string",
+    "uuid": "string"
 }
 
 
@@ -254,3 +281,10 @@ class Project(Schema):
 
         start_response(status_str, response.wsgi_headers)
         return [str.encode(response.body)]
+
+    def generate_swagger(self):
+        swag = SwaggerDoc(
+            collections=self.collections,
+            rules=[GraphQLView.url()])
+        swag_file = swag.generate_swagger()
+        return swag_file

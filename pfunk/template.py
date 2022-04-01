@@ -22,6 +22,7 @@ type Query {
     all{{t.get_verbose_plural_name()|capitalize}}: [{{t.get_class_name()|capitalize}}] @index(name: "all_{{t.get_verbose_plural_name()}}")
     {% endif %}
 {% endfor %}
+    {{extra_graphql_queries}}
 }
 
 {{extra_graphql}}

@@ -1,5 +1,5 @@
 from envs import env
-from faunadb.errors import NotFound as FaunaNotFound, PermissionDenied, BadRequest
+from faunadb.errors import NotFound as FaunaNotFound, PermissionDenied, BadRequest, ErrorData
 from jwt import InvalidSignatureError
 from valley.exceptions import ValidationException
 from werkzeug.exceptions import NotFound, MethodNotAllowed
@@ -83,11 +83,16 @@ class View(object):
                 self.token_check()
             response = getattr(self, self.request.method.lower())().response
         except (FaunaNotFound, NotFound, DocNotFound):
+
             response = self.not_found_class().response
         except PermissionDenied:
             response = self.forbidden_class().response
         except (BadRequest, GraphQLError) as e:
-            response = self.bad_request_class(payload=str(e)).response
+            if isinstance(e, BadRequest):
+                payload = e._get_description()
+            else:
+                payload = str(e)
+            response = self.bad_request_class(payload=payload)
         except (ValidationException,) as e:
             key, value = str(e).split(':')
             response = self.bad_request_class(payload={'validation_errors': {key: value}}).response
@@ -119,7 +124,11 @@ class View(object):
         except PermissionDenied:
             response = self.forbidden_class()
         except (BadRequest, GraphQLError) as e:
-            response = self.bad_request_class(payload=str(e))
+            if isinstance(e, BadRequest):
+                payload = e._get_description()
+            else:
+                payload = str(e)
+            response = self.bad_request_class(payload=payload)
         except (ValidationException,) as e:
             key, value = str(e).split(':')
             response = self.bad_request_class(payload={'validation_errors': {key: value}})

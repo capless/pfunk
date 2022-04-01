@@ -45,4 +45,5 @@ class TestWebSignup(APITestCase):
         })
 
         self.assertFalse(res.json['success'])
+        self.assertEqual(res.status_code, 400)
         self.assertEqual('document is not unique.', res.json['data'])

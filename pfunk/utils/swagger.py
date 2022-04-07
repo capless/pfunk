@@ -135,6 +135,7 @@ class SwaggerDoc(object):
         if not os.path.exists(f'{dir}swagger.yaml'):
             with open(f'{dir}swagger.yaml', 'x') as swag_doc:
                 swag_doc.write(t.to_yaml())
+            return t.to_yaml()
         else:
             print(
                 'There is an existing swagger file. Kindly move/delete it to generate a new one.')

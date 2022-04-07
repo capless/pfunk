@@ -828,6 +828,38 @@ PyYAML = ">=5.1"
 requests = ["requests"]
 
 [[package]]
+name = "openapi-schema-validator"
+version = "0.2.3"
+description = "OpenAPI schema validation for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7.0,<4.0.0"
+
+[package.dependencies]
+jsonschema = ">=3.0.0,<5.0.0"
+
+[package.extras]
+rfc3339-validator = ["rfc3339-validator"]
+strict-rfc3339 = ["strict-rfc3339"]
+isodate = ["isodate"]
+
+[[package]]
+name = "openapi-spec-validator"
+version = "0.4.0"
+description = "OpenAPI 2.0 (aka Swagger) and OpenAPI 3.0 spec validator"
+category = "main"
+optional = false
+python-versions = ">=3.7.0,<4.0.0"
+
+[package.dependencies]
+jsonschema = ">=3.2.0,<5.0.0"
+openapi-schema-validator = ">=0.2.0,<0.3.0"
+PyYAML = ">=5.1"
+
+[package.extras]
+requests = ["requests"]
+
+[[package]]
 name = "packaging"
 version = "21.3"
 description = "Core utilities for Python packages"
@@ -1762,6 +1794,14 @@ nest-asyncio = [
 notebook = [
     {file = "notebook-6.4.11-py3-none-any.whl", hash = "sha256:b4a6baf2eba21ce67a0ca11a793d1781b06b8078f34d06c710742e55f3eee505"},
     {file = "notebook-6.4.11.tar.gz", hash = "sha256:709b1856a564fe53054796c80e17a67262071c86bfbdfa6b96aaa346113c555a"},
+]
+openapi-schema-validator = [
+    {file = "openapi-schema-validator-0.2.3.tar.gz", hash = "sha256:2c64907728c3ef78e23711c8840a423f0b241588c9ed929855e4b2d1bb0cf5f2"},
+    {file = "openapi_schema_validator-0.2.3-py3-none-any.whl", hash = "sha256:9bae709212a19222892cabcc60cafd903cbf4b220223f48583afa3c0e3cc6fc4"},
+]
+openapi-spec-validator = [
+    {file = "openapi-spec-validator-0.4.0.tar.gz", hash = "sha256:97f258850afc97b048f7c2653855e0f88fa66ac103c2be5077c7960aca2ad49a"},
+    {file = "openapi_spec_validator-0.4.0-py3-none-any.whl", hash = "sha256:06900ac4d546a1df3642a779da0055be58869c598e3042a2fef067cfd99d04d0"},
 ]
 openapi-schema-validator = [
     {file = "openapi-schema-validator-0.2.3.tar.gz", hash = "sha256:2c64907728c3ef78e23711c8840a423f0b241588c9ed929855e4b2d1bb0cf5f2"},

@@ -77,11 +77,20 @@ class SwaggerDoc(object):
     def _convert_url_to_swagger(self, replacement: str, to_replace: str) -> str:
         return re.sub('<\w+:\w+>', f'{{{replacement}}}', to_replace)
 
-    def write_to_yaml(self):
+    def write_to_yaml(self, dir=''):
         """ Using the class' variables, write it to a swagger (yaml) file 
         
             It will create `swagger.yaml` file in current directory, if 
             there is already one, it will print the yaml file instead.
+
+            Args:
+                dir (str, optional):
+                    custom directory of the swagger file. If there are no provided, create one in current dir.
+            Returns:
+                dir (str, required):
+                    directory of the created swagger file
+                swagger_file (str, required):
+                    the contents of the swagger yaml file
         """
         if not os.path.exists(f'pfunk.json'):
             raise Exception('Missing JSON Config file.')
@@ -107,14 +116,16 @@ class SwaggerDoc(object):
             schemes=schemes,
             definitions=self.definitions)
 
-        if not os.path.exists(f'swagger.yaml'):
-            with open(f'swagger.yaml', 'x') as swag_doc:
+        if not os.path.exists(f'{dir}/swagger.yaml'):
+            with open(f'{dir}/swagger.yaml', 'x') as swag_doc:
                 swag_doc.write(t.to_yaml())
-            return t.to_yaml()
         else:
-            print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')
-            print(t.to_yaml())
-            return t.to_yaml()
+            print('There is an existing swagger file. Kindly move/delete it to generate a new one.')
+            # print(t.to_yaml())
+        return {
+            "dir": f'{dir}/swagger.yaml',
+            "swagger_file": t.to_yaml()
+        }
 
     def get_operations(self, col: Collection):
         """ Acquires all of the endpoint in the collections and make it 
@@ -234,10 +245,15 @@ class SwaggerDoc(object):
         self.definitions.append(model)
         return self.definitions
 
-    def generate_swagger(self):
-        """ One-function-to-call needed function to generate a swagger documentation """
+    def generate_swagger(self, dir=''):
+        """ One-function-to-call needed function to generate a swagger documentation 
+        
+            Args:
+                dir (str, optional):
+                    directory to create the yaml file
+        """
         for i in self.collections:
             col = i()
             self.get_operations(col)
             self.get_model_definitions(col)
-        return self.write_to_yaml()
+        return self.write_to_yaml(dir)

@@ -19,7 +19,6 @@ class ApiGatewayTests(unittest.TestCase):
         swagger = cls.project.generate_swagger()
         cls.swagger_dir = swagger['dir']
         cls.swagger_file = swagger['swagger_file']
-        print(cls.swagger_dir)
 
     def test_validate_yaml(self):
         result = self.aws_client.validate_yaml(self.swagger_dir)

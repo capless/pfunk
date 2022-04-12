@@ -111,7 +111,6 @@ class ApiGateway(object):
             response = self.client.import_rest_api(
                 failOnWarnings=fail_on_warnings,
                 body=yaml_file)
-
             if response:
                 write_to_config({'api': response})
                 return {

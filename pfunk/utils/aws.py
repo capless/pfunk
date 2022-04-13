@@ -2,7 +2,7 @@ import datetime
 import boto3
 import json
 import swaggyp as sw
-# from botocore.exceptions import BadReq
+from botocore.exceptions import ClientError, NoCredentialsError
 from envs import env
 from openapi_spec_validator import validate_v2_spec, openapi_v2_spec_validator
 from openapi_spec_validator.readers import read_from_filename
@@ -20,7 +20,7 @@ def _json_dt_helper(o):
 
 
 def write_to_config(obj, config_file_dir='pfunk.json'):
-    """ Writes to pfunk config file 
+    """ Appends object to pfunk config file 
     
     Args:
         obj (dict, required):
@@ -111,16 +111,14 @@ class ApiGateway(object):
             response = self.client.import_rest_api(
                 failOnWarnings=fail_on_warnings,
                 body=yaml_file)
-                
-            # TODO: Fix -- if using mocked obj, don't write anything
+
             if response:
                 write_to_config({'api': response})
                 return {
                     'success': True,
                     'response': response
                 }
-        # TODO: Specify boto exceptions
-        except Exception as err:
+        except (ClientError, NoCredentialsError) as err:
             return {
                 'error': str(err)
             }
@@ -154,7 +152,7 @@ class ApiGateway(object):
                 data = read_from_config_file()
                 if data.get('api'):
                     rest_api_id = (data.get('api')
-                        .get('id'))
+                                   .get('id'))
 
             response = self.client.put_rest_api(
                 restApiId=rest_api_id,
@@ -168,8 +166,7 @@ class ApiGateway(object):
                     'success': True,
                     'response': response
                 }
-        # TODO: Specify boto exceptions
-        except Exception as err:
+        except (ClientError, NoCredentialsError) as err:
             return {
                 'error': str(err)
             }

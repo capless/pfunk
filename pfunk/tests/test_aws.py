@@ -9,6 +9,15 @@ from pfunk.project import Project
 
 
 class ApiGatewayTests(unittest.TestCase):
+    """ Unit tests for creation of API from Swagger file 
+    
+        Note that the unittests uses mocked boto3 normally. If
+        you want to test against a real endpoint, remove the 
+        patch decorator at `setUpClass` and the `mocked` 
+        param. Also make sure you have the required
+        env vars for AWS credentials and you have
+        the json config in the current env.
+    """
 
     @classmethod
     @mock.patch('boto3.client')
@@ -48,7 +57,6 @@ class ApiGatewayTests(unittest.TestCase):
     def test_update_api_from_yaml(self, mocked):
         result = self.aws_client.update_api_from_yaml(
             yaml_file=self.swagger_dir, mode='merge')
-        print(result)
         self.assertTrue(result['success'])
 
     @mock.patch('boto3.client')

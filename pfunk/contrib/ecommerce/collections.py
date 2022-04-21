@@ -7,7 +7,7 @@ from pfunk.exceptions import DocNotFound
 from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField, FloatField
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole, Public, UserRole
 from pfunk.contrib.ecommerce.resources import StripePublic
-from pfunk.contrib.ecommerce.views import ListStripePackage, DetailStripePackage
+from pfunk.contrib.ecommerce.views import BaseWebhookView, ListStripePackage, DetailStripePackage, CheckoutSuccessView
 from pfunk.web.views.json import CreateView, UpdateView, DeleteView
 
 
@@ -22,11 +22,15 @@ class StripePackage(Collection):
         fields and functions to match your system.
 
         Read and detail views are naturally public. Write operations
-        requires authentication from admin group.
+        requires authentication from admin group. While it grealty
+        depends on your app, it is recommended to have this only 
+        modified by the admins and use `StripeCustomer` model to
+        attach a `stripe_id` to a model that is bound for payment.
     """
     use_crud_views = False
     collection_roles = [GenericGroupBasedRole]
-    collection_views = [ListStripePackage, DetailStripePackage, CreateView, UpdateView, DeleteView]
+    collection_views = [ListStripePackage, DetailStripePackage,
+                        CheckoutSuccessView, CreateView, UpdateView, DeleteView]
     stripe_id = StringField(required=True)
     name = StringField(required=True)
     price = FloatField(required=True)
@@ -48,10 +52,10 @@ class StripeCustomer(Collection):
         can you structure your collections. Override the 
         fields and functions to match your system.
     """
-    collection_roles = [GenericUserBasedRole]
     user = ReferenceField(User)
-    customer_id = StringField(required=True)
-    package = ReferenceField(StripePackage)
+    collection_roles = [GenericUserBasedRole]
+    stripe_id = StringField(required=True, unique=True)
+    collection_views = [BaseWebhookView]
 
     def __unicode__(self):
         return self.customer_id

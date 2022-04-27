@@ -42,6 +42,7 @@ class SwaggerDoc(object):
         """ Generates swagger doc. Details are going to be acquired from the collections 
         
             The acquisition of the information needed for docs are as follows:
+            ```
                 Response: 
                     Description (str): View's `get_query` docstrings
                     Status Code (int): 
@@ -56,9 +57,16 @@ class SwaggerDoc(object):
                 Model:
                     Name (str): The class name of the `collection`
                     Properties (str): The fields of the collection and their type
-            
+            ```
+
+            Args:
+                collections ([`pfunk.collection.Collection`]):
+                    array of collection of the project to generate models from
+                rules ([`werkzeug.routing.Rule`]):
+                    array of additional URLs that the given collection doesn't have
             Returns:
-                Generated YAML file
+                swagger.yaml (yaml, required):
+                    Generated YAML file
         """
         self.collections = collections
         self.rules = rules

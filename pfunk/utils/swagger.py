@@ -64,9 +64,6 @@ class SwaggerDoc(object):
                     array of collection of the project to generate models from
                 rules ([`werkzeug.routing.Rule`]):
                     array of additional URLs that the given collection doesn't have
-                config_file (str, optional):
-                    directory of the config_file
-
             Returns:
                 swagger.yaml (yaml, required):
                     Generated YAML file

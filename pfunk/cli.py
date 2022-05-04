@@ -25,6 +25,7 @@ def load_config_file(filename):
         config = json.load(f)
     return config
 
+
 @pfunk.command()
 @click.option('--generate_local_key', prompt=True, help='Specifies whether to generate a local database and key',
               default=False)
@@ -36,8 +37,7 @@ def load_config_file(filename):
 @click.option('--description', prompt=True, help='Project Description')
 @click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
-def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str, description: str, host: str):
-
+def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str, description: str, host: str, generate_local_key: bool):
     """
     Creates a PFunk project
     Args:
@@ -69,7 +69,8 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
             }, f, indent=4, sort_keys=True)
         open(f'{name}/__init__.py', 'x').close()
         with open(f'{name}/wsgi.py', 'x') as f:
-            f.write(wsgi_template.render(PFUNK_PROJECT=f'{name}.project.project'))
+            f.write(wsgi_template.render(
+                PFUNK_PROJECT=f'{name}.project.project'))
         with open(f'{name}/project.py', 'x') as f:
             f.write(project_template.render())
         with open(f'{name}/collections.py', 'x') as f:
@@ -81,9 +82,11 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
                 q.create_database({'name': db_name})
             )
             key = client.query(
-                q.create_key({'database': q.database(db_name), 'role': 'admin'})
+                q.create_key(
+                    {'database': q.database(db_name), 'role': 'admin'})
             )
-            click.secho(f'Fauna Local Secret (copy into your .env or pipenv file): {key}', fg='green')
+            click.secho(
+                f'Fauna Local Secret (copy into your .env or pipenv file): {key}', fg='green')
 
     else:
         click.echo('There is already a project file in this directory.')
@@ -113,6 +116,7 @@ def add_stage(stage_name: str, fauna_key: str, filename: str):
     else:
         click.echo('You have not run the init command yet.')
 
+
 @pfunk.command()
 @click.option('--use_reloader', default=True)
 @click.option('--use_debugger', default=True)
@@ -138,7 +142,8 @@ def local(hostname: str, port: int, wsgi: str, config_file: str, use_debugger: b
     sys.path.insert(0, os.getcwd())
     wsgi_path = wsgi or f'{config.get("name")}.wsgi.app'
     app = import_util(wsgi_path)
-    run_simple(hostname, port, app, use_debugger=use_debugger, use_reloader=use_reloader)
+    run_simple(hostname, port, app, use_debugger=use_debugger,
+               use_reloader=use_reloader)
 
 
 @pfunk.command()
@@ -190,6 +195,7 @@ def seed_keys(stage_name: str, config_path: str):
     with open(keys_path, 'w+') as f:
         f.write(key_template.render(keys=keys))
     return keys_path
+
 
 @pfunk.command()
 @click.option('--local_user', help='Specifies whether the user is local.', prompt=True, default=False)
@@ -247,8 +253,10 @@ def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_na
         project = import_util(project_path)
         perm_list = []
         for i in project.collections:
-            perm_list.append(PermissionGroup(collection=i, permissions=['create', 'write', 'read', 'delete']))
+            perm_list.append(PermissionGroup(collection=i, permissions=[
+                             'create', 'write', 'read', 'delete']))
         user.add_permissions(group, perm_list)
+
 
 @pfunk.command()
 @click.option('--config_path', help='Configuration file path')
@@ -271,6 +279,28 @@ def deploy(stage_name: str, config_path: str):
         return
     d.deploy(stage_name)
 
+
+@pfunk.command()
+@click.option('--config_path', help='Configuration file path', default='pfunk.json')
+@click.option('--yaml_path', help='Dir to create yaml swagger file to', default='')
+def generate_swagger(config_path: str, yaml_path: str):
+    """ Generates the swagger file of the project from a config json file
+    
+    Args:
+        config_path (str, optional):
+            dir of the json config file to use
+        yaml_path (str, optional):
+            dir to put the generated swagger file
+
+    Returns:
+
+    """
+    config = load_config_file(config_path)
+    sys.path.insert(0, os.getcwd())
+    project_path = f'{config.get("name")}.project.project'
+    project = import_util(project_path)
+    project.generate_swagger(yaml_dir=yaml_path, config_file=config_path)
+
+
 if __name__ == '__main__':
     pfunk()
-

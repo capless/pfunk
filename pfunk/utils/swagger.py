@@ -64,6 +64,9 @@ class SwaggerDoc(object):
                     array of collection of the project to generate models from
                 rules ([`werkzeug.routing.Rule`]):
                     array of additional URLs that the given collection doesn't have
+                config_file (str, optional):
+                    directory of the config_file
+
             Returns:
                 swagger.yaml (yaml, required):
                     Generated YAML file
@@ -133,7 +136,8 @@ class SwaggerDoc(object):
             with open(f'{dir}swagger.yaml', 'x') as swag_doc:
                 swag_doc.write(t.to_yaml())
         else:
-            print('There is an existing swagger file. Kindly move/delete it to generate a new one.')
+            print(
+                'There is an existing swagger file. Kindly move/delete it to generate a new one.')
             # print(t.to_yaml())
         return {
             "dir": f'{dir}swagger.yaml',

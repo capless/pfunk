@@ -38,7 +38,7 @@ WERKZEUG_URL_TO_YAML_TYPES = {
 
 class SwaggerDoc(object):
 
-    def __init__(self, collections, rules=[]):
+    def __init__(self, collections, rules=[], config_file='pfunk.json'):
         """ Generates swagger doc. Details are going to be acquired from the collections 
         
             The acquisition of the information needed for docs are as follows:
@@ -64,6 +64,9 @@ class SwaggerDoc(object):
                     array of collection of the project to generate models from
                 rules ([`werkzeug.routing.Rule`]):
                     array of additional URLs that the given collection doesn't have
+                config_file (str, optional):
+                    directory of the config_file
+
             Returns:
                 swagger.yaml (yaml, required):
                     Generated YAML file
@@ -73,6 +76,7 @@ class SwaggerDoc(object):
         self.paths = []
         self.definitions = []
         self.responses = []
+        self.config_file = config_file
         self._response_classes = [
             'response_class',
             'not_found_class',
@@ -100,10 +104,10 @@ class SwaggerDoc(object):
                 swagger_file (str, required):
                     the contents of the swagger yaml file
         """
-        if not os.path.exists(f'pfunk.json'):
+        if not os.path.exists(self.config_file):
            raise Exception('Missing JSON Config file.')
         else:
-            with open(f'pfunk.json', 'r') as f:
+            with open(self.config_file, 'r') as f:
                 data = json.loads(f.read())
                 proj_title = data.get('name')
                 proj_desc = data.get('description', 'A Pfunk project')
@@ -111,6 +115,10 @@ class SwaggerDoc(object):
                 host = data.get('host', 'pfunk.com')
                 basePath = data.get('basePath', '/')
                 schemes = ['https']
+
+        if dir:
+            if not dir.endswith('/'):
+                dir = dir + "/"
 
         info = sw.Info(
             title=proj_title,
@@ -128,7 +136,8 @@ class SwaggerDoc(object):
             with open(f'{dir}swagger.yaml', 'x') as swag_doc:
                 swag_doc.write(t.to_yaml())
         else:
-            print('There is an existing swagger file. Kindly move/delete it to generate a new one.')
+            print(
+                'There is an existing swagger file. Kindly move/delete it to generate a new one.')
             # print(t.to_yaml())
         return {
             "dir": f'{dir}swagger.yaml',

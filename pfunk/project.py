@@ -298,9 +298,21 @@ class Project(Schema):
         start_response(status_str, response.wsgi_headers)
         return [str.encode(response.body)]
 
-    def generate_swagger(self):
+    def generate_swagger(self, yaml_dir='', config_file='pfunk.json'):
+        """ Generates a swagger file that houses all endpoints 
+        
+        Args:
+            yaml_dir (str, optional):
+                which directory to create the swagger yaml file
+            config_file (str, optional):
+                which directory to look for the config file
+
+        Returns:
+            swagger file
+        """
         swag = SwaggerDoc(
             collections=self.collections,
-            rules=[GraphQLView.url()])
-        swag_file = swag.generate_swagger()
+            rules=[GraphQLView.url()],
+            config_file=config_file)
+        swag_file = swag.generate_swagger(dir=yaml_dir)
         return swag_file

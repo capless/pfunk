@@ -24,9 +24,6 @@ from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, Refe
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
 
-
-
-
 class Key(object):
 
     @classmethod
@@ -122,6 +119,7 @@ class BaseUser(Collection):
     collection_roles = [Public, UserRole]
     non_public_fields = ['groups']
     use_email_verification = True
+    group_class = env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.Group')
     # Views
     collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView, ForgotPasswordChangeView]
     # Signals
@@ -380,7 +378,8 @@ class PermissionGroup(object):
 
 class User(BaseUser):
     """ User that has permission capabilities. Extension of `BaseUser` """
-    groups = ManyToManyField(Group, 'users_groups')
+    groups = ManyToManyField(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.Group'), 'users_groups')
+
 
     @classmethod
     def get_permissions(cls, ref, _token=None):
@@ -388,7 +387,7 @@ class User(BaseUser):
 
     def get_groups(self, _token=None):
         """ Returns the groups (collections) that the user is bound with """
-        return [Group.get(i.id(), _token=_token) for i in self.client(_token=_token).query(
+        return [self.group_class.get(i.id(), _token=_token) for i in self.client(_token=_token).query(
             q.paginate(q.match('users_groups_by_user', self.ref))
         ).get('data')]
 

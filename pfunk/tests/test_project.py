@@ -1,4 +1,5 @@
 import unittest
+
 from pfunk.project import Project
 from pfunk.tests import Person, Sport, GENDER_PRONOUN
 
@@ -26,5 +27,3 @@ class ProjectTestCase(unittest.TestCase):
         self.assertTrue('type Person' in gql)
         self.assertTrue('type Sport' in gql)
         self.assertTrue('allPeople: [Person] @index(name: "all_people")' in gql)
-
-

@@ -2,14 +2,13 @@ import stripe
 from envs import env
 
 from pfunk.collection import Collection
-from pfunk.contrib.auth.collections import User, Group
-from pfunk.exceptions import DocNotFound
-from pfunk.fields import EmailField, SlugField, ManyToManyField, ListField, ReferenceField, StringField, EnumField, FloatField
-from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole, Public, UserRole
-from pfunk.contrib.ecommerce.resources import StripePublic
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
 from pfunk.contrib.ecommerce.views import ListStripePackage, DetailStripePackage
+from pfunk.exceptions import DocNotFound
+from pfunk.fields import ReferenceField, StringField, FloatField
 from pfunk.web.views.json import CreateView, UpdateView, DeleteView
-
 
 stripe.api_key = env('STRIPE_API_KEY')
 
@@ -38,7 +37,7 @@ class StripePackage(Collection):
 
     @property
     def stripe_price(self):
-        return int(self.price*100)
+        return int(self.price * 100)
 
 
 class StripeCustomer(Collection):

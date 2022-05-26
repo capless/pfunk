@@ -1,13 +1,14 @@
 import tempfile
-from werkzeug.test import Client
 from unittest import mock
-import os
-from jinja2.exceptions import TemplateNotFound
 
-from pfunk.tests import User, Group
-from pfunk.testcase import APITestCase
-from pfunk.contrib.email.ses import SESBackend
+from jinja2.exceptions import TemplateNotFound
+from werkzeug.test import Client
+
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.contrib.email.base import EmailBackend
+from pfunk.contrib.email.ses import SESBackend
+from pfunk.testcase import APITestCase
 
 
 class TestEmailBackend(APITestCase):
@@ -22,7 +23,6 @@ class TestEmailBackend(APITestCase):
         self.backend = EmailBackend()
 
     def test_get_template(self):
-
         template = self.backend.get_template('email/email_template.html')
         # test jinja render if no exceptions
         template.render(unittest_value="random value")
@@ -58,7 +58,6 @@ class TestEmailSES(APITestCase):
 
     @mock.patch('boto3.client')
     def test_send_email(self, mocked):
-
         res = self.SES.send_email(
             subject="test",
             to_emails=["testemail@email.com"],

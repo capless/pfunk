@@ -1,8 +1,9 @@
-from pfunk.contrib.auth.collections import Group, User
-from pfunk.testcase import PFunkTestCase
-from pfunk.project import Project
 from pfunk.client import q
-from pfunk.tests import Sport, Person, User, Group
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
+from pfunk.project import Project
+from pfunk.testcase import PFunkTestCase
+from pfunk.tests import Sport, Person
 
 
 class DeploymentTestCase(PFunkTestCase):
@@ -42,6 +43,3 @@ class DeploymentTestCase(PFunkTestCase):
         # functions
         self.project.publish()
         self.project.publish()
-
-
-

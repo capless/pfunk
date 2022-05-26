@@ -1,10 +1,10 @@
-import unittest
-
-import uuid
 import os
+import unittest
+import uuid
 
 from valley.utils import import_util
 from werkzeug.test import Client
+
 from pfunk import Project
 from pfunk.client import FaunaClient, q
 from pfunk.template import key_template
@@ -41,8 +41,13 @@ class CollectionTestCase(PFunkTestCase):
     def setUp(self) -> None:
         super(CollectionTestCase, self).setUp()
         self.project = Project()
-
-        self.project.add_resources(self.collections)
+        coll = []
+        for i in self.collections:
+            if isinstance(i, str):
+                coll.append(import_util(i))
+            else:
+                coll.append(i)
+        self.project.add_resources(coll)
         self.project.publish()
 
 
@@ -58,7 +63,6 @@ class APITestCase(CollectionTestCase):
         self.keys_path = 'pfunk/tests/unittest_keys.py'
         with open(self.keys_path, 'w+') as f:
             f.write(key_template.render(keys=keys))
-
 
     def tearDown(self) -> None:
         super(APITestCase, self).tearDown()

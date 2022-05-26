@@ -1,7 +1,6 @@
 from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField
-from pfunk.resources import Index
-from pfunk.contrib.auth.collections import User, Group
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
+from pfunk.resources import Index
 
 GENDER_PRONOUN = Enum(name='gender_pronouns', choices=['he', 'her', 'they'])
 
@@ -32,7 +31,7 @@ class Person(Collection):
     last_name = StringField(required=True)
     gender_pronoun = EnumField(GENDER_PRONOUN)
     sport = ReferenceField(Sport)
-    group = ReferenceField(Group)
+    group = ReferenceField('pfunk.contrib.auth.collections.group.Group')
 
     def __unicode__(self):
         return f"{self.first_name} {self.last_name}"
@@ -41,7 +40,7 @@ class Person(Collection):
 class House(Collection):
     collection_roles = [GenericUserBasedRole]
     address = StringField(required=True)
-    user = ReferenceField(User)
+    user = ReferenceField('pfunk.contrib.auth.collections.user.User')
 
     def __unicode__(self):
         return self.address

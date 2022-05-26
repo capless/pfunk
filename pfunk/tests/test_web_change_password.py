@@ -1,4 +1,5 @@
-from pfunk.tests import User, Group
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.testcase import APITestCase
 
 
@@ -25,12 +26,12 @@ class TestWebChangePassword(APITestCase):
                           headers={
                               "Authorization": self.token
                           })
-        
+
         new_token, new_exp = User.api_login("test", "updated_password")
 
         self.assertIsNotNone(new_token)
         self.assertTrue(res.json['success'])
-    
+
     def test_update_pass_wrong_current(self):
         """ Tests `pfunk.contrib.auth.views.UpdatePasswordView` throw an error if the current password given was wrong """
         res = self.c.post('/user/update-password/',
@@ -43,6 +44,6 @@ class TestWebChangePassword(APITestCase):
                               "Authorization": self.token
                           })
         expected = {'success': False, 'data': {'validation_errors': {'current_password': ' Password update failed.'}}}
-        
+
         self.assertDictEqual(res.json, expected)
         self.assertFalse(res.json['success'])

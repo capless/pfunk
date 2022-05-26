@@ -7,6 +7,7 @@ class BearerAuth(requests.auth.AuthBase):
     """
     Bearer Token Auth class for the requests library.
     """
+
     def __init__(self, token):
         """
 
@@ -19,7 +20,8 @@ class BearerAuth(requests.auth.AuthBase):
         r.headers["authorization"] = "Bearer " + self.token
         return r
 
-def create_or_update_role(client, payload:dict={}):
+
+def create_or_update_role(client, payload: dict = {}):
     """
     Utility that attempts to create a role and if that fails it attempts to update it.
     Args:

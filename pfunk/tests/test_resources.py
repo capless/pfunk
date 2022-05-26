@@ -1,6 +1,8 @@
 import unittest
-from pfunk.tests import SimpleIndex
+
 from pfunk.client import q
+from pfunk.tests import SimpleIndex
+
 
 class IndexTestCase(unittest.TestCase):
 
@@ -20,7 +22,7 @@ class IndexTestCase(unittest.TestCase):
         self.assertEqual(
             self.index.get_kwargs(),
             {
-                'name':'simple-index',
+                'name': 'simple-index',
                 'source': q.collection('Project'),
                 'terms': ['name', 'slug'],
                 'unique': True

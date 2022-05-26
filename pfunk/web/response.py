@@ -33,7 +33,7 @@ class Response(object):
             'statusCode': self.status_code,
             'body': self.body,
             'headers': self.headers
-    }
+        }
 
 
 class NotFoundResponseMixin(object):

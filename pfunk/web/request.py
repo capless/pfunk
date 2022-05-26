@@ -20,7 +20,7 @@ class Request(object):
         self.user = None
         self.token: str = None
         self.jwt: str = None
-        
+
     def get_cookies(self, raw_cookies):
         """
         Returns dict of cookies
@@ -59,6 +59,7 @@ class WSGIRequest(Request):
     """
     WSGI Request
     """
+
     def __init__(self, event, kwargs=None):
         super(WSGIRequest, self).__init__(event, kwargs=kwargs)
         self.method = event.method
@@ -98,6 +99,7 @@ class HTTPRequest(BaseAPIGatewayRequest):
     """
     HTTP Request: For HTTP API Gateway
     """
+
     def __init__(self, event, kwargs=None):
         super(HTTPRequest, self).__init__(event, kwargs=kwargs)
         self.raw_event = event
@@ -114,5 +116,3 @@ class HTTPRequest(BaseAPIGatewayRequest):
 
     def get_cookies(self, raw_cookies):
         return parse_cookie(';'.join(raw_cookies))
-
-

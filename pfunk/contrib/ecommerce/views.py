@@ -1,19 +1,17 @@
 import collections
 import json
+from json import JSONDecodeError
+
+import bleach
 import requests
 import stripe
-import bleach
 from envs import env
-from datetime import datetime
-from json import JSONDecodeError
 from jinja2 import Environment, BaseLoader
 
-from pfunk.contrib.email import ses
-from pfunk.exceptions import DocNotFound
-from pfunk.web.views.json import JSONView, ListView, DetailView, CreateView
 from pfunk.contrib.email.ses import SESBackend
-from pfunk.contrib.auth.collections import Group, User
+from pfunk.exceptions import DocNotFound
 from pfunk.web.views.base import ActionMixin
+from pfunk.web.views.json import JSONView, ListView, DetailView
 
 stripe.api_key = env('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY')
@@ -44,7 +42,7 @@ class CheckoutView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         customer = self.collection.objects.get_or_create_customer(
-            self.request.user)   # `StripeCustomer` collection
+            self.request.user)  # `StripeCustomer` collection
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             customer=customer.customer_id,

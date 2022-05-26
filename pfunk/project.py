@@ -1,14 +1,11 @@
 import logging
-
-import requests
 from io import BytesIO
 
+import requests
 from envs import env
-
 from faunadb.client import FaunaClient
 from jinja2 import Template
 from valley.contrib import Schema
-
 from valley.properties import CharProperty, ForeignProperty
 from valley.utils import import_util
 from werkzeug import Request as WerkzeugRequest
@@ -180,10 +177,13 @@ class Project(Schema):
             test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
             if not test_mode:
                 print('GraphQL Schema Imported Successfully!!')  # pragma: no cover
+        else:
+            print('Error Publishing GraphQL!!')
+            print('----------------------------------------')
+            print(resp.content)
+            return
         for col in set(self.collections):
             col.publish()
-        if resp.status_code != 200:
-            print(resp.content)
         return resp.status_code
 
     def unpublish(self) -> None:

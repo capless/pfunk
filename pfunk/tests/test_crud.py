@@ -1,6 +1,5 @@
-from faunadb.errors import PermissionDenied
-
-from pfunk.tests import User, Group
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.testcase import CollectionTestCase
 
 
@@ -12,8 +11,8 @@ class AuthCrudTest(CollectionTestCase):
         self.managers = Group.create(name='Managers', slug='managers')
         self.power_users = Group.create(name='Power Users', slug='power-users')
         self.user = User.create(username='test', email='tlasso@example.org', first_name='Ted',
-                           last_name='Lasso', _credentials='abc123', account_status='ACTIVE', groups=[self.managers])
-
+                                last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
+                                groups=[self.managers])
 
     def test_create_user(self):
         self.assertEqual(2, len(Group.all()))
@@ -33,7 +32,3 @@ class AuthCrudTest(CollectionTestCase):
         self.user.save()
         u = User.get(self.user.ref.id())
         self.assertEqual(u.username, 'test-c')
-
-
-
-

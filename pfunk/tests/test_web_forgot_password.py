@@ -1,6 +1,7 @@
 from werkzeug.test import Client
 
-from pfunk.tests import User, Group
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.testcase import APITestCase
 
 
@@ -26,16 +27,16 @@ class TestWebForgotPassword(APITestCase):
                               "Content-Type": "application/json"})
 
         self.assertTrue(res.json['success'])
-    
+
     def test_submit_key_for_forgot_pass(self):
         """ Submits the key from the forgot password email to initiate password reset """
-        
+
         res = self.c.put(f'/user/forgot-password/',
-                          json={
-                              "verification_key": self.key,
-                              "password": "new_updated_pass"},
-                          headers={
-                              "Content-Type": "application/json"})
+                         json={
+                             "verification_key": self.key,
+                             "password": "new_updated_pass"},
+                         headers={
+                             "Content-Type": "application/json"})
 
         new_login = User.api_login("test", "new_updated_pass")
         self.assertTrue(res.json['success'])
@@ -45,11 +46,11 @@ class TestWebForgotPassword(APITestCase):
         """ Submit a wrong key for verification of reset password. Should return `Not Found` """
         key = 'wrong-key'
         res = self.c.put(f'/user/forgot-password/',
-                          json={
-                              "verification_key": key,
-                              "password": "forgotten_password"},
-                          headers={
-                              "Content-Type": "application/json"})
+                         json={
+                             "verification_key": key,
+                             "password": "forgotten_password"},
+                         headers={
+                             "Content-Type": "application/json"})
         expected = {'data': 'Not Found', 'success': False}
 
         self.assertFalse(res.json['success'])

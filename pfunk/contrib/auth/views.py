@@ -1,7 +1,6 @@
 from abc import ABC
 
 from envs import env
-from werkzeug.http import http_date
 from werkzeug.routing import Rule
 
 from pfunk.web.views.base import ActionMixin
@@ -118,8 +117,8 @@ class ForgotPasswordChangeView(ActionMixin, JSONAuthView):
     def get_query(self):
         kwargs = self.get_query_kwargs()
         return self.collection.verify_email(
-            str(kwargs['verification_key']), 
-            verify_type='forgot', 
+            str(kwargs['verification_key']),
+            verify_type='forgot',
             password=kwargs['password'])
 
 

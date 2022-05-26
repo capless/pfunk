@@ -1,6 +1,7 @@
 from werkzeug.test import Client
 
-from pfunk.tests import User, Group 
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import APITestCase
 
@@ -24,6 +25,7 @@ class TestWebLogin(APITestCase):
 
         # check if response has cookies
         self.assertIsNotNone(res.headers['Set-Cookie'])
+
         self.assertTrue(res.json['success'])
 
     def test_wrong_login(self):
@@ -36,11 +38,11 @@ class TestWebLogin(APITestCase):
     def test_logout(self):
         """ Tests `pfunk.contrib.auth.views.LogoutView` invalidate token login and remove cookie """
         token, exp = User.api_login("test", "abc123")
+
         res = self.c.post('/user/logout/', headers={
             "Authorization": token,
             "Content-Type": "application/json"
         })
-
         self.assertTrue(res.json['success'])
 
     def test_wrong_logout(self):

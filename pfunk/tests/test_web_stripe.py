@@ -1,8 +1,8 @@
 from werkzeug.test import Client
 
-from pfunk.tests import User, Group
-from pfunk.contrib.auth.collections import PermissionGroup
-from pfunk.contrib.ecommerce.collections import StripePackage, StripeCustomer
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.ecommerce.collections import StripePackage
 from pfunk.testcase import APITestCase
 
 
@@ -57,30 +57,24 @@ class TestWebStripe(APITestCase):
                               "Content-Type": "application/json"
                           })
 
-
-
     # TODO: Fix `forbidden` error in stripe views
     def test_update_package(self):
         res = self.c.put(f'/stripepackage/update/{self.stripe_pkg.ref.id()}/',
-                          json={
-                              'stripe_id': '123',
-                              'name': 'stripe_pkg',
-                              'price': 10.10,
-                              'description': 'a test package'
-                          },
-                          headers={
-                              "Authorization": self.token,
-                              "Content-Type": "application/json"
-                          })
-
-
+                         json={
+                             'stripe_id': '123',
+                             'name': 'stripe_pkg',
+                             'price': 10.10,
+                             'description': 'a test package'
+                         },
+                         headers={
+                             "Authorization": self.token,
+                             "Content-Type": "application/json"
+                         })
 
     # TODO: Fix `forbidden` error in stripe views
     def test_delete_package(self):
         res = self.c.delete(f'/stripepackage/delete/{self.stripe_pkg.ref.id()}/',
-                          headers={
-                              "Authorization": self.token,
-                              "Content-Type": "application/json"
-                          })
-
-        
+                            headers={
+                                "Authorization": self.token,
+                                "Content-Type": "application/json"
+                            })

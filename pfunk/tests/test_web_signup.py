@@ -1,6 +1,7 @@
 from werkzeug.test import Client
 
-from pfunk.tests import User, Group 
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.testcase import APITestCase
 
 
@@ -27,7 +28,7 @@ class TestWebSignup(APITestCase):
             "email": "testemail@email.com",
             "first_name": "Forest",
             "last_name": "Gump",
-            "_credential_field": "password" 
+            "_credential_field": "password"
         })
 
         # token = User.login(username="new_user", password="password")
@@ -41,7 +42,7 @@ class TestWebSignup(APITestCase):
             "email": "testemail@email.com",
             "first_name": "Forest",
             "last_name": "Gump",
-            "_credential_field": "password" 
+            "_credential_field": "password"
         })
 
         self.assertFalse(res.json['success'])

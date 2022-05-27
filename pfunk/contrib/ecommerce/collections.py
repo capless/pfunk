@@ -1,16 +1,19 @@
 import stripe
 from envs import env
+from valley.utils import import_util
 
 from pfunk.collection import Collection
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
-from pfunk.contrib.ecommerce.views import ListStripePackage, DetailStripePackage
+from pfunk.contrib.ecommerce.views import ListStripePackage, DetailStripePackage, CheckoutSuccessView, BaseWebhookView
 from pfunk.exceptions import DocNotFound
 from pfunk.fields import ReferenceField, StringField, FloatField
 from pfunk.web.views.json import CreateView, UpdateView, DeleteView
 
 stripe.api_key = env('STRIPE_API_KEY')
+
+
+User = import_util(env('USER_COLLECTION', 'pfunk.contrib.auth.collections.user.User'))
+Group = import_util(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.group.Group'))
 
 
 class StripePackage(Collection):
@@ -21,11 +24,15 @@ class StripePackage(Collection):
         fields and functions to match your system.
 
         Read and detail views are naturally public. Write operations
-        requires authentication from admin group.
+        requires authentication from admin group. While it grealty
+        depends on your app, it is recommended to have this only
+        modified by the admins and use `StripeCustomer` model to
+        attach a `stripe_id` to a model that is bound for payment.
     """
     use_crud_views = False
     collection_roles = [GenericGroupBasedRole]
-    collection_views = [ListStripePackage, DetailStripePackage, CreateView, UpdateView, DeleteView]
+    collection_views = [ListStripePackage, DetailStripePackage,
+                        CheckoutSuccessView, CreateView, UpdateView, DeleteView]
     stripe_id = StringField(required=True)
     name = StringField(required=True)
     price = FloatField(required=True)
@@ -48,9 +55,9 @@ class StripeCustomer(Collection):
         fields and functions to match your system.
     """
     collection_roles = [GenericUserBasedRole]
+    collection_views = [BaseWebhookView]
     user = ReferenceField(User)
-    customer_id = StringField(required=True)
-    package = ReferenceField(StripePackage)
+    stripe_id = StringField(required=True, unique=True)
 
     def __unicode__(self):
         return self.customer_id

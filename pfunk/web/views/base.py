@@ -342,7 +342,7 @@ class ObjectMixin(object):
     """ Generic GET mixin for a Fauna object. """
 
     def get_query(self):
-        """ Acuires  """
+        """ Acuires the entity in a collection using by ID """
         return self.collection.get(self.request.kwargs.get('id'), **self.get_query_kwargs())
 
     def get_query_kwargs(self):

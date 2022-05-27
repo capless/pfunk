@@ -33,6 +33,7 @@ class CreateView(UpdateMixin, ActionMixin, JSONView):
     login_required = True
 
     def get_query(self):
+        """ Entity created in a collection """
         obj = self.collection.create(**self.get_query_kwargs(), _token=self.request.token)
         return obj
 
@@ -68,6 +69,7 @@ class UpdateView(UpdateMixin, IDMixin, JSONView):
     login_required = True
 
     def get_query(self):
+        """ Entity in collection updated by an ID """
         obj = self.collection.get(self.request.kwargs.get('id'), _token=self.request.token)
         obj._data.update(self.get_query_kwargs())
         obj.save()
@@ -88,6 +90,7 @@ class DeleteView(ObjectMixin, IDMixin, JSONView):
     login_required = True
 
     def get_query(self):
+        """ Deleted an entity in the specified collection """
         return self.collection.delete_from_id(self.request.kwargs.get('id'), _token=self.request.token)
 
 

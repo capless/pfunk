@@ -3,14 +3,18 @@ import os
 import sys
 
 import click
+from envs import env
 from valley.utils import import_util
 from werkzeug.serving import run_simple
 
 from pfunk.client import FaunaClient, q
-from pfunk.contrib.auth.collections import Group, PermissionGroup
+from pfunk.contrib.auth.collections import PermissionGroup
 from pfunk.exceptions import DocNotFound
 from pfunk.template import wsgi_template, project_template, collections_templates, key_template
 from pfunk.utils.deploy import Deploy
+
+
+Group = import_util(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.group.Group'))
 
 
 @click.group()
@@ -31,18 +35,25 @@ def load_config_file(filename):
 @click.option('--email', prompt=True, help='Default From Email')
 @click.option('--bucket', prompt=True, help='S3 Bucket')
 @click.option('--fauna_key', prompt=True, help='Fauna Key')
+@click.option('--host', prompt=True, help='Host')
+@click.option('--description', prompt=True, help='Project Description')
 @click.option('--api_type', type=click.Choice(['web', 'rest', 'none']), prompt=True, help='API Type (web, rest, none)')
 @click.argument('name')
-def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stage_name: str, generate_local_key: bool):
+def init(name: str, api_type: str, description: str, host: str, fauna_key: str, bucket: str, email: str,
+         stage_name: str, generate_local_key: bool):
+
     """
     Creates a PFunk project
     Args:
         name: Project name
         api_type: API Gateway type (web, rest, none)
+        description: Project Description
+        host: Host
         fauna_key: Fauna secret key
         bucket: S3 Bucket
         email: Default from Email
         stage_name: Application stage
+        generate_local_key: Specifies whether to generate a local database and key
 
     Returns:
 
@@ -54,6 +65,8 @@ def init(name: str, api_type: str, fauna_key: str, bucket: str, email: str, stag
             json.dump({
                 'name': name,
                 'api_type': api_type,
+                'description': description,
+                'host': host,
                 'stages': {stage_name: {
                     'key_module': f'{name}.{stage_name}_keys.KEYS',
                     'fauna_secret': fauna_key,

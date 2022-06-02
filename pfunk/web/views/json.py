@@ -27,44 +27,28 @@ class JSONView(HTTPView):
         )
 
     def _payload_docs(self):
-        """ Used in custom defining payload parameters for the view in Swagger generation. 
+        """ Used in defining payload parameters for the view. 
         
-            Should return a dict that has the fields of a swagger parameter.
-            If there is an error in the swagger, it will not be raised.
-            Usage of `https://editor.swagger.io` to validate is recommended
-            e.g.
-            ```
-            # Defining formdata
-            {"data": [
-                    {
-                        "name":"name",
-                        "in":"formData",
-                        "description":"name of the pet",
-                        "required": true,
-                        "type": "string"
-                    },
-                    {
-                        "name": "status",
-                        "in": "formData",
-                        "description": "status of the pet",
-                        "required":true,
-                        "type":"string"
-                    }
-                ]}
-            
-            # Defining a payload that references a model
+            Should return a dict that has the fields of a swagger parameter e.g.
             {"data": [
                 {
-                    "name": "body",
-                    "in": "body",
-                    "description": "Collection object to add",
-                    "required": True,
-                    "schema": "#/definitions/Person"
+                    "name":"name",
+                    "in":"formData",
+                    "description":"name of the pet",
+                    "required": true,
+                    "type": "string"
+                },
+                {
+                    "name": "status",
+                    "in": "formData",
+                    "description": "status of the pet",
+                    "required":true,
+                    "type":"string"
                 }
             ]}
-            ```
         """
         return {}
+
 
 
 class CreateView(UpdateMixin, JSONActionMixin, JSONView):
@@ -169,3 +153,7 @@ class ListView(QuerysetMixin, JSONActionMixin, JSONView):
     restrict_content_type = False
     action = 'list'
     login_required = True
+
+
+class GraphQLView(HTTPView):
+    pass

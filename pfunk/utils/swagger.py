@@ -163,6 +163,7 @@ class SwaggerDoc(object):
         ```
         """
         for view in col.collection_views:
+            v = view()
             route = view.url(col)
             rule = route.rule
             methods = route.methods
@@ -211,17 +212,13 @@ class SwaggerDoc(object):
                     )
                     params.append(path_params)
 
-                # Acquire payload of the view from the View's docstring
-                # where to cut the docstrings to use the definition for the payload of the view
-                oas_str_split = '[OAS]\n'
-                view_docs = view.__doc__
-                view_payload = None
-                if (view_docs and len(view_docs.split(oas_str_split)) > 1):
-                    view_payload = view_docs.split(oas_str_split)[1]
+                # Acquire payload of the view from the View's `_payload_docs`
+                view_payload = view()._payload_docs()
 
                 # Construct payload for swagger generation
+                # TODO: support referencing of models
                 if view_payload:
-                    for field in json.loads(view_payload).get('data'):
+                    for field in view_payload.get('data'):
                         param = sw.Parameter(
                             name=field.get('name'),
                             _type=field.get('type'),
@@ -232,17 +229,16 @@ class SwaggerDoc(object):
                         )
                         params.append(param)
 
-                docs_description = view_docs if not len(view_docs.split(
-                    oas_str_split)) > 1 else view_docs.split(oas_str_split)[0]
                 consumes = ['application/json',
                             'application/x-www-form-urlencoded']
                 produces = ['application/json',
                             'application/x-www-form-urlencoded']
+                view_docs = view.__doc__
                 if params:
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=docs_description,
+                        description=view_docs,
                         responses=responses,
                         consumes=consumes,
                         produces=produces,
@@ -251,7 +247,7 @@ class SwaggerDoc(object):
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=docs_description,
+                        description=view_docs,
                         responses=responses,
                         consumes=consumes,
                         produces=produces)

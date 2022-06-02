@@ -163,6 +163,7 @@ class SwaggerDoc(object):
         ```
         """
         for view in col.collection_views:
+            v = view()
             route = view.url(col)
             rule = route.rule
             methods = route.methods
@@ -215,6 +216,7 @@ class SwaggerDoc(object):
                 view_payload = view(col)._payload_docs()
 
                 # Construct payload for swagger generation
+                # TODO: support referencing of models
                 if view_payload:
                     for field in view_payload.get('data'):
                         if field.get('schema'):

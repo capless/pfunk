@@ -26,6 +26,29 @@ class JSONView(HTTPView):
             headers=self.get_headers()
         )
 
+    def _payload_docs(self):
+        """ Used in defining payload parameters for the view. 
+        
+            Should return a dict that has the fields of a swagger parameter e.g.
+            {"data": [
+                {
+                    "name":"name",
+                    "in":"formData",
+                    "description":"name of the pet",
+                    "required": true,
+                    "type": "string"
+                },
+                {
+                    "name": "status",
+                    "in": "formData",
+                    "description": "status of the pet",
+                    "required":true,
+                    "type":"string"
+                }
+            ]}
+        """
+        return {}
+
 
 class CreateView(UpdateMixin, JSONActionMixin, JSONView):
     """ Define a `Create` view that allows `creation` of an entity in the collection """
@@ -35,7 +58,8 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
 
     def get_query(self):
         """ Entity created in a collection """
-        obj = self.collection.create(**self.get_query_kwargs(), _token=self.request.token)
+        obj = self.collection.create(
+            **self.get_query_kwargs(), _token=self.request.token)
         return obj
 
     def get_m2m_kwargs(self, obj):
@@ -51,7 +75,8 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
 
         """
         data = self.request.get_json()
-        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
+        fields = self.collection.get_foreign_fields_by_type(
+            'pfunk.fields.ManyToManyField')
         for k, v in fields.items():
             current_value = data.get(k)
             col = v.get('foreign_class')()
@@ -71,7 +96,8 @@ class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
 
     def get_query(self):
         """ Entity in collection updated by an ID """
-        obj = self.collection.get(self.request.kwargs.get('id'), _token=self.request.token)
+        obj = self.collection.get(self.request.kwargs.get(
+            'id'), _token=self.request.token)
         obj._data.update(self.get_query_kwargs())
         obj.save()
         return obj

@@ -160,6 +160,7 @@ class SwaggerDoc(object):
                 An array of `Path` that can be consumed using 
                 `swaggyp.SwaggerTemplate` to show 
                 available paths 
+        ```
         """
         for view in col.collection_views:
             route = view.url(col)
@@ -188,6 +189,7 @@ class SwaggerDoc(object):
                     # Skip HEAD operations
                     continue
 
+                # Acquire path parameters of URL
                 if args is None or len(args) == 0:
                     # if `defaults` weren't used in URL building, use the argument defined in the URL string
                     for converter, arguments, variable in parse_rule(rule):
@@ -196,10 +198,10 @@ class SwaggerDoc(object):
                         args = variable
                         arg_type = converter
 
-                # Replace werkzeug params (<int: id>) to swagger-style params ({id})
-                swagger_rule = self._convert_url_to_swagger(args, rule)
+                params = []
+                # Construct path parameters for swagger generation
                 if arg_type:
-                    params = sw.Parameter(
+                    path_params = sw.Parameter(
                         name=args,
                         _type=WERKZEUG_URL_TO_YAML_TYPES.get(arg_type),
                         _in='path',
@@ -207,18 +209,55 @@ class SwaggerDoc(object):
                         required=True,
                         allowEmptyValue=False
                     )
+                    params.append(path_params)
+
+                # Acquire payload of the view from the View's docstring
+                # where to cut the docstrings to use the definition for the payload of the view
+                oas_str_split = '[OAS]\n'
+                view_docs = view.__doc__
+                view_payload = None
+                if (view_docs and len(view_docs.split(oas_str_split)) > 1):
+                    view_payload = view_docs.split(oas_str_split)[1]
+
+                # Construct payload for swagger generation
+                if view_payload:
+                    for field in json.loads(view_payload).get('data'):
+                        param = sw.Parameter(
+                            name=field.get('name'),
+                            _type=field.get('type'),
+                            _in=field.get('in'),
+                            description=field.get('description'),
+                            required=field.get('required'),
+                            allowEmptyValue=False
+                        )
+                        params.append(param)
+
+                docs_description = view_docs if not len(view_docs.split(
+                    oas_str_split)) > 1 else view_docs.split(oas_str_split)[0]
+                consumes = ['application/json',
+                            'application/x-www-form-urlencoded']
+                produces = ['application/json',
+                            'application/x-www-form-urlencoded']
+                if params:
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=view.__doc__,
+                        description=docs_description,
                         responses=responses,
-                        parameters=[params])
+                        consumes=consumes,
+                        produces=produces,
+                        parameters=params)
                 else:
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=view.__doc__,
-                        responses=responses)
+                        description=docs_description,
+                        responses=responses,
+                        consumes=consumes,
+                        produces=produces)
+
+                # Replace werkzeug params (<int: id>) to swagger-style params ({id})
+                swagger_rule = self._convert_url_to_swagger(args, rule)
                 p = sw.Path(endpoint=swagger_rule, operations=[op])
                 self.paths.append(p)
         return self.paths
@@ -240,6 +279,9 @@ class SwaggerDoc(object):
                 An array of `Definition` that can be consumed using 
                 `swaggyp.SwaggerTemplate` to show 
                 available models 
+
+        Payload:
+
         
         """
         # Define model definitions by iterating through collection's fields for its properties

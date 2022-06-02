@@ -211,42 +211,38 @@ class SwaggerDoc(object):
                     )
                     params.append(path_params)
 
-                # Acquire payload of the view from the View's `_payload_docs`
-                view_payload = view(col)._payload_docs()
+                # Acquire payload of the view from the View's docstring
+                # where to cut the docstrings to use the definition for the payload of the view
+                oas_str_split = '[OAS]\n'
+                view_docs = view.__doc__
+                view_payload = None
+                if (view_docs and len(view_docs.split(oas_str_split)) > 1):
+                    view_payload = view_docs.split(oas_str_split)[1]
 
                 # Construct payload for swagger generation
                 if view_payload:
-                    for field in view_payload.get('data'):
-                        if field.get('schema'):
-                            schema = sw.SwagSchema(ref=field.get('schema'))
-                            param = sw.Parameter(
-                                    name=field.get('name'),
-                                    _in=field.get('in'),
-                                    description=field.get('description'),
-                                    required=field.get('required'),
-                                    schema=schema
-                                )
-                        else:
-                            param = sw.Parameter(
-                                name=field.get('name'),
-                                _type=field.get('type'),
-                                _in=field.get('in'),
-                                description=field.get('description'),
-                                required=field.get('required'),
-                                allowEmptyValue=False
-                            )
+                    for field in json.loads(view_payload).get('data'):
+                        param = sw.Parameter(
+                            name=field.get('name'),
+                            _type=field.get('type'),
+                            _in=field.get('in'),
+                            description=field.get('description'),
+                            required=field.get('required'),
+                            allowEmptyValue=False
+                        )
                         params.append(param)
 
+                docs_description = view_docs if not len(view_docs.split(
+                    oas_str_split)) > 1 else view_docs.split(oas_str_split)[0]
                 consumes = ['application/json',
                             'application/x-www-form-urlencoded']
                 produces = ['application/json',
                             'application/x-www-form-urlencoded']
-                view_docs = view.__doc__
                 if params:
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=view_docs,
+                        description=docs_description,
                         responses=responses,
                         consumes=consumes,
                         produces=produces,
@@ -255,7 +251,7 @@ class SwaggerDoc(object):
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=view_docs,
+                        description=docs_description,
                         responses=responses,
                         consumes=consumes,
                         produces=produces)

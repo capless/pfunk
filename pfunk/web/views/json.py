@@ -29,15 +29,31 @@ class JSONView(HTTPView):
     def _payload_docs(self):
         """ Used in custom defining payload parameters for the view. 
         
-            Should return a dict that has the fields of a swagger parameter e.g.
+            Should return a dict that has the fields of a swagger parameter.
+            If there is an error in the swagger, it will not be raised.
+            Usage of `https://editor.swagger.io` to validate is recommended
+            e.g.
+            ```
+            # Defining formdata
             {"data": [
-                {
-                    "name":"name",
-                    "in":"formData",
-                    "description":"name of the pet",
-                    "required": True,
-                    "type": "string"
-                },
+                    {
+                        "name":"name",
+                        "in":"formData",
+                        "description":"name of the pet",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "status",
+                        "in": "formData",
+                        "description": "status of the pet",
+                        "required":true,
+                        "type":"string"
+                    }
+                ]}
+            
+            # Defining a payload that references a model
+            {"data": [
                 {
                     "name": "body",
                     "in": "body",
@@ -46,6 +62,7 @@ class JSONView(HTTPView):
                     "schema": "#/definitions/Person"
                 }
             ]}
+            ```
         """
         return {}
 
@@ -88,17 +105,22 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
             )
 
     def _payload_docs(self):
-        # Reference the collection by default
-        if self.collection:
-            return {"data": [
-                    {
-                        "name": "body",
-                        "in": "body",
-                        "description": "Collection object to add",
-                        "required": True,
-                        "schema": f"#/definitions/{self.collection.__class__.__name__}"
-                    }
-                    ]}
+        return {"data": [
+                {
+                    "name": "name",
+                    "in": "formData",
+                    "description": "name of the pet",
+                    "required": True,
+                    "type": "string"
+                },
+                {
+                    "name": "body",
+                    "in": "body",
+                    "description": "Collection object to add",
+                    "required": True,
+                    "schema": "#/definitions/Person"
+                }
+                ]}
 
 
 class UpdateView(UpdateMixin, JSONIDMixin, JSONView):

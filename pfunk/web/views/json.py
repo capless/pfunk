@@ -27,7 +27,7 @@ class JSONView(HTTPView):
         )
 
     def _payload_docs(self):
-        """ Used in defining payload parameters for the view. 
+        """ Used in custom defining payload parameters for the view. 
         
             Should return a dict that has the fields of a swagger parameter e.g.
             {"data": [
@@ -35,15 +35,15 @@ class JSONView(HTTPView):
                     "name":"name",
                     "in":"formData",
                     "description":"name of the pet",
-                    "required": true,
+                    "required": True,
                     "type": "string"
                 },
                 {
-                    "name": "status",
-                    "in": "formData",
-                    "description": "status of the pet",
-                    "required":true,
-                    "type":"string"
+                    "name": "body",
+                    "in": "body",
+                    "description": "Collection object to add",
+                    "required": True,
+                    "schema": "#/definitions/Person"
                 }
             ]}
         """

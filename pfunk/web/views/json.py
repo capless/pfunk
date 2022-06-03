@@ -27,7 +27,7 @@ class JSONView(HTTPView):
         )
 
     def _payload_docs(self):
-        """ Used in custom defining payload parameters for the view. 
+        """ Used in custom defining payload parameters for the view in Swagger generation. 
         
             Should return a dict that has the fields of a swagger parameter.
             If there is an error in the swagger, it will not be raised.

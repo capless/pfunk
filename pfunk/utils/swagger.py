@@ -216,17 +216,28 @@ class SwaggerDoc(object):
                 view_payload = view()._payload_docs()
 
                 # Construct payload for swagger generation
-                # TODO: support referencing of models
                 if view_payload:
                     for field in view_payload.get('data'):
-                        param = sw.Parameter(
-                            name=field.get('name'),
-                            _type=field.get('type'),
-                            _in=field.get('in'),
-                            description=field.get('description'),
-                            required=field.get('required'),
-                            allowEmptyValue=False
-                        )
+                        if field.get('schema'):
+                            schema = sw.SwagSchema(
+                                ref=field.get('schema')
+                            )
+                            param = sw.Parameter(
+                                    name=field.get('name'),
+                                    _in=field.get('in'),
+                                    description=field.get('description'),
+                                    required=field.get('required'),
+                                    schema=schema
+                                )
+                        else:
+                            param = sw.Parameter(
+                                name=field.get('name'),
+                                _type=field.get('type'),
+                                _in=field.get('in'),
+                                description=field.get('description'),
+                                required=field.get('required'),
+                                allowEmptyValue=False
+                            )
                         params.append(param)
 
                 consumes = ['application/json',

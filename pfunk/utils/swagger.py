@@ -216,7 +216,6 @@ class SwaggerDoc(object):
                 view_payload = view(col)._payload_docs()
 
                 # Construct payload for swagger generation
-                # TODO: support referencing of models
                 if view_payload:
                     for field in view_payload.get('data'):
                         if field.get('schema'):

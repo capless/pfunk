@@ -219,9 +219,7 @@ class SwaggerDoc(object):
                 if view_payload:
                     for field in view_payload.get('data'):
                         if field.get('schema'):
-                            schema = sw.SwagSchema(
-                                ref=field.get('schema')
-                            )
+                            schema = sw.SwagSchema(ref=field.get('schema'))
                             param = sw.Parameter(
                                     name=field.get('name'),
                                     _in=field.get('in'),

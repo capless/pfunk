@@ -105,22 +105,17 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
             )
 
     def _payload_docs(self):
-        return {"data": [
-                {
-                    "name": "name",
-                    "in": "formData",
-                    "description": "name of the pet",
-                    "required": True,
-                    "type": "string"
-                },
-                {
-                    "name": "body",
-                    "in": "body",
-                    "description": "Collection object to add",
-                    "required": True,
-                    "schema": "#/definitions/Person"
-                }
-                ]}
+        # TODO: Get view's collection class name by default
+        if self.collection:
+            return {"data": [
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "Collection object to add",
+                        "required": True,
+                        "schema": f"#/definitions/Collection"
+                    }
+                    ]}
 
 
 class UpdateView(UpdateMixin, JSONIDMixin, JSONView):

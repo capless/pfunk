@@ -163,7 +163,6 @@ class SwaggerDoc(object):
         ```
         """
         for view in col.collection_views:
-            v = view()
             route = view.url(col)
             rule = route.rule
             methods = route.methods

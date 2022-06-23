@@ -106,7 +106,7 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
             )
 
     def _payload_docs(self):
-        # TODO: Get view's collection class name by default
+        # Reference the collection by default
         if self.collection:
             return {"data": [
                     {
@@ -114,7 +114,7 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
                         "in": "body",
                         "description": "Collection object to add",
                         "required": True,
-                        "schema": f"#/definitions/Collection"
+                        "schema": f"#/definitions/{self.collection.__class__.__name__}"
                     }
                     ]}
 
@@ -146,6 +146,7 @@ class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
                         "schema": f"#/definitions/{self.collection.__class__.__name__}"
                     }
                     ]}
+
 
 
 class DetailView(ObjectMixin, JSONIDMixin, JSONView):

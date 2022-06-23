@@ -104,7 +104,7 @@ class CreateView(UpdateMixin, ActionMixin, JSONView):
             )
 
     def _payload_docs(self):
-        # TODO: Get view's collection class name by default
+        # Reference the collection by default
         if self.collection:
             return {"data": [
                     {
@@ -112,7 +112,7 @@ class CreateView(UpdateMixin, ActionMixin, JSONView):
                         "in": "body",
                         "description": "Collection object to add",
                         "required": True,
-                        "schema": f"#/definitions/Collection"
+                        "schema": f"#/definitions/{self.collection.__class__.__name__}"
                     }
                     ]}
 
@@ -130,6 +130,19 @@ class UpdateView(UpdateMixin, IDMixin, JSONView):
         obj._data.update(self.get_query_kwargs())
         obj.save()
         return obj
+
+    def _payload_docs(self):
+        # Reference the collection by default
+        if self.collection:
+            return {"data": [
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "Collection object to add",
+                        "required": True,
+                        "schema": f"#/definitions/{self.collection.__class__.__name__}"
+                    }
+                    ]}
 
 
 class DetailView(ObjectMixin, IDMixin, JSONView):

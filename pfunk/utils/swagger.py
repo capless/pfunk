@@ -212,7 +212,7 @@ class SwaggerDoc(object):
                     params.append(path_params)
 
                 # Acquire payload of the view from the View's `_payload_docs`
-                view_payload = view()._payload_docs()
+                view_payload = view(col)._payload_docs()
 
                 # Construct payload for swagger generation
                 if view_payload:

@@ -116,3 +116,24 @@ class HTTPRequest(BaseAPIGatewayRequest):
         return parse_cookie(';'.join(raw_cookies))
 
 
+class BaseDigitalOCeanRequest(Request):
+    """ Base API Request for digitalocean functions """
+    
+    def __init__(self, args):
+        pass
+
+
+class DigiOcHTTPRequest(BaseDigitalOCeanRequest):
+    """ DigitalOcean HTTP Request """
+
+    def __init__(self, args):
+        self.raw_event = args
+        self.headers = args.get('__ow_headers')
+        self.method = args.get('__ow_method')
+        self.path = args.get('__ow_method')
+
+
+class DigiOcRESTRequest(BaseDigitalOCeanRequest):
+    """ DigitalOcean REST API request """
+    pass
+

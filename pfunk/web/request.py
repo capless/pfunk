@@ -124,6 +124,8 @@ class BaseDigitalOCeanRequest(Request):
         self.headers = args.get('__ow_headers')
         self.method = args.get('__ow_method')
         self.path = args.get('__ow_path')
+        self.query_params = args.get('__ow_query')   # only shows up if input is binary and non-json types
+        self.body = args.get('__ow_body')   # only shows up if input is binary and non-json types
         try:
             self.cookies = self.get_cookies(self.headers.pop('Cookie'))
         except KeyError:

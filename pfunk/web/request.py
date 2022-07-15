@@ -120,17 +120,21 @@ class BaseDigitalOCeanRequest(Request):
     """ Base API Request for digitalocean functions """
     
     def __init__(self, args):
-        pass
+        self.raw_event = args
+        self.headers = args.get('__ow_headers')
+        self.method = args.get('__ow_method')
+        self.path = args.get('__ow_path')
+        try:
+            self.cookies = self.get_cookies(self.headers.pop('Cookie'))
+        except KeyError:
+            self.cookies = {}
+
+    def get_cookies(self, raw_cookies):
+        return parse_cookie(raw_cookies)
 
 
 class DigiOcHTTPRequest(BaseDigitalOCeanRequest):
     """ DigitalOcean HTTP Request """
-
-    def __init__(self, args):
-        self.raw_event = args
-        self.headers = args.get('__ow_headers')
-        self.method = args.get('__ow_method')
-        self.path = args.get('__ow_method')
 
 
 class DigiOcRESTRequest(BaseDigitalOCeanRequest):

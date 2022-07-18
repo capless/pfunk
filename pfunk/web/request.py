@@ -116,16 +116,22 @@ class HTTPRequest(BaseAPIGatewayRequest):
         return parse_cookie(';'.join(raw_cookies))
 
 
-class BaseDigitalOCeanRequest(Request):
-    """ Base API Request for digitalocean functions """
+class DigitalOCeanRequest(Request):
+    """ API Request for digitalocean functions """
     
     def __init__(self, args):
         self.raw_event = args
+        self.body = args
+        self.query_params = args
         self.headers = args.get('__ow_headers')
         self.method = args.get('__ow_method')
         self.path = args.get('__ow_path')
-        self.query_params = args.get('__ow_query')   # only shows up if input is binary and non-json types
-        self.body = args.get('__ow_body')   # only shows up if input is binary and non-json types
+
+        if args.get('__ow_query'):
+            self.query_params = args.get('__ow_query')   # only shows up if web:raw in project.yml
+        if args.get('__ow_body'):
+            self.body = args.get('__ow_body')   # only shows up if web:raw in project.yml
+
         try:
             self.cookies = self.get_cookies(self.headers.pop('Cookie'))
         except KeyError:
@@ -133,13 +139,3 @@ class BaseDigitalOCeanRequest(Request):
 
     def get_cookies(self, raw_cookies):
         return parse_cookie(raw_cookies)
-
-
-class DigiOcHTTPRequest(BaseDigitalOCeanRequest):
-    """ DigitalOcean HTTP Request """
-
-
-class DigiOcRESTRequest(BaseDigitalOCeanRequest):
-    """ DigitalOcean REST API request """
-    pass
-

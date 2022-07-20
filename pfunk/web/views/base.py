@@ -140,13 +140,50 @@ class View(object):
             response = self.unauthorized_class()
         return response
 
+    def process_digitalocean_request(self):
+        """ Processes the DigitalOcean Request.
+            Returns response if it returned a successful 
+            query otherwise, a json error response.
+        
+        Returns:
+            response (`web.Response`, required):
+                Response object with differing status_code to represent
+                stauts of the request
+        """
+
+        try:
+            if self.login_required:
+                self.token_check()
+            response = getattr(self, self.request.method.lower())()
+        except (FaunaNotFound, NotFound, DocNotFound):
+            response = self.not_found_class()
+        except PermissionDenied:
+            response = self.forbidden_class()
+        except (BadRequest, GraphQLError) as e:
+            if isinstance(e, BadRequest):
+                payload = e._get_description()
+            else:
+                payload = str(e)
+            response = self.bad_request_class(payload=payload)
+        except (ValidationException,) as e:
+            key, value = str(e).split(':')
+            response = self.bad_request_class(payload={'validation_errors': {key: value}})
+        except (MethodNotAllowed,):
+            response = self.method_not_allowed_class()
+        except (LoginFailed,) as e:
+            response = self.unauthorized_class(payload=str(e))
+        except (Unauthorized, InvalidSignatureError, TokenValidationFailed):
+            response = self.unauthorized_class()
+        return response
+
     def process_request(self):
         """ Calls the handler for varying `request` and leave the 
             handling to it.
         """
         if isinstance(self.request, (HTTPRequest, RESTRequest)):
             return self.process_lambda_request()
-        elif isinstance(self.request, ())
+        elif isinstance(self.request, (DigitalOCeanRequest)):
+            return self.process_digitalocean_request()
         return self.process_wsgi_request()
 
     def get_token(self):

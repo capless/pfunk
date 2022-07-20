@@ -7,7 +7,7 @@ from werkzeug.http import dump_cookie
 from werkzeug.routing import Rule
 
 from pfunk.exceptions import TokenValidationFailed, LoginFailed, Unauthorized, DocNotFound, GraphQLError
-from pfunk.web.request import Request, RESTRequest, HTTPRequest
+from pfunk.web.request import Request, RESTRequest, HTTPRequest, DigitalOCeanRequest
 from pfunk.web.response import (Response, HttpNotFoundResponse, HttpForbiddenResponse, HttpBadRequestResponse,
                                 HttpMethodNotAllowedResponse, HttpUnauthorizedResponse)
 
@@ -146,6 +146,7 @@ class View(object):
         """
         if isinstance(self.request, (HTTPRequest, RESTRequest)):
             return self.process_lambda_request()
+        elif isinstance(self.request, ())
         return self.process_wsgi_request()
 
     def get_token(self):

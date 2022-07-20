@@ -38,10 +38,11 @@ WERKZEUG_URL_TO_YAML_TYPES = {
 
 class SwaggerDoc(object):
 
-    def __init__(self, collections, rules=[]):
+    def __init__(self, collections, rules=[], config_file='pfunk.json'):
         """ Generates swagger doc. Details are going to be acquired from the collections 
         
             The acquisition of the information needed for docs are as follows:
+            ```
                 Response: 
                     Description (str): View's `get_query` docstrings
                     Status Code (int): 
@@ -56,15 +57,26 @@ class SwaggerDoc(object):
                 Model:
                     Name (str): The class name of the `collection`
                     Properties (str): The fields of the collection and their type
-            
+            ```
+
+            Args:
+                collections ([`pfunk.collection.Collection`]):
+                    array of collection of the project to generate models from
+                rules ([`werkzeug.routing.Rule`]):
+                    array of additional URLs that the given collection doesn't have
+                config_file (str, optional):
+                    directory of the config_file
+
             Returns:
-                Generated YAML file
+                swagger.yaml (yaml, required):
+                    Generated YAML file
         """
         self.collections = collections
         self.rules = rules
         self.paths = []
         self.definitions = []
         self.responses = []
+        self.config_file = config_file
         self._response_classes = [
             'response_class',
             'not_found_class',
@@ -77,16 +89,25 @@ class SwaggerDoc(object):
     def _convert_url_to_swagger(self, replacement: str, to_replace: str) -> str:
         return re.sub('<\w+:\w+>', f'{{{replacement}}}', to_replace)
 
-    def write_to_yaml(self):
+    def write_to_yaml(self, dir=''):
         """ Using the class' variables, write it to a swagger (yaml) file 
         
             It will create `swagger.yaml` file in current directory, if 
             there is already one, it will print the yaml file instead.
+
+            Args:
+                dir (str, optional):
+                    custom directory of the swagger file. If there are no provided, create one in current dir.
+            Returns:
+                dir (str, required):
+                    directory of the created swagger file
+                swagger_file (str, required):
+                    the contents of the swagger yaml file
         """
-        if not os.path.exists(f'pfunk.json'):
+        if not os.path.exists(self.config_file):
            raise Exception('Missing JSON Config file.')
         else:
-            with open(f'pfunk.json', 'r') as f:
+            with open(self.config_file, 'r') as f:
                 data = json.loads(f.read())
                 proj_title = data.get('name')
                 proj_desc = data.get('description', 'A Pfunk project')
@@ -94,6 +115,10 @@ class SwaggerDoc(object):
                 host = data.get('host', 'pfunk.com')
                 basePath = data.get('basePath', '/')
                 schemes = ['https']
+
+        if dir:
+            if not dir.endswith('/'):
+                dir = dir + "/"
 
         info = sw.Info(
             title=proj_title,
@@ -107,13 +132,17 @@ class SwaggerDoc(object):
             schemes=schemes,
             definitions=self.definitions)
 
-        if not os.path.exists(f'swagger.yaml'):
-            with open(f'swagger.yaml', 'x') as swag_doc:
+        if not os.path.exists(f'{dir}swagger.yaml'):
+            with open(f'{dir}swagger.yaml', 'x') as swag_doc:
                 swag_doc.write(t.to_yaml())
         else:
-            print('There is an existing swagger file. Kindly move/delete it to generate a new one. Printing instead...')
-            print(t.to_yaml())
-            return t.to_yaml()
+            print(
+                'There is an existing swagger file. Kindly move/delete it to generate a new one.')
+            # print(t.to_yaml())
+        return {
+            "dir": f'{dir}swagger.yaml',
+            "swagger_file": t.to_yaml()
+        }
 
     def get_operations(self, col: Collection):
         """ Acquires all of the endpoint in the collections and make it 
@@ -131,6 +160,7 @@ class SwaggerDoc(object):
                 An array of `Path` that can be consumed using 
                 `swaggyp.SwaggerTemplate` to show 
                 available paths 
+        ```
         """
         for view in col.collection_views:
             route = view.url(col)
@@ -159,6 +189,7 @@ class SwaggerDoc(object):
                     # Skip HEAD operations
                     continue
 
+                # Acquire path parameters of URL
                 if args is None or len(args) == 0:
                     # if `defaults` weren't used in URL building, use the argument defined in the URL string
                     for converter, arguments, variable in parse_rule(rule):
@@ -167,10 +198,10 @@ class SwaggerDoc(object):
                         args = variable
                         arg_type = converter
 
-                # Replace werkzeug params (<int: id>) to swagger-style params ({id})
-                swagger_rule = self._convert_url_to_swagger(args, rule)
+                params = []
+                # Construct path parameters for swagger generation
                 if arg_type:
-                    params = sw.Parameter(
+                    path_params = sw.Parameter(
                         name=args,
                         _type=WERKZEUG_URL_TO_YAML_TYPES.get(arg_type),
                         _in='path',
@@ -178,18 +209,59 @@ class SwaggerDoc(object):
                         required=True,
                         allowEmptyValue=False
                     )
+                    params.append(path_params)
+
+                # Acquire payload of the view from the View's `_payload_docs`
+                view_payload = view(col)._payload_docs()
+
+                # Construct payload for swagger generation
+                if view_payload:
+                    for field in view_payload.get('data'):
+                        if field.get('schema'):
+                            schema = sw.SwagSchema(ref=field.get('schema'))
+                            param = sw.Parameter(
+                                    name=field.get('name'),
+                                    _in=field.get('in'),
+                                    description=field.get('description'),
+                                    required=field.get('required'),
+                                    schema=schema
+                                )
+                        else:
+                            param = sw.Parameter(
+                                name=field.get('name'),
+                                _type=field.get('type'),
+                                _in=field.get('in'),
+                                description=field.get('description'),
+                                required=field.get('required'),
+                                allowEmptyValue=False
+                            )
+                        params.append(param)
+
+                consumes = ['application/json',
+                            'application/x-www-form-urlencoded']
+                produces = ['application/json',
+                            'application/x-www-form-urlencoded']
+                view_docs = view.__doc__
+                if params:
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=view.__doc__,
+                        description=view_docs,
                         responses=responses,
-                        parameters=[params])
+                        consumes=consumes,
+                        produces=produces,
+                        parameters=params)
                 else:
                     op = sw.Operation(
                         http_method=method.lower(),
                         summary=f'({method}) -> {col.__class__.__name__}',
-                        description=view.__doc__,
-                        responses=responses)
+                        description=view_docs,
+                        responses=responses,
+                        consumes=consumes,
+                        produces=produces)
+
+                # Replace werkzeug params (<int: id>) to swagger-style params ({id})
+                swagger_rule = self._convert_url_to_swagger(args, rule)
                 p = sw.Path(endpoint=swagger_rule, operations=[op])
                 self.paths.append(p)
         return self.paths
@@ -211,6 +283,9 @@ class SwaggerDoc(object):
                 An array of `Definition` that can be consumed using 
                 `swaggyp.SwaggerTemplate` to show 
                 available models 
+
+        Payload:
+
         
         """
         # Define model definitions by iterating through collection's fields for its properties
@@ -233,10 +308,15 @@ class SwaggerDoc(object):
         self.definitions.append(model)
         return self.definitions
 
-    def generate_swagger(self):
-        """ One-function-to-call needed function to generate a swagger documentation """
+    def generate_swagger(self, dir=''):
+        """ One-function-to-call needed function to generate a swagger documentation 
+        
+            Args:
+                dir (str, optional):
+                    directory to create the yaml file
+        """
         for i in self.collections:
             col = i()
             self.get_operations(col)
             self.get_model_definitions(col)
-        return self.write_to_yaml()
+        return self.write_to_yaml(dir)

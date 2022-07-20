@@ -3,6 +3,7 @@ from pfunk.testcase import APITestCase
 
 
 # TODO: Mock digitalocean environment functions here to emulate working proj in digitalocean ecosystem
+# TODO: make views of the `House` collection use DigitalOcean-type requests
 class TestWebDigitalOcean(APITestCase):
     collections = [User, Group, House]
     

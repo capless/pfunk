@@ -1,6 +1,8 @@
+from ast import Del
 from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
-from pfunk.resources import Index
+from pfunk.web.views.json import DetailView, CreateView, UpdateView, DeleteView, ListView
+from pfunk.web.request import DigitalOCeanRequest
 
 GENDER_PRONOUN = Enum(name='gender_pronouns', choices=['he', 'her', 'they'])
 
@@ -44,3 +46,35 @@ class House(Collection):
 
     def __unicode__(self):
         return self.address
+
+
+class DODetailView(DetailView):
+    request_class = DigitalOCeanRequest
+
+
+class DOCreateView(CreateView):
+    request_class = DigitalOCeanRequest
+
+
+class DOUpdateView(UpdateView):
+    request_class = DigitalOCeanRequest
+
+
+class DOListView(ListView):
+    request_class = DigitalOCeanRequest
+
+
+class DODeleteView(DeleteView):
+    request_class = DigitalOCeanRequest
+
+
+class Blogs(Collection):
+    """ Collection for DigitalOcean-Type request """
+    title = StringField(required=True)
+    content = StringField(required=True)
+    user = ReferenceField(User)
+    crud_views = [DODetailView, DOCreateView,
+                  DOUpdateView, DOListView, DODeleteView]
+
+    def __unicode__(self):
+        return self.title

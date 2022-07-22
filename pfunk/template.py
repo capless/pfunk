@@ -9,7 +9,7 @@ enum {{e.name}} {
 }
 {% endfor %}
 {% for t in collection_list %}
-type {{t.get_class_name()|capitalize}} {
+type {{t.__name__}} {
     {% for k,v in t._base_properties.items() %}
     {{k}}:{{v.get_graphql_type()}}
     {% endfor %}
@@ -19,7 +19,7 @@ type {{t.get_class_name()|capitalize}} {
 type Query {
 {% for t in collection_list %}
     {% if t.all_index %}
-    all{{t.get_verbose_plural_name()|capitalize}}: [{{t.get_class_name()|capitalize}}] @index(name: "all_{{t.get_verbose_plural_name()}}")
+    all{{t.get_verbose_plural_name()|capitalize}}: [{{t.__name__}}] @index(name: "all_{{t.get_verbose_plural_name()}}")
     {% endif %}
 {% endfor %}
     {{extra_graphql_queries}}

@@ -190,9 +190,7 @@ class Project(Schema):
         Returns: int
 
         """
-
         gql_io = BytesIO(self.render().encode())
-
         if self.client:
             secret = self.client.secret
         else:
@@ -208,13 +206,11 @@ class Project(Schema):
             test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
             if not test_mode:
                 print('GraphQL Schema Imported Successfully!!')  # pragma: no cover
-        else:
-            print('Error Publishing GraphQL!!')
-            print('----------------------------------------')
+            for col in set(self.collections):
+                col.publish()
+        if resp.status_code != 200:
+            print(resp.text)
             print(resp.content)
-            return
-        for col in set(self.collections):
-            col.publish()
         return resp.status_code
 
     def unpublish(self) -> None:

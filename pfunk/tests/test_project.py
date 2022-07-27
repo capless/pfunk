@@ -29,6 +29,10 @@ class ProjectTestCase(unittest.TestCase):
 
     def tearDown(self) -> None:
         os.remove("pfunk.json")
+        try:
+            os.remove('swagger.yaml')
+        except FileNotFoundError:
+            pass
 
     def test_add_resource(self):
         self.project.add_resource(Person)

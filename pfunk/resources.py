@@ -2,8 +2,8 @@ import re
 
 from faunadb.query import query
 
-from pfunk.utils.publishing import create_or_update_function, create_or_update_role, create_or_pass_index
 from pfunk.client import q
+from pfunk.utils.publishing import create_or_update_function, create_or_update_role, create_or_pass_index
 
 
 class Resource(object):
@@ -52,20 +52,20 @@ class Resource(object):
         return payload_dict
 
     def publish(self):
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def unpublish(self):
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def get_body(self):
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
 
 class Function(Resource):
 
     def get_role(self):
         """Gets the role to use when calling the function."""
-        return None # pragma: no cover
+        return None  # pragma: no cover
 
     def publish(self):
         """
@@ -88,7 +88,7 @@ class Role(Resource):
     user_table: str = None
 
     def get_lambda(self, resource_type):
-        return # pragma: no cover
+        return  # pragma: no cover
 
     def get_payload(self) -> dict:
         """
@@ -98,12 +98,14 @@ class Role(Resource):
         """
         payload_dict = {
             "name": self.get_name(),
-            "membership": self.get_membership(),
             "privileges": self.get_privileges(),
         }
         data = self.get_data()
+        membership = self.get_membership()
         if data:
             payload_dict['data'] = data
+        if membership:
+            payload_dict['membership'] = membership
         return payload_dict
 
     def get_data(self) -> dict:
@@ -112,10 +114,10 @@ class Role(Resource):
 
         Returns: dict
         """
-        return None # pragma: no cover
+        return None  # pragma: no cover
 
     def get_privileges(self):
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def get_membership_lambda(self):
         """
@@ -125,10 +127,10 @@ class Role(Resource):
         """
         return q.query(
             q.lambda_(['object_ref'],
-                q.equals(
-                    q.select('account_status', q.select('data', q.get(q.var('object_ref')))),
-                    "ACTIVE"
-                )
+                      q.equals(
+                          q.select('account_status', q.select('data', q.get(q.var('object_ref')))),
+                          "ACTIVE"
+                      )
                       ))
 
     def get_membership(self) -> dict:
@@ -137,10 +139,13 @@ class Role(Resource):
 
         Returns: dict
         """
-        return {
+        membership = self.get_membership_lambda()
+        payload_dict = {
             'resource': q.collection(self.user_table or self.collection.get_collection_name()),
-            'predicate': self.get_membership_lambda()
         }
+        if membership:
+            payload_dict['predicate'] = self.get_membership_lambda()
+        return payload_dict
 
     def publish(self):
         """
@@ -189,7 +194,6 @@ class Index(object):
 
         kwargs = {'name': self.name, 'source': q.collection(self.source), }
         if self.terms:
-
             kwargs['terms'] = self.terms
         if self.values:
             kwargs['values'] = self.values
@@ -246,4 +250,3 @@ class Filter(Function):
                       )
                       )
         )
-

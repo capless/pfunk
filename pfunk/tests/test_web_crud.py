@@ -1,7 +1,7 @@
 from werkzeug.test import Client
 
-from pfunk.tests import User, Group
-from pfunk.exceptions import LoginFailed
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.testcase import APITestCase
 from pfunk.tests import House
 
@@ -45,7 +45,7 @@ class TestWebCrud(APITestCase):
 
         self.assertTrue(res.json['success'])
         self.assertIn("the street somewhere", [
-                      house.address for house in House.all()])
+            house.address for house in House.all()])
 
     def test_update(self):
         self.assertNotIn("the updated street somewhere", [
@@ -59,7 +59,7 @@ class TestWebCrud(APITestCase):
 
         self.assertTrue(res.json['success'])
         self.assertIn("the updated street somewhere", [
-                      house.address for house in House.all()])
+            house.address for house in House.all()])
 
     def test_delete(self):
         res = self.c.delete(f'/house/delete/{self.house.ref.id()}/',

@@ -1,7 +1,8 @@
 from envs import env
-from faunadb.errors import NotFound as FaunaNotFound, PermissionDenied, BadRequest, ErrorData
+from faunadb.errors import NotFound as FaunaNotFound, PermissionDenied, BadRequest
 from jwt import InvalidSignatureError
 from valley.exceptions import ValidationException
+from valley.utils import import_util
 from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.http import dump_cookie
 from werkzeug.routing import Rule
@@ -358,6 +359,8 @@ class UpdateMixin(object):
         for k, v in fields.items():
             current_value = data.get(k)
             col = v.get('foreign_class')
+            if isinstance(col, str):
+                col = import_util(col)
             if current_value:
                 obj = col.get(current_value)
                 data[k] = obj

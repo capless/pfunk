@@ -1,5 +1,3 @@
-
-
 class LoginFailed(Exception):
     """Exception raised when an attempt to login fails."""
     pass

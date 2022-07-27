@@ -1,5 +1,5 @@
 from pfunk.client import q
-from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole, Public, UserRole
+from pfunk.contrib.auth.resources import Public
 
 
 class StripePublic(Public):

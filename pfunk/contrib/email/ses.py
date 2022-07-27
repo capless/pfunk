@@ -1,5 +1,6 @@
 import boto3
 from envs import env
+
 from pfunk.contrib.email.base import EmailBackend
 
 
@@ -47,5 +48,5 @@ class SESBackend(EmailBackend):
                 'Body': self.get_body_kwargs(html_template=html_template, txt_template=txt_template, **kwargs)
             }
         )
-        
+
         return res

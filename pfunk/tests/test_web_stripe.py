@@ -1,15 +1,15 @@
-import json
-from lib2to3.pytree import Base
 import tempfile
-from werkzeug.test import Client
 from types import SimpleNamespace
 from unittest import mock
 
-from pfunk.tests import User, Group
+from werkzeug.test import Client
+
 from pfunk.contrib.auth.collections import PermissionGroup
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.contrib.ecommerce.collections import StripePackage, StripeCustomer
-from pfunk.testcase import APITestCase
 from pfunk.contrib.ecommerce.views import BaseWebhookView
+from pfunk.testcase import APITestCase
 from pfunk.web.request import HTTPRequest
 
 
@@ -23,7 +23,8 @@ class TestWebStripeCrud(APITestCase):
                                 last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                 groups=[self.group])
         self.stripe_pkg = StripePackage.create(group=self.group,
-                                               stripe_id='100', price='10', description='unit testing...', name='unit test package')
+                                               stripe_id='100', price='10', description='unit testing...',
+                                               name='unit test package')
         self.stripe_cus = StripeCustomer.create(
             user=self.user, stripe_id='100')
 
@@ -68,7 +69,7 @@ class TestWebStripeCrud(APITestCase):
 
         self.assertTrue(res.json['success'])
         self.assertIn("new stripe pkg", [
-                      pkg.name for pkg in StripePackage.all()])
+            pkg.name for pkg in StripePackage.all()])
 
     def test_update_package(self):
         self.assertNotIn("updated pkg", [
@@ -120,7 +121,7 @@ class TestWebStripeCrud(APITestCase):
 
         self.assertTrue(res.json['success'])
         self.assertIn(stripe_id, [
-                      cus.stripe_id for cus in StripeCustomer.all()])
+            cus.stripe_id for cus in StripeCustomer.all()])
 
     def test_list_customers(self):
         res = self.c.get('/stripecustomer/list/', headers={
@@ -232,14 +233,13 @@ class TestStripeWebhook(APITestCase):
     @mock.patch('boto3.client')
     def test_send_html_email(self, mocked):
         # Requires to have `TEMPLATE_ROOT_DIR=/tmp` in your .env file
-        with tempfile.NamedTemporaryFile(prefix='/tmp/', suffix='.html') as tmp:
-            res = self.view.send_html_email(
-                subject='Test Subject',
-                from_email='unittesting@email.com',
-                to_email_list=['recipient@email.com'],
-                template_name=(tmp.name.split("/")[-1])
-            )
-            self.assertTrue(True)  # if there are no exceptions, then it passed
+        res = self.view.send_html_email(
+            subject='Test Subject',
+            from_email='unittesting@email.com',
+            to_email_list=['recipient@email.com'],
+            template_name=('email/email_template.html')
+        )
+        self.assertTrue(True)  # if there are no exceptions, then it passed
 
     @mock.patch('stripe.Webhook')
     def test_check_signing_secret(self, mocked):
@@ -273,7 +273,8 @@ class TestStripeCheckoutView(APITestCase):
                                 groups=[self.group])
         self.token, self.exp = User.api_login("test", "abc123")
         self.stripe_pkg = StripePackage.create(group=self.group,
-                                               stripe_id='100', price='10', description='unit testing...', name='unit test package')
+                                               stripe_id='100', price='10', description='unit testing...',
+                                               name='unit test package')
         self.app = self.project.wsgi_app
         self.c = Client(self.app)
 

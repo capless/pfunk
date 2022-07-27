@@ -1,9 +1,10 @@
-import boto3
 import datetime
 import json
 import os
-import pip
 import shutil
+
+import boto3
+import pip
 import sammy as sm
 
 s3 = boto3.client('s3')

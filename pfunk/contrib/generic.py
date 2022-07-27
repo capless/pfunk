@@ -1,13 +1,12 @@
-from pfunk.resources import Function, Index
 from pfunk.client import q
-
+from pfunk.resources import Function
 
 
 class GenericFunction(Function):
     action = 'create'
 
     def get_role(self):
-        return None # pragma: no cover
+        return None  # pragma: no cover
 
     def get_name(self):
         return f"{self.action}_{self.collection.get_class_name()}"
@@ -24,19 +23,19 @@ class AllFunction(GenericFunction):
     def get_body(self):
         return q.query(
             q.lambda_(["input"],
-                q.map_(
-                    q.lambda_(['ref'],
-                        q.get(q.var('ref'))
-                    ),
-                    q.paginate(
-                        q.match(q.index(self.collection.all_index_name())),
-                        q.select('size', q.var('input'))
-                    )
-                )
-            )
+                      q.map_(
+                          q.lambda_(['ref'],
+                                    q.get(q.var('ref'))
+                                    ),
+                          q.paginate(
+                              q.match(q.index(self.collection.all_index_name())),
+                              q.select('size', q.var('input'))
+                          )
+                      )
+                      )
         )
-    
-    
+
+
 class GenericCreate(GenericFunction):
 
     def get_body(self):
@@ -68,13 +67,13 @@ class GenericUpdate(GenericFunction):
                       ))
 
 
-
 class GenericDelete(GenericFunction):
     action = 'delete'
 
     def get_body(self):
         return q.query(
             q.lambda_(["input"],
-                      q.delete(q.ref(q.collection(self.collection.get_collection_name()), q.select('id', q.var("input"))))
+                      q.delete(
+                          q.ref(q.collection(self.collection.get_collection_name()), q.select('id', q.var("input"))))
                       )
         )

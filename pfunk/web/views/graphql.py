@@ -1,13 +1,13 @@
 import requests
 from envs import env
+from graphql.exceptions import SyntaxError as GQLSyntaxError
+from graphql.parser import GraphQLParser
 from werkzeug.routing import Rule
 
 from pfunk.exceptions import GraphQLError
 from pfunk.utils.publishing import BearerAuth
 from pfunk.web.response import GraphQLResponse
 from pfunk.web.views.json import JSONView
-from graphql.parser import GraphQLParser
-from graphql.exceptions import SyntaxError as GQLSyntaxError
 
 parser = GraphQLParser()
 
@@ -55,12 +55,12 @@ class GraphQLView(JSONView):
     def get_query(self):
         gql = self.process_graphql()
         resp = requests.request(
-                method='post',
-                url=env('FAUNA_GRAPHQL_URL', 'https://graphql.fauna.com/graphql'),
-                json=self.request.get_json(),
-                auth=BearerAuth(self.request.token),
-                allow_redirects=False
-            )
+            method='post',
+            url=env('FAUNA_GRAPHQL_URL', 'https://graphql.fauna.com/graphql'),
+            json=self.request.get_json(),
+            auth=BearerAuth(self.request.token),
+            allow_redirects=False
+        )
         return resp.json()
 
     def process_graphql(self):

@@ -1,10 +1,8 @@
-from faunadb.errors import PermissionDenied
-
 from pfunk.contrib.auth.collections import Key
-from pfunk.tests import User, Group
+from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections.user import User
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import APITestCase
-from pfunk.contrib.auth.collections import Key
 
 
 class AuthToken(APITestCase):

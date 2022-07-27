@@ -1,6 +1,6 @@
+from pfunk.client import q
 from pfunk.web.response import JSONResponse, JSONNotFoundResponse, JSONBadRequestResponse, \
     JSONMethodNotAllowedResponse, JSONUnauthorizedResponse, JSONForbiddenResponse
-from pfunk.client import q
 from pfunk.web.views.base import ActionMixin, HTTPView, IDMixin, ObjectMixin, QuerysetMixin, UpdateMixin
 
 

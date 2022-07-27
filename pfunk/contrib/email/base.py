@@ -10,7 +10,8 @@ class EmailBackend(object):
     """
     Base email backend class
     """
-    def get_template(self, template:str):
+
+    def get_template(self, template: str):
         """
         Get the template based on the template location string
         Args:
@@ -81,5 +82,5 @@ def send_email(subject: str, to_emails: list, html_template: str = None, txt_tem
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', category=ResourceWarning)
         email_backend().send_email(subject=subject, to_emails=to_emails, html_template=html_template,
-                              txt_template=txt_template, from_email=from_email, cc_emails=cc_emails,
-                              bcc_emails=bcc_emails, fail_silently=fail_silently, **kwargs)
+                                   txt_template=txt_template, from_email=from_email, cc_emails=cc_emails,
+                                   bcc_emails=bcc_emails, fail_silently=fail_silently, **kwargs)

@@ -5,11 +5,10 @@ from valley.exceptions import ValidationException
 from valley.properties import CharProperty, IntegerProperty, DateTimeProperty, DateProperty, FloatProperty, \
     BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty, ForeignListProperty, ListProperty
 from valley.utils import import_util
+from valley.validators import ChoiceValidator, ForeignValidator
 
-from valley.validators import Validator, ChoiceValidator, ForeignValidator
-
-from pfunk.collection import Enum
 from pfunk.client import Ref
+from pfunk.collection import Enum
 
 
 class ChoiceListValidator(ChoiceValidator):
@@ -113,6 +112,7 @@ class ReferenceValidator(ForeignValidator):
                 raise ValidationException('{0}: This value ({1}) should be an instance of {2}.'.format(
                     key, value, self.foreign_class.__name__))
 
+
 class ReferenceField(GraphQLMixin, ForeignProperty):
 
     def get_validators(self):
@@ -153,7 +153,7 @@ class ManyToManyValidators(ForeignValidator):
             self.foreign_class = import_util(self.foreign_class)
         if value:
             for obj in value:
-                if not isinstance(obj,self.foreign_class):
+                if not isinstance(obj, self.foreign_class):
                     raise ValidationException(
                         '{0}: This value ({1}) should be an instance of {2}.'.format(
                             key, obj, self.foreign_class.__name__))
@@ -162,7 +162,8 @@ class ManyToManyValidators(ForeignValidator):
 class ManyToManyField(GraphQLMixin, ForeignListProperty):
     relation_field = True
 
-    def __init__(self, foreign_class, relation_name, return_type=None,return_prop=None,**kwargs):
+    def __init__(self, foreign_class, relation_name, return_type=None, return_prop=None, **kwargs):
+
         self.foreign_class = foreign_class
         self.relation_name = relation_name
         super(ManyToManyField, self).__init__(foreign_class, return_type=return_type, return_prop=return_prop, **kwargs)
@@ -187,8 +188,13 @@ class ManyToManyField(GraphQLMixin, ForeignListProperty):
                     c.ref = i
                     c._lazied = True
                     ra(c)
-                if isinstance(i, self.foreign_class):
-                    ra(i)
+
+                try:
+                    if isinstance(i, self.foreign_class):
+                        ra(i)
+                except TypeError:
+                    if f'{i.__class__.__module__}.{i.__class__.__name__}' == self.foreign_class:
+                        ra(i)
         return ref_list
 
     def get_db_value(self, value):

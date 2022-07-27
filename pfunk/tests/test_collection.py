@@ -50,7 +50,3 @@ class CollectionTestCase(unittest.TestCase):
         sport = Sport()
         sport.get_unique_together()
         self.assertEqual(len(sport.collection_indexes), 1)
-
-
-
-

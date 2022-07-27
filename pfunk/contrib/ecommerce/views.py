@@ -1,21 +1,18 @@
 import collections
 import json
+from json import JSONDecodeError
+
+import bleach
 import requests
 import stripe
-import bleach
 from envs import env
-from datetime import datetime
-from json import JSONDecodeError
-from werkzeug.routing import Rule
 from jinja2 import Environment, BaseLoader
+from werkzeug.routing import Rule
 
-from pfunk.contrib.email import ses
-from pfunk.exceptions import DocNotFound
-from pfunk.web.views.json import JSONView, ListView, DetailView, CreateView
 from pfunk.contrib.email.ses import SESBackend
-from pfunk.contrib.auth.collections import Group, User
+from pfunk.exceptions import DocNotFound
 from pfunk.web.views.base import ActionMixin
-
+from pfunk.web.views.json import ListView, DetailView, CreateView
 
 stripe.api_key = env('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY')
@@ -46,7 +43,7 @@ class CheckoutView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         customer = self.collection.objects.get_or_create_customer(
-            self.request.user)   # `StripeCustomer` collection
+            self.request.user)  # `StripeCustomer` collection
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             customer=customer.customer_id,
@@ -181,9 +178,9 @@ class BaseWebhookView(CreateView, ActionMixin):
 
     def check_signing_secret(self):
         """
-        Make sure the request's Stripe signature to make sure it matches our signing secret 
-        then returns the event 
-        
+        Make sure the request's Stripe signature to make sure it matches our signing secret
+        then returns the event
+
         :return: Stripe Event Object
         """
         # If we are running tests we can't verify the signature but we need the event objects
@@ -198,7 +195,7 @@ class BaseWebhookView(CreateView, ActionMixin):
 
     def checkout_session_completed(self):
         """ A method to override to implement custom actions 
-            after successful Stripe checkout. 
+            after successful Stripe checkout.
 
             This is a Stripe event.
             Use this method by subclassing this class in your

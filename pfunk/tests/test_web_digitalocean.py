@@ -1,78 +1,12 @@
+import os
+from valley.utils import import_util
+
 from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField, ManyToManyField, IntegerField, BooleanField, DateTimeField
 from pfunk.testcase import APITestCase
 from pfunk.web.request import DigitalOCeanRequest
 from pfunk.web.views.json import DetailView, CreateView, UpdateView, DeleteView, ListView
 from pfunk.contrib.auth.views import ForgotPasswordChangeView, LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView
-from pfunk.contrib.auth.collections import BaseUser, User, Group
-
-
-class DOLoginView(LoginView):
-    request_class = DigitalOCeanRequest
-
-
-class DOSignUpView(SignUpView):
-    request_class = DigitalOCeanRequest
-
-
-class DOVerifyEmailView(VerifyEmailView):
-    request_class = DigitalOCeanRequest
-
-
-class DOLogoutView(LogoutView):
-    request_class = DigitalOCeanRequest
-
-
-class DOUpdatePasswordView(UpdatePasswordView):
-    request_class = DigitalOCeanRequest
-
-
-class DOForgotPasswordView(ForgotPasswordView):
-    request_class = DigitalOCeanRequest
-
-
-class DOForgotPasswordChangeView(ForgotPasswordChangeView):
-    request_class = DigitalOCeanRequest
-
-
-class DOUser(User):
-    collection_views = [DOLoginView, DOSignUpView, DOVerifyEmailView, DOLogoutView,
-                        DOUpdatePasswordView, DOForgotPasswordView, DOForgotPasswordChangeView]
-    groups = ManyToManyField('pfunk.tests.test_web_digitalocean.DOGroup', relation_name='users_groups')
-
-class DOGroup(Group):
-    users = ManyToManyField(DOUser, relation_name='users_groups')
-
-
-class DODetailView(DetailView):
-    request_class = DigitalOCeanRequest
-
-
-class DOCreateView(CreateView):
-    request_class = DigitalOCeanRequest
-
-
-class DOUpdateView(UpdateView):
-    request_class = DigitalOCeanRequest
-
-
-class DOListView(ListView):
-    request_class = DigitalOCeanRequest
-
-
-class DODeleteView(DeleteView):
-    request_class = DigitalOCeanRequest
-
-
-class Blog(Collection):
-    """ Collection for DigitalOcean-Type request """
-    title = StringField(required=True)
-    content = StringField(required=True)
-    user = ReferenceField(DOUser)
-    crud_views = [DODetailView, DOCreateView,
-                  DOUpdateView, DOListView, DODeleteView]
-
-    def __unicode__(self):
-        return self.title
+from pfunk.tests.init_digitalocean import DOUser, DOGroup, Blog
 
 
 # TODO: Mock digitalocean environment functions here to emulate working proj in digitalocean ecosystem
@@ -89,7 +23,7 @@ class TestWebDigitalOcean(APITestCase):
         self.blog = Blog.create(
             title='test_blog', content='test content', user=self.user)
 
-        self.token, self.exp = User.api_login("test", "abc123")
+        self.token, self.exp = DOUser.api_login("test", "abc123")
         print(f'\n\nTOKEN: {self.token}')
         print(f'\n\nEXP: {self.exp}')
 

@@ -1,5 +1,6 @@
 from ast import Del
 from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField
+from pfunk.resources import Index
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
 
 GENDER_PRONOUN = Enum(name='gender_pronouns', choices=['he', 'her', 'they'])

@@ -1,7 +1,8 @@
 from pfunk.client import q
 from pfunk.web.response import JSONResponse, JSONNotFoundResponse, JSONBadRequestResponse, \
     JSONMethodNotAllowedResponse, JSONUnauthorizedResponse, JSONForbiddenResponse
-from pfunk.web.views.base import ActionMixin, HTTPView, IDMixin, ObjectMixin, QuerysetMixin, UpdateMixin
+from pfunk.web.views.base import HTTPView, ObjectMixin, QuerysetMixin, UpdateMixin, \
+    JSONActionMixin, JSONIDMixin
 
 
 class JSONView(HTTPView):
@@ -26,7 +27,7 @@ class JSONView(HTTPView):
         )
 
 
-class CreateView(UpdateMixin, ActionMixin, JSONView):
+class CreateView(UpdateMixin, JSONActionMixin, JSONView):
     """ Define a `Create` view that allows `creation` of an entity in the collection """
     action = 'create'
     http_methods = ['post']
@@ -62,7 +63,7 @@ class CreateView(UpdateMixin, ActionMixin, JSONView):
             )
 
 
-class UpdateView(UpdateMixin, IDMixin, JSONView):
+class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
     """ Define a view to allow `Update` operations """
     action = 'update'
     http_methods = ['put']
@@ -76,14 +77,14 @@ class UpdateView(UpdateMixin, IDMixin, JSONView):
         return obj
 
 
-class DetailView(ObjectMixin, IDMixin, JSONView):
+class DetailView(ObjectMixin, JSONIDMixin, JSONView):
     """ Define a view to allow single entity operations """
     action = 'detail'
     restrict_content_type = False
     login_required = True
 
 
-class DeleteView(ObjectMixin, IDMixin, JSONView):
+class DeleteView(ObjectMixin, JSONIDMixin, JSONView):
     """ Define a view to allow `Delete` entity operations """
     action = 'delete'
     http_methods = ['delete']
@@ -94,12 +95,8 @@ class DeleteView(ObjectMixin, IDMixin, JSONView):
         return self.collection.delete_from_id(self.request.kwargs.get('id'), _token=self.request.token)
 
 
-class ListView(QuerysetMixin, ActionMixin, JSONView):
+class ListView(QuerysetMixin, JSONActionMixin, JSONView):
     """ Define a view to allow `All/List` entity operations """
     restrict_content_type = False
     action = 'list'
     login_required = True
-
-
-class GraphQLView(HTTPView):
-    pass

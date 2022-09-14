@@ -3,7 +3,7 @@ import datetime
 import pytz
 from valley.exceptions import ValidationException
 from valley.properties import CharProperty, IntegerProperty, DateTimeProperty, DateProperty, FloatProperty, \
-    BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty, ForeignListProperty, ListProperty
+    BooleanProperty, EmailProperty, SlugProperty, BaseProperty, ForeignProperty as FP, ForeignListProperty, ListProperty
 from valley.utils import import_util
 from valley.validators import ChoiceValidator, ForeignValidator
 
@@ -40,6 +40,10 @@ class GraphQLMixin(object):
 
         return f"{self.GRAPHQL_FIELD_TYPE}{req} {unique}"
 
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.StringField'
+
+
 
 class StringField(GraphQLMixin, CharProperty):
     pass
@@ -47,7 +51,8 @@ class StringField(GraphQLMixin, CharProperty):
 
 class IntegerField(GraphQLMixin, IntegerProperty):
     GRAPHQL_FIELD_TYPE = 'Int'
-
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.IntegerField'
 
 class DateTimeField(GraphQLMixin, DateTimeProperty):
     GRAPHQL_FIELD_TYPE = 'Time'
@@ -55,17 +60,28 @@ class DateTimeField(GraphQLMixin, DateTimeProperty):
     def now(self):
         return datetime.datetime.now(tz=pytz.UTC)
 
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.DateTimeField'
+
 
 class FloatField(GraphQLMixin, FloatProperty):
     GRAPHQL_FIELD_TYPE = 'Float'
+
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.FloatField'
+
 
 
 class BooleanField(GraphQLMixin, BooleanProperty):
     GRAPHQL_FIELD_TYPE = 'Boolean'
 
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.BooleanField'
+
 
 class EmailField(GraphQLMixin, EmailProperty):
-    pass
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.EmailField'
 
 
 class SlugField(GraphQLMixin, SlugProperty):
@@ -101,6 +117,9 @@ class EnumField(GraphQLMixin, BaseProperty):
             unique = '@unique'
         return f"{self.enum.name}{req} {unique}"
 
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.ChoiceField'
+
 
 class ReferenceValidator(ForeignValidator):
 
@@ -113,7 +132,19 @@ class ReferenceValidator(ForeignValidator):
                     key, value, self.foreign_class.__name__))
 
 
+class ForeignProperty(FP):
+
+    def __init__(self, foreign_class, return_type=None, return_prop=None, choices_index=None, **kwargs):
+        super(ForeignProperty, self).__init__(
+            foreign_class, return_type=return_type, return_prop=return_prop,
+            choices_index=choices_index, **kwargs)
+        self.choices_index = choices_index
+
+
 class ReferenceField(GraphQLMixin, ForeignProperty):
+
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.ChoiceField'
 
     def get_validators(self):
         super(BaseProperty, self).get_validators()
@@ -209,6 +240,9 @@ class DateField(GraphQLMixin, DateProperty):
 
     def now(self):
         return datetime.datetime.now(tz=pytz.UTC).date()
+
+    def get_form_field(self, **kwargs):
+        return 'formy.fields.DateField'
 
 
 class ListField(GraphQLMixin, ListProperty):

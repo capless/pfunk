@@ -109,7 +109,10 @@ class ForgotPasswordView(ActionMixin, JSONAuthView):
 
 
 class ForgotPasswordChangeView(ActionMixin, JSONAuthView):
-    """ Accepts a hashed key from the forgot-password email, validates it if it matches the user's and change the password """
+    """
+    Accepts a hashed key from the forgot-password email, validates
+    it if it matches the user's and change the password
+    """
     action = 'forgot-password'
     login_required = False
     http_methods = ['put']
@@ -120,6 +123,7 @@ class ForgotPasswordChangeView(ActionMixin, JSONAuthView):
             str(kwargs['verification_key']),
             verify_type='forgot',
             password=kwargs['password'])
+
 
 
 class WebhookView(JSONView):

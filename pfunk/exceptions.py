@@ -21,3 +21,8 @@ class Unauthorized(Exception):
 class GraphQLError(Exception):
     """Graphql SyntaxError"""
     pass
+
+
+class NotUniqueError(Exception):
+    """Exception raised when a unique constraint is violated"""
+    pass

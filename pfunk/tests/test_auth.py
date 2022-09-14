@@ -1,8 +1,8 @@
 from faunadb.errors import PermissionDenied
 
-from pfunk.contrib.auth.collections import PermissionGroup
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.key import PermissionGroup
+from pfunk.contrib.auth.collections import Group
+from pfunk.contrib.auth.collections import User
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import CollectionTestCase
 from pfunk.tests import Sport, Person, House

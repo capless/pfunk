@@ -8,13 +8,13 @@ from valley.utils import import_util
 from werkzeug.serving import run_simple
 
 from pfunk.client import FaunaClient, q
-from pfunk.contrib.auth.collections import PermissionGroup
+from pfunk.contrib.auth.key import PermissionGroup
 from pfunk.exceptions import DocNotFound
 from pfunk.template import wsgi_template, project_template, collections_templates, key_template
 from pfunk.utils.deploy import Deploy
 
 
-Group = import_util(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.group.Group'))
+Group = import_util(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.Group'))
 
 
 @click.group()
@@ -191,7 +191,7 @@ def seed_keys(stage_name: str, config_path: str):
 
     """
     config = load_config_file(config_path)
-    Key = import_util('pfunk.contrib.auth.collections.Key')
+    Key = import_util('pfunk.contrib.auth.key.Key')
     keys = Key.create_keys()
     name = config.get('name')
     keys_path = f'{name}/{stage_name}_keys.py'
@@ -233,7 +233,7 @@ def create_admin_user(stage_name: str, group_slug: str, last_name: str, first_na
     """
     config = load_config_file(config_path)
     secret = config['stages'][stage_name]['fauna_secret']
-    User = import_util('pfunk.contrib.auth.collections.user.User')
+    User = import_util('pfunk.contrib.auth.collections.User')
     if not local_user:
         os.environ['FAUNA_SECRET'] = secret
 

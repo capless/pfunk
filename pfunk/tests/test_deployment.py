@@ -1,6 +1,6 @@
 from pfunk.client import q
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.collections import Group
+from pfunk.contrib.auth.collections import User
 from pfunk.project import Project
 from pfunk.testcase import PFunkTestCase
 from pfunk.tests import Sport, Person

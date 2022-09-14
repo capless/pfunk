@@ -12,8 +12,8 @@ from pfunk.web.views.json import CreateView, UpdateView, DeleteView
 stripe.api_key = env('STRIPE_API_KEY')
 
 
-User = import_util(env('USER_COLLECTION', 'pfunk.contrib.auth.collections.user.User'))
-Group = import_util(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.group.Group'))
+User = import_util(env('USER_COLLECTION', 'pfunk.contrib.auth.collections.User'))
+Group = import_util(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.Group'))
 
 
 class StripePackage(Collection):

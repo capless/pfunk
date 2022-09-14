@@ -3,7 +3,7 @@ import warnings
 from envs import env
 from valley.utils import import_util
 
-from pfunk.contrib.templates import temp_env
+from pfunk.utils.templates import temp_env
 
 
 class EmailBackend(object):

@@ -5,8 +5,8 @@ import unittest
 from pfunk.cli import init
 from pfunk.project import Project
 from pfunk.tests import Person, Sport, GENDER_PRONOUN
-from pfunk.contrib.auth.collections.user import User
-from pfunk.contrib.auth.collections.group import Group
+from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group
 
 
 class ProjectTestCase(unittest.TestCase):

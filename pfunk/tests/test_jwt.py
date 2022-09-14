@@ -1,6 +1,6 @@
-from pfunk.contrib.auth.collections import Key
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.key import Key
+from pfunk.contrib.auth.collections import Group
+from pfunk.contrib.auth.collections import User
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import APITestCase
 

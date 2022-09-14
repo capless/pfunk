@@ -1,7 +1,7 @@
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.collections import Group
+from pfunk.contrib.auth.collections import User
 from pfunk.testcase import APITestCase
 
 

@@ -22,6 +22,7 @@ Includes GraphQL and generic ABAC auth workflow integrations.
 
 - [Getting Started](#Getting-Started)
     - [Installation](#Installation)
+    - [Environment Variables](#environment-variables)
     - [Setup the Connection](#setup-the-connection)
     - [Define your Collections](#define-your-collections-collectionspy)
     - [Choose an Auth Workflow](#auth-workflows)
@@ -37,6 +38,11 @@ Includes GraphQL and generic ABAC auth workflow integrations.
 ### Installation
 ```pip install pfunk```
 
+### Environment Variables
+
+- **FAUNA_SECRET** - Fauna admin or server key.
+- **FAUNA_SCHEME** - (optional) HTTP scheme to use (default: https)
+- 
 ### Setup the Connection
 
 #### Using Environment Variables (Preferred Method)

@@ -36,6 +36,7 @@ jobs:
         # Ignore the failure of a step and avoid terminating the job.
         continue-on-error: true
 
+      - run: docker volume create --name=pfunk-fauna-data
       - run: docker-compose build
 
       # Runs a single command using the runners shell

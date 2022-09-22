@@ -29,15 +29,15 @@ jobs:
       - name: Generate env vars from gh secrets
         run: |  
           echo TEMPLATE_ROOT_DIR=${{ secrets.TEMPLATE_ROOT_DIR }} >> .env
-          FAUNA_SECRET=${{ secrets.FAUNA_SECRET }}  >> .env
-          FAUNA_SCHEME=${{ secrets.FAUNA_SCHEME }} >> .env
-          FAUNA_DOMAIN=${{ secrets.FAUNA_DOMAIN }} >> .env
-          FAUNA_PORT=${{ secrets.FAUNA_PORT}} >> .env
-          FAUNA_GRAPHQL_IMPORT_URL=${{ secrets.FAUNA_GRAPHQL_IMPORT_URL}} >> .env
-          FAUNA_GRAPHQL_URL=$${{ secrets.FAUNA_GRAPHQL_URL }} >> .env
-          DEFAULT_FROM_EMAIL=${{ secrets.DEFAULT_FROM_EMAIL }} >> .env
-          PROJECT_NAME=${{ secrets.PROJECT_NAME }} >> .env
-          KEY_MODULE=${{ secrets.KEY_MODULE }}  >> .env
+          echo FAUNA_SECRET=${{ secrets.FAUNA_SECRET }}  >> .env
+          echo FAUNA_SCHEME=${{ secrets.FAUNA_SCHEME }} >> .env
+          echo FAUNA_DOMAIN=${{ secrets.FAUNA_DOMAIN }} >> .env
+          echo FAUNA_PORT=${{ secrets.FAUNA_PORT}} >> .env
+          echo FAUNA_GRAPHQL_IMPORT_URL=${{ secrets.FAUNA_GRAPHQL_IMPORT_URL}} >> .env
+          echo FAUNA_GRAPHQL_URL=$${{ secrets.FAUNA_GRAPHQL_URL }} >> .env
+          echo DEFAULT_FROM_EMAIL=${{ secrets.DEFAULT_FROM_EMAIL }} >> .env
+          echo PROJECT_NAME=${{ secrets.PROJECT_NAME }} >> .env
+          echo KEY_MODULE=${{ secrets.KEY_MODULE }}  >> .env
           cat .env
       - run: docker-compose pull
 

@@ -204,6 +204,10 @@ class Project(Schema):
             auth=BearerAuth(secret),
             data=gql_io
         )
+        
+        print(f'\n')
+        print(self.render())
+        print('----------------------------------------\n')
         if resp.status_code == 200:
             test_mode = env('PFUNK_TEST_MODE', False, var_type='boolean')
             if not test_mode:

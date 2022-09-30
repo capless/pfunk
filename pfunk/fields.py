@@ -194,7 +194,6 @@ class ManyToManyField(GraphQLMixin, ForeignListProperty):
     relation_field = True
 
     def __init__(self, foreign_class, relation_name, return_type=None, return_prop=None, **kwargs):
-
         self.foreign_class = foreign_class
         self.relation_name = relation_name
         super(ManyToManyField, self).__init__(foreign_class, return_type=return_type, return_prop=return_prop, **kwargs)

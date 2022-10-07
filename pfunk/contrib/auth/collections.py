@@ -1,3 +1,4 @@
+from cmath import log
 import uuid
 
 from envs import env
@@ -80,12 +81,11 @@ class BaseUser(Collection):
         """
         c = cls()
         try:
-            print(f'USERNAME: {username}\nPASSWORD: {password}')
             return c.client(_token=_token).query(
                 q.call("login_user", {
                     "username": username, "password": password})
             )
-        except BadRequest:
+        except Exception as err:
             raise LoginFailed(
                 'The login credentials you entered are incorrect.')
 
@@ -103,7 +103,9 @@ class BaseUser(Collection):
     @classmethod
     def api_login(cls, username, password, _token=None):
         token = cls.login(username=username, password=password, _token=_token)
+        print(f'\n\nLOGIN: {token}\n\n')
         user = cls.get_current_user(_token=token)
+        print(f'\n\nUSER: {user}\n\n')
         claims = user.to_dict().copy()
         try:
             claims.get('data').pop('verification_key')

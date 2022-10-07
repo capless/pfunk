@@ -13,7 +13,7 @@ class LoginUser(AuthFunction):
         return q.query(
             q.lambda_(["input"],
                       q.let({
-                          "user": q.match(q.index("unique_User_username"), q.select("username", q.var("input")))
+                          "user": q.match(q.index(f"unique_{self.collection.__class__.__name__}_username"), q.select("username", q.var("input")))
                       },
                           q.if_(
                               q.equals(

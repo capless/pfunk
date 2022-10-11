@@ -103,9 +103,7 @@ class BaseUser(Collection):
     @classmethod
     def api_login(cls, username, password, _token=None):
         token = cls.login(username=username, password=password, _token=_token)
-        print(f'\n\nLOGIN: {token}\n\n')
         user = cls.get_current_user(_token=token)
-        print(f'\n\nUSER: {user}\n\n')
         claims = user.to_dict().copy()
         try:
             claims.get('data').pop('verification_key')
@@ -284,8 +282,15 @@ class ExtendedUser(BaseUser):
         """ Returns the groups (collections) that the user is bound with """
         if not self.group_class:
             raise NotImplementedError
+        user_class = self.__class__.__name__.lower()
+        group_class = self.group_class.__name__.lower()
+        relation_name = self._base_properties.get("groups").relation_name
+        index_name = f'{user_class}s_{group_class}s_by_{user_class}'
+        if relation_name:
+            index_name = f'{relation_name}_by_{user_class}'
+
         return [self.group_class.get(i.id(), _token=_token) for i in self.client(_token=_token).query(
-            q.paginate(q.match('users_groups_by_user', self.ref))
+            q.paginate(q.match(index_name, self.ref)) 
         ).get('data')]
 
     def permissions(self, _token=None):
@@ -302,9 +307,15 @@ class ExtendedUser(BaseUser):
             perm_list (str[]):
                 Permissions of the user in list: `['create', 'read', 'delete', 'write']`
         """
+        user_class = self.__class__.__name__.lower()
+        group_class = self.group_class.__name__.lower()
+        relation_name = self._base_properties.get("groups").relation_name
+        index_name = f'{user_class}s_{group_class}s_by_{group_class}_and_{user_class}'
+        if relation_name:
+            index_name = f'{relation_name}_by_{group_class}_and_{user_class}'
         perm_list = []
         for i in self.get_groups(_token=_token):
-            ug = self.user_group_class.get_index('users_groups_by_group_and_user', [
+            ug = self.user_group_class.get_index(index_name, [
                 i.ref, self.ref], _token=_token)
             for user_group in ug:
                 p = []

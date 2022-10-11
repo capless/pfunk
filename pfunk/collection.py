@@ -213,7 +213,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: FaunaClient
 
         """
-
         if _token:
             return FaunaClient(secret=_token)
         return FaunaClient(secret=env('FAUNA_SECRET'))

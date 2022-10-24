@@ -171,12 +171,35 @@ class UserRole(Role):
 
 
 class GenericAuthorizationRole(Role):
-    user_table = 'User'
-    current_user_field = 'user'
-    name_suffix = 'user_based_crud_role'
+
+    def get_user_collection(self):
+        user_field = self.collection._base_properties.get("users")
+        if not user_field:
+            user_field = self.collection._base_properties.get("user")
+        return user_field
+
+    def get_user_table(self):
+        user_field = self.get_user_collection()
+        if user_field:
+            return user_field.get_foreign_class().__name__
+        else:
+            return None
+
+    def get_relation_index_name(self):
+        self.current_user_field = self.collection.__class__.__name__.lower()
+        self.user_table = self.collection.__class__.__name__
+        relation_index_name = (self.get_user_collection().__base_properties.get('groups').relation_name
+            + '_by_'
+            + self.collection.group_class.__name__.lower()
+            + '_'
+            + self.get_user_table())
+        return relation_index_name
+
+    def get_name_suffix(self):
+        return f'{self.get_user_table().lower()}_based_crud_role'
 
     def get_name(self):
-        return self.name or f"{self.collection.get_class_name()}_{self.name_suffix}"
+        return self.name or f"{self.collection.get_class_name()}_{self.get_name_suffix()}"
 
     def get_privileges(self):
         priv_list = [
@@ -190,7 +213,7 @@ class GenericAuthorizationRole(Role):
                 }
             },
             {
-                "resource": q.index(self.relation_index_name),
+                "resource": q.index(self.get_relation_index_name()),
                 "actions": {
                     "read": True
                 }
@@ -226,10 +249,23 @@ class GenericAuthorizationRole(Role):
 class GenericUserBasedRole(GenericAuthorizationRole):
     relation_index_name = 'users_groups_by_user'
 
+    def get_relation_index_name(self):
+        # Acquires the `groups` field from the user collection
+        user_col = self.get_user_collection().get_foreign_class()
+        user_groups = user_col._base_properties.get("groups")
+
+        if user_groups:
+            relation_index_name = (user_groups.relation_name
+                + '_by_'
+                + self.get_user_table().lower())
+            return relation_index_name
+        return None
+
     def get_lambda(self, resource_type):
+        current_user_field = self.collection.get_user_field()
         if resource_type == 'write':
             lambda_args = ["old_object", "new_object", "object_ref"]
-            user_ref = q.select(self.current_user_field,
+            user_ref = q.select(current_user_field,
                                 q.select('data', q.var('old_object')))
             return q.query(
                 q.lambda_(lambda_args,
@@ -239,7 +275,7 @@ class GenericUserBasedRole(GenericAuthorizationRole):
                                   q.current_identity()
                               ),
                               q.equals(
-                                  q.select(self.current_user_field, q.select('data', q.var('new_object'))),
+                                  q.select(current_user_field, q.select('data', q.var('new_object'))),
                                   q.current_identity()
                               )
                           )
@@ -248,11 +284,11 @@ class GenericUserBasedRole(GenericAuthorizationRole):
             )
         elif resource_type == 'create':
             lambda_args = ["new_object"]
-            user_ref = q.select(self.current_user_field,
+            user_ref = q.select(current_user_field,
                                 q.select('data', q.var('new_object')))
         elif resource_type == 'read' or resource_type == 'delete':
             lambda_args = ["object_ref"]
-            user_ref = q.select(self.current_user_field,
+            user_ref = q.select(current_user_field,
                                 q.select('data', q.get(q.var('object_ref'))))
 
         return q.query(
@@ -273,10 +309,31 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
     user_table = 'User'
     name_suffix = 'group_based_crud_role'
 
+    def get_name_suffix(self):
+        """  """
+        # TODO: Return `group_based_crud_role` with dynamic group name class
+        pass
+
+    def get_relation_index_name(self):
+        user_col = self.get_user_collection().get_foreign_class()
+        user_groups = user_col._base_properties.get("groups")
+        
+        if user_groups:
+            # TODO: be able to return `<user_group_relation>_by_<user_table>` .e.g.  `users_groups_by_user`
+            relation_index_name = (user_groups.relation_name
+                + '_by_'
+                + self.collection.group_class.__name__.lower()
+                + '_'
+                + self.get_user_table().lower())
+            return relation_index_name
+        return None
+
     def get_lambda(self, resource_type):
+        current_group_field = self.collection.get_group_field()
+        print(f'\n\nCURRENT GROUP FIELD: {current_group_field}\n\n')
         perm = f'{self.collection.get_collection_name()}-{resource_type}'.lower()
         if resource_type == 'write':
-            group_ref = q.select(self.current_group_field,
+            group_ref = q.select(current_group_field,
                                  q.select('data', q.var('old_object')))
             lambda_args = ["old_object", "new_object", "object_ref"]
 
@@ -289,7 +346,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                                         q.select(self.permissions_field,
                                                                  q.get(
                                                                      q.match(
-                                                                         q.index(self.relation_index_name),
+                                                                         q.index(self.get_relation_index_name()),
                                                                          group_ref,
                                                                          q.current_identity()
                                                                      )
@@ -297,18 +354,18 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                   perm
                               ),
                               q.equals(
-                                  q.select(self.current_group_field, q.select('data', q.var('old_object'))),
-                                  q.select(self.current_group_field, q.select('data', q.var('new_object'))),
+                                  q.select(current_group_field, q.select('data', q.var('old_object'))),
+                                  q.select(current_group_field, q.select('data', q.var('new_object'))),
                               )
                           )
                           )
             )
         elif resource_type == 'create':
-            group_ref = q.select(self.current_group_field,
+            group_ref = q.select(current_group_field,
                                  q.select('data', q.var('new_object')))
             lambda_args = ["new_object"]
         elif resource_type == 'read' or resource_type == 'delete':
-            group_ref = q.select(self.current_group_field,
+            group_ref = q.select(current_group_field,
                                  q.select('data', q.get(q.var('object_ref'))))
             lambda_args = ["object_ref"]
 
@@ -320,7 +377,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                           q.select(self.permissions_field,
                                                    q.select("data",
                                                             q.get(q.match(
-                                                                q.index(self.relation_index_name),
+                                                                q.index(self.get_relation_index_name()),
                                                                 group_ref,
                                                                 q.current_identity()
                                                             )))))),

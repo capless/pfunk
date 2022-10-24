@@ -133,6 +133,10 @@ class Role(Resource):
                       )
                       ))
 
+    def get_user_table(self):
+        """ Acquires user table from the class name """
+        return None
+
     def get_membership(self) -> dict:
         """
         Returns the membership configuration for the role
@@ -141,7 +145,7 @@ class Role(Resource):
         """
         membership = self.get_membership_lambda()
         payload_dict = {
-            'resource': q.collection(self.user_table or self.collection.get_collection_name()),
+            'resource': q.collection(self.get_user_table() or self.collection.get_collection_name()),
         }
         if membership:
             payload_dict['predicate'] = self.get_membership_lambda()

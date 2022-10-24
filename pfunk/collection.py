@@ -124,6 +124,35 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
         return {k: q.select(k, q.var("input")) for k, v in self._base_properties.items() if
                 k not in self.non_public_fields}
+    
+    def get_user_field(self) -> str:
+        """ Acquires the field where the relationship with a user was defined.
+
+            It is required to define the `USER_COLLECTION` in env var if a custom 
+            user will be used. This is to ensure the permissions to work properly
+        """
+        fields = self._base_properties.items()
+        user_class = env('USER_COLLECTION', 'User')
+        user_field = None
+        for k, v in fields:
+            if user_class in v.get_graphql_type():
+                user_field = k
+        return user_field
+
+    def get_group_field(self) -> str:
+        """ Acquires the field where the relationship with a group was defined.
+
+            It is required to define the `GROUP_COLLECTION` in env var if a custom 
+            user will be used. This is to ensure the permissions to work properly
+            
+        """
+        fields = self._base_properties.items()
+        group_class = env('GROUP_COLLECTION', 'Group')
+        group_field = None
+        for k, v in fields:
+            if group_class in v.get_graphql_type():
+                group_field = k
+        return group_field
 
     def get_collection_name(self) -> str:
         """

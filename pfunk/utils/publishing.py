@@ -39,7 +39,7 @@ def create_or_update_role(client, payload: dict = {}):
         )
     except BadRequest as err:
         payload_copy = payload.copy()
-        role_name = payload_copy.pop("name") 
+        role_name = payload_copy.pop("name")
 
         response = client.query(
             q.update(

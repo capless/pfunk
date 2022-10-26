@@ -137,6 +137,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         for k, v in fields:
             if user_class in v.get_graphql_type():
                 user_field = k
+                break
         return user_field
 
     def get_group_field(self) -> str:
@@ -152,6 +153,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         for k, v in fields:
             if group_class in v.get_graphql_type():
                 group_field = k
+                break
         return group_field
 
     def get_collection_name(self) -> str:

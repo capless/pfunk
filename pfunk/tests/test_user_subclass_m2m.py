@@ -53,6 +53,7 @@ class TestUserGroupError(APITestCase):
         self.user = Newuser.create(username='test', email='tlasso@example.org', first_name='Ted',
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
+        p(f'@Test Setup: User Created: {self.user.__dict__}')
         self.blog = Blog.create(
             title='test_blog', content='test content', users=[self.user], token=self.secret)
         self.token, self.exp = Newuser.api_login("test", "abc123")

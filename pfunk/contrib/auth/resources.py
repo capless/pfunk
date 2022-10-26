@@ -1,3 +1,4 @@
+from tokenize import group
 from pfunk.client import q
 from pfunk.resources import Function, Role
 
@@ -184,6 +185,17 @@ class GenericAuthorizationRole(Role):
         else:
             return None
 
+    def get_group_collection(self):
+        """ Acquires Group collection type from User's fields """
+        user_col = self.get_user_collection()
+        col = user_col()
+        group_field = col.get_group_field()
+        user_groups = user_col._base_properties.get(group_field)
+        if user_groups:
+            return user_groups.get_foreign_class()
+        else:
+            return None
+
     def get_user_table(self):
         """ Acquires User's class name """
         col = self.get_user_collection()
@@ -191,9 +203,17 @@ class GenericAuthorizationRole(Role):
             return col.__name__
         return None
 
+    def get_group_table(self):
+        """ Acquires group class name from the user's fields """
+        group_col = self.get_group_collection()
+        if group_col:
+            return group_col.__name__
+        return None
+
     def get_relation_index_name(self):
         user_col = self.get_user_collection()
-        user_groups = user_col._base_properties.get("groups")
+        group_field = user_col.get_group_field()
+        user_groups = user_col._base_properties.get(group_field)
         self.user_table = self.get_user_table().lower()
         relation_index_name = (user_groups.relation_name
                                + '_by_'
@@ -319,26 +339,24 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
     name_suffix = 'group_based_crud_role'
 
     def get_name_suffix(self):
-        """  """
-        # TODO: Return `group_based_crud_role` with dynamic group name class
-        pass
+        return f'{self.get_group_table().lower()}_based_crud_role'
 
     def get_relation_index_name(self):
-        user_col = self.get_user_collection().get_foreign_class()
+        """ Returns the index name of the m2m index of group and user e.g. 'users_groups_by_group_and_user' """
+        user_col = self.get_user_collection()
         user_groups = user_col._base_properties.get("groups")
-
-        if user_groups:
-            # TODO: be able to return `<user_group_relation>_by_<user_table>` .e.g.  `users_groups_by_user`
+        group_table = self.get_group_table().lower()
+        if group_table:
             relation_index_name = (user_groups.relation_name
                                    + '_by_'
-                                   + self.collection.group_class.__name__.lower()
-                                   + '_'
+                                   + group_table
+                                   + '_and_'
                                    + self.get_user_table().lower())
             return relation_index_name
         return None
 
     def get_lambda(self, resource_type):
-        current_group_field = self.collection.get_group_field()
+        current_group_field = self.get_group_table()
         perm = f'{self.collection.get_collection_name()}-{resource_type}'.lower()
         if resource_type == 'write':
             group_ref = q.select(current_group_field,

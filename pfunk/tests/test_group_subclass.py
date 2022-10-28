@@ -4,40 +4,29 @@ import os
 from valley.utils import import_util
 from pprint import pprint as p
 
-from pfunk.contrib.auth.collections import BaseGroup, ExtendedUser
+from pfunk.contrib.auth.collections import BaseGroup, ExtendedUser, UserGroups
 from pfunk.testcase import APITestCase
 from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField, ManyToManyField, IntegerField, BooleanField, DateTimeField
 from pfunk.fields import EmailField, ManyToManyField, StringField, EnumField, ListField
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
 
 
-class UserGroups(Collection):
-    collection_name = 'users_groups'
-    userID = ReferenceField('pfunk.tests.test_user_subclass.Newuser')
-    groupID = ReferenceField('pfunk.tests.test_user_subclass.Newgroup')
-    permissions = ListField()
-
-
 class Newgroup(BaseGroup):
-    users = ManyToManyField('pfunk.tests.test_user_subclass.Newuser',
+    users = ManyToManyField('pfunk.tests.test_group_subclass.Newuser',
                             relation_name='custom_users_groups')
-    blogs = ReferenceField('pfunk.tests.test_user_subclass.Blog',
-                            relation_name='newgroup_blogs')
-
 
 
 class Newuser(ExtendedUser):
-    user_group_class = import_util('pfunk.tests.test_user_subclass.UserGroups')
-    group_class = import_util('pfunk.tests.test_user_subclass.Newgroup')
+    group_class = import_util('pfunk.tests.test_group_subclass.Newgroup')
     groups = ManyToManyField(
-        'pfunk.tests.test_user_subclass.Newgroup', relation_name='custom_users_groups')
+        'pfunk.tests.test_group_subclass.Newgroup', relation_name='custom_users_groups')
 
 
 class Blog(Collection):
-    collection_roles = [GenericUserBasedRole]
+    collection_roles = [GenericGroupBasedRole]
     title = StringField(required=True)
     content = StringField(required=True)
-    group = ReferenceField('pfunk.tests.test_user_subclass.Newgroup',
+    group = ReferenceField('pfunk.tests.test_group_subclass.Newgroup',
                             relation_name='newgroup_blogs')
 
     def __unicode__(self):
@@ -54,9 +43,14 @@ class TestUserGroupError(APITestCase):
         self.user = Newuser.create(username='test', email='tlasso@example.org', first_name='Ted',
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
+        print(f'\n\nALL INDEXES: {self.project.indexes}\n\n')
+        perms = self.user.add_permissions(self.group, ['create', 'read', 'write', 'delete'])
+        
+        p(f'\n\nest setup: Added User permissions: {perms}\n\n')
+        p(f'@test setup: User permissions: {self.user.permissions()}')
         p(f'@Test Setup: User Created: {self.user.__dict__}')
         self.blog = Blog.create(
-            title='test_blog', content='test content', group=[self.group], token=self.secret)
+            title='test_blog', content='test content', group=self.group, token=self.secret)
         self.token, self.exp = Newuser.api_login("test", "abc123")
         # p(f'@Test Setup: Blog Created: {self.blog.__dict__}\n')
         # p(f'@Test Setup: User Created: {self.user.__dict__}')

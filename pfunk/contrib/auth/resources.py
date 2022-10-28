@@ -1,7 +1,12 @@
 from tokenize import group
+from envs import env
+
 from pfunk.client import q
 from pfunk.resources import Function, Role
 
+# Global collections
+USER_CLASS = env('USER_COLLECTION', 'User')
+GROUP_CLASS = env('GROUP_COLLECTION', 'Group')
 
 class AuthFunction(Function):
 
@@ -178,7 +183,9 @@ class GenericAuthorizationRole(Role):
 
     def get_user_collection(self):
         """ Acquires User collection type """
-        user_field = self.collection.get_user_field().lower()
+        user_field = self.collection.get_user_field()
+        if user_field:
+            user_field = user_field.lower()
         col = self.collection._base_properties.get(user_field)
         if col:
             return col.get_foreign_class()
@@ -272,6 +279,7 @@ class GenericAuthorizationRole(Role):
 
 
 class GenericUserBasedRole(GenericAuthorizationRole):
+    """ Generic set of permissions for entity to user relationship """
 
     def get_relation_index_name(self):
         """ Returns the user-group by user index name 
@@ -331,32 +339,37 @@ class GenericUserBasedRole(GenericAuthorizationRole):
 
 
 class GenericGroupBasedRole(GenericAuthorizationRole):
-    relation_index_name = 'users_groups_by_group_and_user'
-    through_user_field = 'userID'
-    current_group_field = 'group'
     permissions_field = 'permissions'
-    user_table = 'User'
-    name_suffix = 'group_based_crud_role'
+    user_table = USER_CLASS
+    group_table = GROUP_CLASS
+    through_user_field = USER_CLASS.lower() + 'ID'
 
     def get_name_suffix(self):
-        return f'{self.get_group_table().lower()}_based_crud_role'
+        return f'{self.group_table.lower()}_based_crud_role'
 
     def get_relation_index_name(self):
         """ Returns the index name of the m2m index of group and user e.g. 'users_groups_by_group_and_user' """
-        user_col = self.get_user_collection()
-        user_groups = user_col._base_properties.get("groups")
-        group_table = self.get_group_table().lower()
-        if group_table:
+        group_field = self.collection.get_group_field()
+        group_col = self.collection._base_properties.get(group_field).get_foreign_class()
+        group_user_field = group_col().get_user_field()
+        user_groups = group_col._base_properties.get(group_user_field)
+        if self.group_table:
             relation_index_name = (user_groups.relation_name
                                    + '_by_'
-                                   + group_table
+                                   + self.group_table.lower()
                                    + '_and_'
-                                   + self.get_user_table().lower())
+                                   + self.user_table.lower())
             return relation_index_name
         return None
 
     def get_lambda(self, resource_type):
-        current_group_field = self.get_group_table()
+        """ Returns the lambda function for giving the permission to Group-based entities 
+        
+            Allows modification if:
+                1. You belong to the group that owns the document
+                2. You have the create permission to perform the action (create, read, write, and delete)
+        """
+        current_group_field = self.collection.get_group_field().lower()
         perm = f'{self.collection.get_collection_name()}-{resource_type}'.lower()
         if resource_type == 'write':
             group_ref = q.select(current_group_field,
@@ -415,3 +428,67 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                 )
             )
         )
+
+
+# class GenericUserBasedRoleM2M(GenericAuthorizationRole):
+#     """ Generic set of permissions for many-to-many entity to user relationship """
+
+#     def get_name_suffix(self):
+#         # TODO: return suffix: 
+#         return f'{self.get_group_table().lower()}_based_crud_role'
+
+#     def get_relation_index_name(self):
+#         # TODO: return index name: `users_blogs_by_blog_and_newuser`
+#         """ Returns the index name of the m2m index of group and user e.g. 'users_groups_by_group_and_user' """
+#         user_col = self.get_user_collection()
+#         user_groups = user_col._base_properties.get("groups")
+#         group_table = self.get_group_table().lower()
+#         if group_table:
+#             relation_index_name = (user_groups.relation_name
+#                                    + '_by_'
+#                                    + group_table
+#                                    + '_and_'
+#                                    + self.get_user_table().lower())
+#             return relation_index_name
+#         return None
+
+#     def get_lambda(self, resource_type):
+#         # TODO: refactor to look for the M2M index and see if the user has permission for the entity
+#         current_user_field = self.collection.get_user_field()
+#         if resource_type == 'write':
+#             lambda_args = ["old_object", "new_object", "object_ref"]
+#             user_ref = q.select(current_user_field,
+#                                 q.select('data', q.var('old_object')))
+#             return q.query(
+#                 q.lambda_(lambda_args,
+#                           q.and_(
+#                               q.equals(
+#                                   user_ref,
+#                                   q.current_identity()
+#                               ),
+#                               q.equals(
+#                                   q.select(current_user_field, q.select(
+#                                       'data', q.var('new_object'))),
+#                                   q.current_identity()
+#                               )
+#                           )
+
+#                           )
+#             )
+#         elif resource_type == 'create':
+#             lambda_args = ["new_object"]
+#             user_ref = q.select(current_user_field,
+#                                 q.select('data', q.var('new_object')))
+#         elif resource_type == 'read' or resource_type == 'delete':
+#             lambda_args = ["object_ref"]
+#             user_ref = q.select(current_user_field,
+#                                 q.select('data', q.get(q.var('object_ref'))))
+
+#         return q.query(
+#             q.lambda_(lambda_args,
+#                       q.equals(
+#                           user_ref,
+#                           q.current_identity()
+#                       )
+#                       )
+#         )

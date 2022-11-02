@@ -17,6 +17,7 @@ from werkzeug.utils import cached_property
 
 from pfunk.web.request import HTTPRequest, RESTRequest, WSGIRequest
 from pfunk.web.response import HttpNotFoundResponse, JSONMethodNotAllowedResponse
+from .contrib.auth.collections import User, Group, UserGroups, BaseGroup, BaseUser, ExtendedUser
 from .collection import Collection
 from .fields import ForeignList
 from .template import graphql_template
@@ -217,7 +218,19 @@ class Project(Schema):
             print('----------------------------------------')
             print(resp.content)
             return
-        for col in set(self.collections):
+        
+        collections = set(self.collections)
+        # make publishing prioritize User, Group and UserGroups
+        for col in collections.copy():
+            if (issubclass(col, User) 
+            or issubclass(col, Group)
+            or issubclass(col, BaseGroup)
+            or issubclass(col, ExtendedUser)
+            or issubclass(col, BaseUser)
+            or issubclass(col, UserGroups)):
+                col.publish()
+                collections.remove(col)
+        for col in collections:
             col.publish()
         return resp.status_code
 

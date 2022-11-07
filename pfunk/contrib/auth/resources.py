@@ -218,14 +218,8 @@ class GenericAuthorizationRole(Role):
         return None
 
     def get_relation_index_name(self):
-        user_col = self.get_user_collection()
-        group_field = user_col.get_group_field()
-        user_groups = user_col._base_properties.get(group_field)
-        self.user_table = self.get_user_table().lower()
-        relation_index_name = (user_groups.relation_name
-                               + '_by_'
-                               + self.user_table)
-        return relation_index_name
+        """ Returns the index name of the created permission index of group and user -> 'usergroups_by_userID_and_groupID' """
+        return 'usergroups_by_userID_and_groupID'
 
     def get_name_suffix(self):
         return f'{self.collection.get_user_field().lower()}_based_crud_role'
@@ -347,21 +341,6 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
     def get_name_suffix(self):
         return f'{self.group_table.lower()}_based_crud_role'
 
-    def get_relation_index_name(self):
-        """ Returns the index name of the m2m index of group and user e.g. 'users_groups_by_group_and_user' """
-        group_field = self.collection.get_group_field()
-        group_col = self.collection._base_properties.get(group_field).get_foreign_class()
-        group_user_field = group_col().get_user_field()
-        user_groups = group_col._base_properties.get(group_user_field)
-        if self.group_table:
-            relation_index_name = (user_groups.relation_name
-                                   + '_by_'
-                                   + self.group_table.lower()
-                                   + '_and_'
-                                   + self.user_table.lower())
-            return relation_index_name
-        return None
-
     def get_lambda(self, resource_type):
         """ Returns the lambda function for giving the permission to Group-based entities 
         
@@ -370,7 +349,10 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                 2. You have the create permission to perform the action (create, read, write, and delete)
         """
         current_group_field = self.collection.get_group_field().lower()
+        # group_slug = self.collection.
+        # TODO: perm won't match with the entity that is being queried 
         perm = f'{self.collection.get_collection_name()}-{resource_type}'.lower()
+
         if resource_type == 'write':
             group_ref = q.select(current_group_field,
                                  q.select('data', q.var('old_object')))
@@ -383,14 +365,15 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                   # User ID from index
                                   q.select(0, q.filter_(lambda i: q.equals(perm, i),
                                                         q.select(self.permissions_field,
+                                                        q.select("data",
                                                                  q.get(
                                                                      q.match(
                                                                          q.index(
                                                                              self.get_relation_index_name()),
-                                                                         group_ref,
-                                                                         q.current_identity()
+                                                                         q.current_identity(),
+                                                                         group_ref
                                                                      )
-                                                                 )))),
+                                  ))))),
                                   perm
                               ),
                               q.equals(
@@ -415,14 +398,17 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
             q.lambda_(
                 lambda_args,
                 q.equals(
+                    # NOTE: After acquiring the instance of `UserGroup`, filter the result: permission field
+                    # that matches the `perm` variable AND then see if that is equals to `perm` var
+                    # IMPORTANT: by using this, it will easily filter permissions available, and if there were none, then it is automatically false
                     q.select(0, q.filter_(lambda i: q.equals(perm, i),
                                           q.select(self.permissions_field,
                                                    q.select("data",
                                                             q.get(q.match(
                                                                 q.index(
                                                                     self.get_relation_index_name()),
-                                                                group_ref,
-                                                                q.current_identity()
+                                                                q.current_identity(),
+                                                                group_ref
                                                             )))))),
                     perm
                 )

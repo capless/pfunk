@@ -27,7 +27,7 @@ class Blog(Collection):
     title = StringField(required=True)
     content = StringField(required=True)
     group = ReferenceField('pfunk.tests.test_group_subclass.Newgroup',
-                            relation_name='newgroup_blogs')
+                           relation_name='newgroup_blogs')
 
     def __unicode__(self):
         return self.title
@@ -44,17 +44,17 @@ class TestUserGroupError(APITestCase):
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
         print(f'\n\nALL INDEXES: {self.project.indexes}\n\n')
-        perms = self.user.add_permissions(self.group, ['create', 'read', 'write', 'delete'])
-        
+        perms = self.user.add_permissions(
+            self.group, ['create', 'read', 'write', 'delete'])
+
         p(f'\n\nest setup: Added User permissions: {perms}\n\n')
         p(f'@test setup: User permissions: {self.user.permissions()}')
         p(f'@Test Setup: User Created: {self.user.__dict__}')
         self.blog = Blog.create(
-            title='test_blog', content='test content', group=self.group, token=self.secret)
+            title='test_blog', content='test content', group=self.group)
         self.token, self.exp = Newuser.api_login("test", "abc123")
         # p(f'@Test Setup: Blog Created: {self.blog.__dict__}\n')
         # p(f'@Test Setup: User Created: {self.user.__dict__}')
-
 
     def test_read(self):
         res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',

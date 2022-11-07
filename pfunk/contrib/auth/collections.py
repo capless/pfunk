@@ -360,11 +360,10 @@ class ExtendedUser(BaseUser):
             ug = self.user_group_class.get_index(index_name, [
                 self.ref, i.ref], _token=_token)
             for user_group in ug:
-                print(f'\n\n@contrib auth: USER GROUP: {user_group}\n\n')
                 p = []
                 if isinstance(user_group.permissions, list):
                     p = [
-                        f'{user_group.groupID}-{i}' for i in user_group.permissions]
+                        f'{user_group.groupID.slug}-{i}' for i in user_group.permissions]
                 perm_list.extend(p)
         return perm_list
 
@@ -402,7 +401,7 @@ class ExtendedUser(BaseUser):
                 index_name, terms=[self.ref, group.ref])
         except DocNotFound:
             user_group = self.user_group_class.create(
-                userID=self, groupID=group, permissions=perm_list, _token=_token)
+                userID=self.ref, groupID=group.ref, permissions=perm_list, _token=_token)
         if user_group.permissions != perm_list:
             user_group.permissions = perm_list
         user_group.save()

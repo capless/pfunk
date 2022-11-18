@@ -42,6 +42,12 @@ class NotFoundResponseMixin(object):
     success: bool = False
 
 
+class RedirectResponseMixin(object):
+    status_code = 302
+    default_payload = 'Redirect'
+    success: bool = False
+
+
 class BadRequestResponseMixin(object):
     status_code = 400
     default_payload = 'Bad Request'
@@ -123,3 +129,9 @@ class HttpBadRequestResponse(BadRequestResponseMixin, Response):
 
 class JSONBadRequestResponse(BadRequestResponseMixin, JSONResponse):
     pass
+
+
+class HttpRedirectResponse(RedirectResponseMixin, Response):
+    def __init__(self, location, payload=None, headers={}, *args, **kwargs):
+        super(HttpRedirectResponse, self).__init__(payload, headers, *args, **kwargs)
+        self.raw_headers['Location'] = location

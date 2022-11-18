@@ -51,6 +51,7 @@ class BaseAPIGatewayRequest(Request):
         super(BaseAPIGatewayRequest, self).__init__(event, kwargs)
         self.is_base64_encoded = event.get('isBase64Encoded')
         self.body = event.get('body')
+        self.form_data = event.get('body')
         self.headers = event.get('headers') or dict()
         self.query_params = event.get('queryStringParameters') or dict()
 
@@ -64,11 +65,18 @@ class WSGIRequest(Request):
         super(WSGIRequest, self).__init__(event, kwargs=kwargs)
         self.method = event.method
         self.query_params = event.args
+        self.form_data = self.build_form_data()
         self.body = event.data
         self.headers = event.headers
         self.path = event.path
         self.cookies = event.cookies
         self.source_ip = event.remote_addr
+        self.reverse = event.reverse
+
+    def build_form_data(self):
+        """ Builds the form data """
+        if self.raw_event.form:
+            return {k: v for k, v in self.raw_event.form.items()}
 
 
 class RESTRequest(BaseAPIGatewayRequest):

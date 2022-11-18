@@ -47,6 +47,7 @@ class CollectionTestCase(PFunkTestCase):
                 coll.append(import_util(i))
             else:
                 coll.append(i)
+
         self.project.add_resources(coll)
         self.project.publish()
 
@@ -61,8 +62,13 @@ class APITestCase(CollectionTestCase):
         Key = import_util('pfunk.contrib.auth.key.Key')
         keys = Key.create_keys()
         self.keys_path = 'pfunk/tests/unittest_keys.py'
-        with open(self.keys_path, 'w+') as f:
-            f.write(key_template.render(keys=keys))
+        try:
+            with open(self.keys_path, 'w+') as f:
+                f.write(key_template.render(keys=keys))
+        except (Exception, FileNotFoundError) as e:
+            print(e)
+            # Print the current working directory
+            print('unittest_keys.py not found in current working directory', os.getcwd())
 
     def tearDown(self) -> None:
         super(APITestCase, self).tearDown()

@@ -11,6 +11,7 @@ def get_loaders():
     loaders = [
         FileSystemLoader(env('TEMPLATE_ROOT_DIR')),
         PackageLoader('pfunk.contrib.auth'),
+        PackageLoader('pfunk.forms'),
     ]
     for i in env('TEMPLATE_PACKAGES', [], var_type='list'):
         loaders.append(PackageLoader(i))

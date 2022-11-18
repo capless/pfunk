@@ -1,17 +1,20 @@
-from formy import Form
 from valley.utils import import_util
+
+from pfunk.forms.form import Form
 
 
 class CollectionForm(Form):
     _template = 'forms/ul.html'
 
     def __init__(self, **kwargs):
-        super(CollectionForm, self).__init__(**kwargs)
-        self._instance = kwargs.get('_instance')
+        try:
+            self._instance = kwargs.pop('_instance')
+        except KeyError:
+            self._instance = None
         if self._instance:
-            self._data = self._instance.to_dict().get('data')
+            self._data = self._instance.to_dict(flat=True).get('data')
         self.create_fields()
-
+        super(CollectionForm, self).__init__(**kwargs)
 
     @classmethod
     def add_field_choices(cls, class_name, field):
@@ -45,8 +48,11 @@ class CollectionForm(Form):
                     class_name, field)
             if field.default_value:
                 field_kwargs['default_value'] = field.default
-            if self._data.get(name):
-                field_kwargs['value'] = self._data.get(name)
+            try:
+                if self._data.get(name):
+                    field_kwargs['value'] = self._data.get(name)
+            except AttributeError:
+                pass
             self._base_properties[name] = field_class(**field_kwargs)
 
     def create_fields(self):

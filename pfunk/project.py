@@ -244,6 +244,7 @@ class Project(Schema):
                 path = event.get('path')
                 method = event.get('httpMethod')
                 request_cls = RESTRequest
+            event.reverse = self.urls.build
             try:
                 view, kwargs = self.urls.match(path, method)
             except NotFound:

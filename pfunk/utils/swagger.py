@@ -1,10 +1,10 @@
+import json
 import os
 import re
-import json
 import swaggyp as sw
-from werkzeug.routing import Map, parse_rule
 
 from pfunk.collection import Collection
+from pfunk.utils.routing import parse_rule
 
 GRAPHQL_TO_YAML_TYPES = {
     "String": "string",
@@ -84,7 +84,7 @@ class SwaggerDoc(object):
             there is already one, it will print the yaml file instead.
         """
         if not os.path.exists(f'pfunk.json'):
-           raise Exception('Missing JSON Config file.')
+            raise Exception('Missing JSON Config file.')
         else:
             with open(f'pfunk.json', 'r') as f:
                 data = json.loads(f.read())

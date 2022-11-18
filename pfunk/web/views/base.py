@@ -8,7 +8,6 @@ from werkzeug.http import dump_cookie
 from werkzeug.routing import Rule
 
 from pfunk.exceptions import TokenValidationFailed, LoginFailed, Unauthorized, DocNotFound, GraphQLError, NotUniqueError
-from pfunk.web.forms.collections import CollectionForm
 from pfunk.web.request import Request, RESTRequest, HTTPRequest
 from pfunk.web.response import (Response, HttpNotFoundResponse, HttpForbiddenResponse, HttpBadRequestResponse,
                                 HttpMethodNotAllowedResponse, HttpUnauthorizedResponse)
@@ -323,7 +322,7 @@ class QuerysetMixin(object):
         return self.collection.all(**self.get_query_kwargs())
 
     def get_query_kwargs(self):
-        """ Acquires the addutional generic kwargs in a query 
+        """ Acquires the additional generic kwargs in a query
 
             This includes the  keys that are generic 
             to queries. ['after, 'before', 'page_size']
@@ -354,27 +353,13 @@ class UpdateMixin(object):
     """ Generic PUT mixin for a fauna object """
     form_class = None
 
-    def get_form_class(self):
-        """ Acquires or builds the form class to use for updating the object """
-        if self.form_class:
-            return self.form_class
-        return self.build_form_class()
-
-    def build_form_class(self):
-        """ Builds the form class to use for updating the object """
-
-        class Meta:
-            collection = self.collection
-
-        form_class = type(f"{self.get_collection_name()}Form", (CollectionForm,), {
-            # constructor
-
-            "Meta": Meta,
-        })
+    def get_data(self):
+        """ Acquires the data from the request body """
+        return self.request.get_json()
 
     def get_query_kwargs(self):
 
-        data = self.request.get_json()
+        data = self.get_data()
         fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ReferenceField')
         for k, v in fields.items():
             current_value = data.get(k)
@@ -384,7 +369,6 @@ class UpdateMixin(object):
             if current_value:
                 obj = col.get(current_value)
                 data[k] = obj
-
         return data
 
 

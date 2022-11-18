@@ -438,7 +438,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             except BadRequest as e:
                 if 'instance not unique' in [i.code for i in e.errors]:
                     raise NotUniqueError(f"{self.get_collection_name()} document is not unique.")
-
+                print(e.errors)
             self.ref = resp['ref']
             self.call_signals('post_create_signals')
         else:
@@ -591,8 +591,12 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     # JSON #
     ########
 
-    def to_dict(self):
+    def to_dict(self, flat=False):
         field_data = self._data.copy()
+        if flat:
+            for k, v in field_data.items():
+                if isinstance(v, Collection):
+                    field_data[k] = v.ref.id()
         ref = {'id': self.ref.id(), 'collection': self.ref.collection().id()}
         obj = {
             'ref': ref,

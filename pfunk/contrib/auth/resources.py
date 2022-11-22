@@ -8,6 +8,7 @@ from pfunk.resources import Function, Role
 USER_CLASS = env('USER_COLLECTION', 'User')
 GROUP_CLASS = env('GROUP_COLLECTION', 'Group')
 
+
 class AuthFunction(Function):
 
     def get_role(self):
@@ -340,6 +341,9 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
 
     def get_name_suffix(self):
         return f'{self.group_table.lower()}_based_crud_role'
+    
+    def get_user_table(self):
+        return USER_CLASS
 
     def get_lambda(self, resource_type):
         """ Returns the lambda function for giving the permission to Group-based entities 
@@ -349,9 +353,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                 2. You have the create permission to perform the action (create, read, write, and delete)
         """
         current_group_field = self.collection.get_group_field().lower()
-        # group_slug = self.collection.
-        # TODO: perm won't match with the entity that is being queried 
-        perm = f'{self.collection.get_collection_name()}-{resource_type}'.lower()
+        perm = f'{resource_type}'.lower()
 
         if resource_type == 'write':
             group_ref = q.select(current_group_field,
@@ -373,7 +375,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                                                                          q.current_identity(),
                                                                          group_ref
                                                                      )
-                                  ))))),
+                                                                 ))))),
                                   perm
                               ),
                               q.equals(
@@ -420,7 +422,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
 #     """ Generic set of permissions for many-to-many entity to user relationship """
 
 #     def get_name_suffix(self):
-#         # TODO: return suffix: 
+#         # TODO: return suffix:
 #         return f'{self.get_group_table().lower()}_based_crud_role'
 
 #     def get_relation_index_name(self):

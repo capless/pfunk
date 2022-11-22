@@ -328,9 +328,10 @@ class ExtendedUser(BaseUser):
         """ Returns the groups (collections) that the user is bound with """
         if not self.group_class:
             raise NotImplementedError
+        group_class_field = self.get_group_field()
         user_class = self.__class__.__name__.lower()
         group_class = self.group_class.__name__.lower()
-        relation_name = self._base_properties.get("groups").relation_name
+        relation_name = self._base_properties.get(group_class_field).relation_name
         index_name = f'{user_class}s_{group_class}s_by_{user_class}'
         if relation_name:
             index_name = f'{relation_name}_by_{user_class}'

@@ -34,35 +34,28 @@ class Blog(Collection):
 
 
 # Test case to see if user-group is working
-class TestUserGroupError(APITestCase):
+class TestCustomGroupBasedPerms(APITestCase):
     collections = [Newuser, Newgroup, UserGroups, Blog]
 
     def setUp(self) -> None:
         super().setUp()
         self.group = Newgroup.create(name='Power Users', slug='power-users')
-        self.user = Newuser.create(username='test', email='tlasso@example.org', first_name='Ted',
+        self.user = Newuser.create(username='test_user', email='tlasso@example.org', first_name='Ted',
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
-        print(f'\n\nALL INDEXES: {self.project.indexes}\n\n')
         perms = self.user.add_permissions(
             self.group, ['create', 'read', 'write', 'delete'])
-
-        p(f'\n\nest setup: Added User permissions: {perms}\n\n')
-        p(f'@test setup: User permissions: {self.user.permissions()}')
-        p(f'@Test Setup: User Created: {self.user.__dict__}')
+        self.token, self.exp = Newuser.api_login("test_user", "abc123")
+        self.raw_token = Newuser.login("test_user", "abc123")
         self.blog = Blog.create(
             title='test_blog', content='test content', group=self.group)
-        self.token, self.exp = Newuser.api_login("test", "abc123")
-        # p(f'@Test Setup: Blog Created: {self.blog.__dict__}\n')
-        # p(f'@Test Setup: User Created: {self.user.__dict__}')
 
-    def test_read(self):
-        res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
-                         headers={
-                             "Authorization": self.token})
-        print(f'\n\nRESPONSE: {res.json}\n\n')
-        self.assertTrue(res.status_code, 200)
-        self.assertEqual("test_blog", res.json['data']['data']['title'])
+    # def test_read(self):
+    #     res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
+    #                      headers={
+    #                          "Authorization": self.token})
+    #     self.assertTrue(res.status_code, 200)
+    #     self.assertEqual("test_blog", res.json['data']['data']['title'])
 
     # def test_read_all(self):
     #     res = self.c.get(f'/json/blog/list/',
@@ -70,20 +63,19 @@ class TestUserGroupError(APITestCase):
     #                          "Authorization": self.token})
     #     self.assertTrue(res.status_code, 200)
 
-    # def test_create(self):
-    #     self.assertNotIn("new blog", [
-    #         blog.title for blog in Blog.all()])
-    #     res = self.c.post('/json/blog/create/',
-    #                       json={
-    #                           "title": "new blog",
-    #                           "content": "I created a new blog.",
-    #                           "user": self.user.ref.id()},
-    #                       headers={
-    #                           "Authorization": self.token})
-
-    #     self.assertTrue(res.status_code, 200)
-    #     self.assertIn("new blog", [
-    #         blog.title for blog in Blog.all()])
+    def test_create(self):
+        self.assertNotIn("new blog", [
+            blog.title for blog in Blog.all()])
+        res = self.c.post('/json/blog/create/',
+                          json={
+                              "title": "new blog",
+                              "content": "I created a new blog."},
+                          headers={
+                              "Authorization": self.token})
+        print(f'\n\nRESPONSE: {res.json}\n\n')
+        self.assertTrue(res.status_code, 200)
+        self.assertIn("new blog", [
+            blog.title for blog in Blog.all()])
 
     # def test_update(self):
     #     self.assertNotIn("the updated street somewhere", [
@@ -91,8 +83,7 @@ class TestUserGroupError(APITestCase):
     #     res = self.c.put(f'/json/blog/update/{self.blog.ref.id()}/',
     #                      json={
     #                           "title": "updated blog",
-    #                           "content": "I updated my blog.",
-    #                           "user": self.user.ref.id()},
+    #                           "content": "I updated my blog."},
     #                      headers={
     #                          "Authorization": self.token})
 

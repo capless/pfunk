@@ -12,43 +12,47 @@ from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBased
 
 
 class Newgroup(BaseGroup):
-    users = ManyToManyField('pfunk.tests.test_user_subclass.Newuser',
+    users = ManyToManyField('pfunk.tests.test_custom_user_group_group_perms.Newuser',
                             relation_name='custom_users_groups')
 
 
 class Newuser(ExtendedUser):
-    user_group_class = import_util('pfunk.tests.test_user_subclass.UserGroups')
-    group_class = import_util('pfunk.tests.test_user_subclass.Newgroup')
+    group_class = import_util('pfunk.tests.test_custom_user_group_group_perms.Newgroup')
     groups = ManyToManyField(
-        'pfunk.tests.test_user_subclass.Newgroup', relation_name='custom_users_groups')
-    blogs = ManyToManyField('pfunk.tests.test_user_subclass.Blog',
-                            relation_name='users_blogs')
+        'pfunk.tests.test_custom_user_group_group_perms.Newgroup', relation_name='custom_users_groups')
 
 
 class Blog(Collection):
-    collection_roles = [GenericUserBasedRole]
+    collection_roles = [GenericGroupBasedRole]
     title = StringField(required=True)
     content = StringField(required=True)
-    user = ReferenceField('pfunk.tests.test_user_subclass.Newuser',
-                          relation_name='users_blogs')
+    group = ReferenceField('pfunk.tests.test_custom_user_group_group_perms.Newgroup',
+                           relation_name='newgroup_blogs')
 
     def __unicode__(self):
         return self.title
 
 
 # Test case to see if user-group is working
-class TestUserGroupError(APITestCase):
+class TestCustomGroupBasedPerms(APITestCase):
     collections = [Newuser, Newgroup, UserGroups, Blog]
 
     def setUp(self) -> None:
+        os.environ['USER_COLLECTION'] = 'Newuser'
+        os.environ['GROUP_COLLECTION'] = 'Newgroup'
+        os.environ['USER_COLLECTION_DIR'] = 'pfunk.tests.test_custom_user_group_group_perms.Newuser'
+        os.environ['GROUP_COLLECTION_DIR'] = 'pfunk.tests.test_custom_user_group_group_perms.Newgroup'
         super().setUp()
         self.group = Newgroup.create(name='Power Users', slug='power-users')
-        self.user = Newuser.create(username='test', email='tlasso@example.org', first_name='Ted',
+        self.user = Newuser.create(username='test_user', email='tlasso@example.org', first_name='Ted',
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
+        perms = self.user.add_permissions(
+            self.group, ['create', 'read', 'write', 'delete'])
+        self.token, self.exp = Newuser.api_login("test_user", "abc123")
+        self.raw_token = Newuser.login("test_user", "abc123")
         self.blog = Blog.create(
-            title='test_blog', content='test content', user=self.user, token=self.secret)
-        self.token, self.exp = Newuser.api_login("test", "abc123")
+            title='test_blog', content='test content', group=self.group)
 
     def test_read(self):
         res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
@@ -70,10 +74,9 @@ class TestUserGroupError(APITestCase):
                           json={
                               "title": "new blog",
                               "content": "I created a new blog.",
-                              "user": self.user.ref.id()},
+                              "group": self.group.ref.id()},
                           headers={
                               "Authorization": self.token})
-
         self.assertTrue(res.status_code, 200)
         self.assertIn("new blog", [
             blog.title for blog in Blog.all()])
@@ -83,9 +86,8 @@ class TestUserGroupError(APITestCase):
             house.address for house in Blog.all()])
         res = self.c.put(f'/json/blog/update/{self.blog.ref.id()}/',
                          json={
-                             "title": "updated blog",
-                             "content": "I updated my blog.",
-                             "user": self.user.ref.id()},
+                              "title": "updated blog",
+                              "content": "I updated my blog."},
                          headers={
                              "Authorization": self.token})
 
@@ -101,3 +103,5 @@ class TestUserGroupError(APITestCase):
                             })
 
         self.assertTrue(res.status_code, 200)
+        self.assertNotIn("test_blog", [
+            blog.title for blog in Blog.all()])

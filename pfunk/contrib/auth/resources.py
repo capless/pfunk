@@ -182,45 +182,15 @@ class UserRole(Role):
 
 class GenericAuthorizationRole(Role):
 
-    def get_user_collection(self):
-        """ Acquires User collection type """
-        user_field = self.collection.get_user_field()
-        if user_field:
-            user_field = user_field.lower()
-        col = self.collection._base_properties.get(user_field)
-        if col:
-            return col.get_foreign_class()
-        else:
-            return None
-
-    def get_group_collection(self):
-        """ Acquires Group collection type from User's fields """
-        user_col = self.get_user_collection()
-        col = user_col()
-        group_field = col.get_group_field()
-        user_groups = user_col._base_properties.get(group_field)
-        if user_groups:
-            return user_groups.get_foreign_class()
-        else:
-            return None
-
-    def get_user_table(self):
-        """ Acquires User's class name """
-        col = self.get_user_collection()
-        if col:
-            return col.__name__
-        return None
-
-    def get_group_table(self):
-        """ Acquires group class name from the user's fields """
-        group_col = self.get_group_collection()
-        if group_col:
-            return group_col.__name__
-        return None
-
     def get_relation_index_name(self):
         """ Returns the index name of the created permission index of group and user -> 'usergroups_by_userID_and_groupID' """
         return 'usergroups_by_userID_and_groupID'
+
+    def get_user_table(self):
+        return USER_CLASS
+
+    def get_group_table(self):
+        return GROUP_CLASS
 
     def get_name_suffix(self):
         return f'{self.collection.get_user_field().lower()}_based_crud_role'
@@ -282,7 +252,13 @@ class GenericUserBasedRole(GenericAuthorizationRole):
             Formatted as: {user_group_relation_name}_by_{user_class}
         """
         # Acquires the `groups` field from the user collection
-        user_col = self.get_user_collection()
+        user_field = self.collection.get_user_field()
+        if user_field:
+            user_field = user_field.lower()
+        else:
+            return None
+        user_col = self.collection._base_properties.get(user_field)
+        user_col = user_col.get_foreign_class()
         user_groups = user_col._base_properties.get("groups")
 
         if user_groups:
@@ -342,9 +318,6 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
     def get_name_suffix(self):
         return f'{self.group_table.lower()}_based_crud_role'
     
-    def get_user_table(self):
-        return USER_CLASS
-
     def get_lambda(self, resource_type):
         """ Returns the lambda function for giving the permission to Group-based entities 
         
@@ -388,13 +361,13 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                           )
             )
         elif resource_type == 'create':
+            lambda_args = ["new_object"]
             group_ref = q.select(current_group_field,
                                  q.select('data', q.var('new_object')))
-            lambda_args = ["new_object"]
         elif resource_type == 'read' or resource_type == 'delete':
+            lambda_args = ["object_ref"]
             group_ref = q.select(current_group_field,
                                  q.select('data', q.get(q.var('object_ref'))))
-            lambda_args = ["object_ref"]
 
         return q.query(
             q.lambda_(

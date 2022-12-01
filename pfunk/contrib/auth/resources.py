@@ -391,65 +391,83 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
         )
 
 
-# class GenericUserBasedRoleM2M(GenericAuthorizationRole):
-#     """ Generic set of permissions for many-to-many entity to user relationship """
+class GenericUserBasedRoleM2M(GenericAuthorizationRole):
+    """ Generic set of permissions for many-to-many entity to user relationship """
 
-#     def get_name_suffix(self):
-#         # TODO: return suffix:
-#         return f'{self.get_group_table().lower()}_based_crud_role'
+    def get_name_suffix(self):
+        return f'{self.collection.get_user_field().lower()}_based_crud_role'
+ 
+    def get_relation_index_name(self):
+        """ Returns the index name of the m2m index of group and user e.g. 'users_blogs_by_blog_and_newuser' """
+        user_field = self.collection.get_user_field()
+        if user_field:
+            user_field = user_field.lower()
+        else:
+            return None
+        user_col = self.collection._base_properties.get(user_field)
+        user_col_relation = user_col.relation_name
 
-#     def get_relation_index_name(self):
-#         # TODO: return index name: `users_blogs_by_blog_and_newuser`
-#         """ Returns the index name of the m2m index of group and user e.g. 'users_groups_by_group_and_user' """
-#         user_col = self.get_user_collection()
-#         user_groups = user_col._base_properties.get("groups")
-#         group_table = self.get_group_table().lower()
-#         if group_table:
-#             relation_index_name = (user_groups.relation_name
-#                                    + '_by_'
-#                                    + group_table
-#                                    + '_and_'
-#                                    + self.get_user_table().lower())
-#             return relation_index_name
-#         return None
+        group_table = self.get_group_table().lower()
+        if group_table:
+            relation_index_name = (user_col_relation
+                                   + '_by_'
+                                   + self.collection.get_collection_name().lower()
+                                   + '_and_'
+                                   + self.get_user_table().lower())
+            return relation_index_name
+        return None
 
-#     def get_lambda(self, resource_type):
-#         # TODO: refactor to look for the M2M index and see if the user has permission for the entity
-#         current_user_field = self.collection.get_user_field()
-#         if resource_type == 'write':
-#             lambda_args = ["old_object", "new_object", "object_ref"]
-#             user_ref = q.select(current_user_field,
-#                                 q.select('data', q.var('old_object')))
-#             return q.query(
-#                 q.lambda_(lambda_args,
-#                           q.and_(
-#                               q.equals(
-#                                   user_ref,
-#                                   q.current_identity()
-#                               ),
-#                               q.equals(
-#                                   q.select(current_user_field, q.select(
-#                                       'data', q.var('new_object'))),
-#                                   q.current_identity()
-#                               )
-#                           )
 
-#                           )
-#             )
-#         elif resource_type == 'create':
-#             lambda_args = ["new_object"]
-#             user_ref = q.select(current_user_field,
-#                                 q.select('data', q.var('new_object')))
-#         elif resource_type == 'read' or resource_type == 'delete':
-#             lambda_args = ["object_ref"]
-#             user_ref = q.select(current_user_field,
-#                                 q.select('data', q.get(q.var('object_ref'))))
+    def get_lambda(self, resource_type):
+        current_user_field = self.collection.get_user_field()
+        if resource_type == 'write':
+            lambda_args = ["old_object", "new_object", "object_ref"]
+            obj_ref = q.var('old_object')
+            # BUG: Returning error 'NoneType' object has no attribute 'relation_field'
+            return q.query(
+                q.lambda_(lambda_args,
+                          q.and_(
+                              q.equals(
+                                  q.select(f'{USER_CLASS.lower()}ID',
+                                           q.select("data",
+                                                    q.get(q.match(
+                                                        q.index(
+                                                          self.get_relation_index_name()),
+                                                        obj_ref,
+                                                        q.current_identity()
+                                                    )))
+                                           ),
+                                  q.current_identity()
+                              ),
+                              q.equals(
+                                  q.select(current_user_field, q.select(
+                                      'data', q.var('new_object'))),
+                                  q.current_identity()
+                              )
+                          )
+                          )
+            )
+        elif resource_type == 'create':
+            lambda_args = ["new_object"]
+            obj_ref = q.var('new_object')
+        elif resource_type == 'read' or resource_type == 'delete':
+            lambda_args = ["object_ref"]
+            obj_ref = q.var('object_ref')
 
-#         return q.query(
-#             q.lambda_(lambda_args,
-#                       q.equals(
-#                           user_ref,
-#                           q.current_identity()
-#                       )
-#                       )
-#         )
+        return q.query(
+            q.lambda_(
+                lambda_args,
+                q.equals(
+                    q.select(f'{USER_CLASS.lower()}ID',
+                        q.select("data",
+                            q.get(q.match(
+                                q.index(
+                                    self.get_relation_index_name()),
+                                obj_ref,
+                                q.current_identity()
+                            )))
+                    ),
+                    q.current_identity()
+                )
+            )
+        )

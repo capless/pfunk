@@ -1,6 +1,22 @@
 from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField
 from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
 from pfunk.resources import Index
+from pfunk.web.views.html import HTMLView
+
+from jinja2 import Environment
+from jinja2.loaders import ChoiceLoader, PackageLoader, FileSystemLoader
+
+
+temp_env = Environment(loader=FileSystemLoader('./pfunk/tests/templates'))
+# Let's monkey-patch `HTMLView`'s method `get_template` for testing
+def get_template(self):
+    return temp_env.get_template(
+        self.template_name.format(
+            collection=self.collection.get_collection_name().lower(),
+            action=self.action
+        )
+    )
+HTMLView.get_template = get_template
 
 GENDER_PRONOUN = Enum(name='gender_pronouns', choices=['he', 'her', 'they'])
 

@@ -28,6 +28,7 @@ class TestWebCrud(APITestCase):
                              "Authorization": self.token})
 
         self.assertIn("test address", res.text)
+        self.assertTrue(res.status_code, 200)
 
     def test_read_all(self):
         res = self.c.get(f'/house/list/',
@@ -52,6 +53,7 @@ class TestWebCrud(APITestCase):
             house.address for house in House.all()])
         self.assertEqual(res.status_code, 302)
         self.assertEqual(res.location, "/house/list/")
+        self.assertTrue(res.status_code, 200)
 
     def test_update(self):
         self.assertNotIn("the updated street somewhere", [
@@ -64,7 +66,7 @@ class TestWebCrud(APITestCase):
                               "Authorization": self.token})
         self.assertIn("the updated street somewhere", [
             house.address for house in House.all()])
-
+        self.assertTrue(res.status_code, 200)
     def test_delete(self):
         self.assertIn("test address", [
             house.address for house in House.all()])

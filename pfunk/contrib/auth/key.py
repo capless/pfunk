@@ -43,8 +43,8 @@ class Key(object):
 
     @classmethod
     def get_key(cls):
-
-        return random.choice(cls.get_keys())
+        keys = cls.get_keys()
+        return random.choice(keys)
 
     @classmethod
     def create_jwt(cls, secret_claims):

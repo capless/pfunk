@@ -58,33 +58,33 @@ class TestCustomUserM2M(APITestCase):
         self.token, self.exp = Newuser.api_login("test", "abc123")
 
 
-    # def test_read(self):
-    #     res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
-    #                      headers={
-    #                          "Authorization": self.token})
-    #     self.assertTrue(res.status_code, 200)
-    #     self.assertEqual("test_blog", res.json['data']['data']['title'])
+    def test_read(self):
+        res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
+                         headers={
+                             "Authorization": self.token})
+        self.assertTrue(res.status_code, 200)
+        self.assertEqual("test_blog", res.json['data']['data']['title'])
 
-    # def test_read_all(self):
-    #     res = self.c.get(f'/json/blog/list/',
-    #                      headers={
-    #                          "Authorization": self.token})
-    #     self.assertTrue(res.status_code, 200)
+    def test_read_all(self):
+        res = self.c.get(f'/json/blog/list/',
+                         headers={
+                             "Authorization": self.token})
+        self.assertTrue(res.status_code, 200)
 
-    # def test_create(self):
-    #     self.assertNotIn("new blog", [
-    #         blog.title for blog in Blog.all()])
-    #     res = self.c.post('/json/blog/create/',
-    #                       json={
-    #                           "title": "new blog",
-    #                           "content": "I created a new blog.",
-    #                           "users": [self.user.ref.id(), self.user2.ref.id()]},
-    #                       headers={
-    #                           "Authorization": self.token})
+    def test_create(self):
+        self.assertNotIn("new blog", [
+            blog.title for blog in Blog.all()])
+        res = self.c.post('/json/blog/create/',
+                          json={
+                              "title": "new blog",
+                              "content": "I created a new blog.",
+                              "users": [self.user.ref.id(), self.user2.ref.id()]},
+                          headers={
+                              "Authorization": self.token})
 
-    #     self.assertTrue(res.status_code, 200)
-    #     self.assertIn("new blog", [
-    #         blog.title for blog in Blog.all()])
+        self.assertTrue(res.status_code, 200)
+        self.assertIn("new blog", [
+            blog.title for blog in Blog.all()])
 
     def test_update(self):
         self.assertNotIn("updated blog", [
@@ -98,16 +98,15 @@ class TestCustomUserM2M(APITestCase):
                          headers={
                              "Authorization": self.token})
 
-        print(f'\n\nRESPONSE: {res.json}\n\n')
         self.assertTrue(res.status_code, 200)
         self.assertIn("updated blog", [
             blog.title for blog in Blog.all()])
 
-    # def test_delete(self):
-    #     res = self.c.delete(f'/json/blog/delete/{self.blog.ref.id()}/',
-    #                         headers={
-    #                             "Authorization": self.token,
-    #                             "Content-Type": "application/json"
-    #                         })
+    def test_delete(self):
+        res = self.c.delete(f'/json/blog/delete/{self.blog.ref.id()}/',
+                            headers={
+                                "Authorization": self.token,
+                                "Content-Type": "application/json"
+                            })
 
-    #     self.assertTrue(res.status_code, 200)
+        self.assertTrue(res.status_code, 200)

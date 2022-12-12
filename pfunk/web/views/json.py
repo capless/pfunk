@@ -121,9 +121,26 @@ class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
 
     def get_query(self):
         """ Entity in collection updated by an ID """
-        obj = self.collection.get(self.request.kwargs.get(
-            'id'), _token=self.request.token)
-        obj._data.update(self.get_query_kwargs())
+        data = self.get_query_kwargs()
+        obj = self.collection.get(self.request.kwargs.get('id'), _token=self.request.token)
+        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
+        for k, v in fields.items():
+            col = import_util(v['foreign_class'])
+            entities = []
+            for ref in data[k]:
+                c = col.get(ref)
+
+                # # TODO: instantiate collection by just passsing the ref
+                # col_data = {'_ref': ref}
+                # c = col(**col_data)
+                # # print(f'\n\nCOLLECTION AND REF {c.get_collection_name()} -> {ref}\n\n')
+                # # c._ref = q.ref(q.collection(c.get_collection_name()), ref)
+                # # print(f'\n\nCOLLECTION ID: {c._id}\n\n')
+                # print(f'\n\nCOLLECTION REF ID: {c.ref}\n\n')
+                entities.append(c)
+            data[k] = entities
+
+        obj._data.update(data)
         obj.save()
         return obj
 

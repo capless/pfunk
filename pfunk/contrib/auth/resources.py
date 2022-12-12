@@ -426,7 +426,6 @@ class GenericUserBasedRoleM2M(GenericAuthorizationRole):
         if resource_type == 'write':
             lambda_args = ["old_object", "new_object", "object_ref"]
             obj_ref = q.var('old_object')
-            # BUG: Returning error 'NoneType' object has no attribute 'relation_field'
             return q.query(
                 q.lambda_(lambda_args,
                           q.and_(

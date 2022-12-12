@@ -1,3 +1,5 @@
+from valley.utils import import_util
+
 from pfunk.client import q
 from pfunk.web.response import JSONResponse, JSONNotFoundResponse, JSONBadRequestResponse, \
     JSONMethodNotAllowedResponse, JSONUnauthorizedResponse, JSONForbiddenResponse
@@ -76,34 +78,25 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
 
     def get_query(self):
         """ Entity created in a collection """
-        obj = self.collection.create(
-            **self.get_query_kwargs(), _token=self.request.token)
-        return obj
-
-    def get_m2m_kwargs(self, obj):
-        """ Acquires the keyword-arguments for the many-to-many relationship 
-        
-        FaunaDB is only able to create a many-to-many relationship
-        by creating a collection that references both of the object. 
-        So, when creating an entity, it is needed to create an entity to
-        make them related to each other.
-
-        Args:
-            obj (dict, required):
-
-        """
-        data = self.request.get_json()
-        fields = self.collection.get_foreign_fields_by_type(
-            'pfunk.fields.ManyToManyField')
+        data = self.get_query_kwargs()
+        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
         for k, v in fields.items():
-            current_value = data.get(k)
-            col = v.get('foreign_class')()
-            client = col().client()
-            client.query(
-                q.create(
+            col = import_util(v['foreign_class'])
+            entities = []
+            for ref in data[k]:
+                c = col.get(ref)
 
-                )
-            )
+                # # TODO: instantiate collection by just passsing the ref
+                # col_data = {'_ref': ref}
+                # c = col(**col_data)
+                # # print(f'\n\nCOLLECTION AND REF {c.get_collection_name()} -> {ref}\n\n')
+                # # c._ref = q.ref(q.collection(c.get_collection_name()), ref)
+                # # print(f'\n\nCOLLECTION ID: {c._id}\n\n')
+                # print(f'\n\nCOLLECTION REF ID: {c.ref}\n\n')
+                entities.append(c)
+            data[k] = entities
+        obj = self.collection.create(**data, _token=self.request.token)
+        return obj
 
     def _payload_docs(self):
         # Reference the collection by default

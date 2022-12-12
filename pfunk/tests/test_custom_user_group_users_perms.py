@@ -83,8 +83,8 @@ class TestCustomUserBasedPerms(APITestCase):
             blog.title for blog in Blog.all()])
 
     def test_update(self):
-        self.assertNotIn("the updated street somewhere", [
-            house.address for house in Blog.all()])
+        self.assertNotIn("updated blog", [
+            blog.title for blog in Blog.all()])
         res = self.c.put(f'/json/blog/update/{self.blog.ref.id()}/',
                          json={
                              "title": "updated blog",

@@ -81,7 +81,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     def __str__(self):
         try:
             return self.__unicode__() # pragma: no cover
-        except AttributeError:
+        except (AttributeError, TypeError):
             return f"{self.__class__.__name__} object"  # pragma: no cover
 
 

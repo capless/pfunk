@@ -50,60 +50,64 @@ class TestCustomUserM2M(APITestCase):
         self.user = Newuser.create(username='test', email='tlasso@example.org', first_name='Ted',
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
+        self.user2 = Newuser.create(username='test2', email='tlasso2@example.org', first_name='Juliuz',
+                                   last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
+                                   groups=[self.group])
         self.blog = Blog.create(
             title='test_blog', content='test content', users=[self.user], token=self.secret)
         self.token, self.exp = Newuser.api_login("test", "abc123")
 
 
-    def test_read(self):
-        res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
-                         headers={
-                             "Authorization": self.token})
-        self.assertTrue(res.status_code, 200)
-        self.assertEqual("test_blog", res.json['data']['data']['title'])
-
-    def test_read_all(self):
-        res = self.c.get(f'/json/blog/list/',
-                         headers={
-                             "Authorization": self.token})
-        self.assertTrue(res.status_code, 200)
-
-    def test_create(self):
-        self.assertNotIn("new blog", [
-            blog.title for blog in Blog.all()])
-        res = self.c.post('/json/blog/create/',
-                          json={
-                              "title": "new blog",
-                              "content": "I created a new blog.",
-                              "user": self.user.ref.id()},
-                          headers={
-                              "Authorization": self.token})
-
-        self.assertTrue(res.status_code, 200)
-        self.assertIn("new blog", [
-            blog.title for blog in Blog.all()])
-
-    # def test_update(self):
-    #     self.assertNotIn("the updated street somewhere", [
-    #         house.address for house in Blog.all()])
-    #     res = self.c.put(f'/json/blog/update/{self.blog.ref.id()}/',
-    #                      json={
-    #                          "title": "updated blog",
-    #                          "content": "I updated my blog.",
-    #                          "user": self.user.ref.id()},
+    # def test_read(self):
+    #     res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
     #                      headers={
     #                          "Authorization": self.token})
-
-    #     print(f'\n\nRESPONSE: {res.json}\n\n')
     #     self.assertTrue(res.status_code, 200)
-    #     self.assertIn("updated blog", [
+    #     self.assertEqual("test_blog", res.json['data']['data']['title'])
+
+    # def test_read_all(self):
+    #     res = self.c.get(f'/json/blog/list/',
+    #                      headers={
+    #                          "Authorization": self.token})
+    #     self.assertTrue(res.status_code, 200)
+
+    # def test_create(self):
+    #     self.assertNotIn("new blog", [
+    #         blog.title for blog in Blog.all()])
+    #     res = self.c.post('/json/blog/create/',
+    #                       json={
+    #                           "title": "new blog",
+    #                           "content": "I created a new blog.",
+    #                           "users": [self.user.ref.id(), self.user2.ref.id()]},
+    #                       headers={
+    #                           "Authorization": self.token})
+
+    #     self.assertTrue(res.status_code, 200)
+    #     self.assertIn("new blog", [
     #         blog.title for blog in Blog.all()])
 
-    def test_delete(self):
-        res = self.c.delete(f'/json/blog/delete/{self.blog.ref.id()}/',
-                            headers={
-                                "Authorization": self.token,
-                                "Content-Type": "application/json"
-                            })
+    def test_update(self):
+        self.assertNotIn("updated blog", [
+            blog.title for blog in Blog.all()])
+        res = self.c.put(f'/json/blog/update/{self.blog.ref.id()}/',
+                         json={
+                             "title": "updated blog",
+                             "content": "I updated my blog.",
+                             "users": [self.user.ref.id()]
+                        },
+                         headers={
+                             "Authorization": self.token})
 
+        print(f'\n\nRESPONSE: {res.json}\n\n')
         self.assertTrue(res.status_code, 200)
+        self.assertIn("updated blog", [
+            blog.title for blog in Blog.all()])
+
+    # def test_delete(self):
+    #     res = self.c.delete(f'/json/blog/delete/{self.blog.ref.id()}/',
+    #                         headers={
+    #                             "Authorization": self.token,
+    #                             "Content-Type": "application/json"
+    #                         })
+
+    #     self.assertTrue(res.status_code, 200)

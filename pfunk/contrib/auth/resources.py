@@ -212,7 +212,10 @@ class GenericAuthorizationRole(Role):
             {
                 "resource": q.index(self.get_relation_index_name()),
                 "actions": {
-                    "read": True
+                    "read": True,
+                    "create": True,
+                    "update": True,
+                    "delete": True
                 }
             },
             {
@@ -448,8 +451,8 @@ class GenericUserBasedRoleM2M(GenericAuthorizationRole):
                           )
             )
         elif resource_type == 'create':
-            lambda_args = ["new_object"]
-            obj_ref = q.var('new_object')
+            # Create ops will always be allowed 
+            return True
         elif resource_type == 'read' or resource_type == 'delete':
             lambda_args = ["object_ref"]
             obj_ref = q.var('object_ref')

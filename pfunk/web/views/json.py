@@ -28,46 +28,17 @@ class JSONView(HTTPView):
             headers=self.get_headers()
         )
 
-    def _payload_docs(self):
-        """ Used in custom defining payload parameters for the view in Swagger generation. 
-        
-            Should return a dict that has the fields of a swagger parameter.
-            If there is an error in the swagger, it will not be raised.
-            Usage of `https://editor.swagger.io` to validate is recommended
-            e.g.
-            ```
-            # Defining formdata
-            {"data": [
-                    {
-                        "name":"name",
-                        "in":"formData",
-                        "description":"name of the pet",
-                        "required": true,
-                        "type": "string"
-                    },
-                    {
-                        "name": "status",
-                        "in": "formData",
-                        "description": "status of the pet",
-                        "required":true,
-                        "type":"string"
-                    }
-                ]}
-            
-            # Defining a payload that references a model
-            {"data": [
-                {
-                    "name": "body",
-                    "in": "body",
-                    "description": "Collection object to add",
-                    "required": True,
-                    "schema": "#/definitions/Person"
-                }
-            ]}
-            ```
-        """
-        return {}
-
+    def get_req_with_m2m(self, data):
+        """ Returns request with updated params that has the proper m2m entities """
+        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
+        for k, v in fields.items():
+            col = import_util(v['foreign_class'])
+            entities = []
+            for ref in data[k]:
+                c = col.get(ref)
+                entities.append(c)
+            data[k] = entities
+        return data
 
 
 class CreateView(UpdateMixin, JSONActionMixin, JSONView):
@@ -79,22 +50,7 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
     def get_query(self):
         """ Entity created in a collection """
         data = self.get_query_kwargs()
-        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
-        for k, v in fields.items():
-            col = import_util(v['foreign_class'])
-            entities = []
-            for ref in data[k]:
-                c = col.get(ref)
-
-                # # TODO: instantiate collection by just passsing the ref
-                # col_data = {'_ref': ref}
-                # c = col(**col_data)
-                # # print(f'\n\nCOLLECTION AND REF {c.get_collection_name()} -> {ref}\n\n')
-                # # c._ref = q.ref(q.collection(c.get_collection_name()), ref)
-                # # print(f'\n\nCOLLECTION ID: {c._id}\n\n')
-                # print(f'\n\nCOLLECTION REF ID: {c.ref}\n\n')
-                entities.append(c)
-            data[k] = entities
+        data = self.get_req_with_m2m(data)
         obj = self.collection.create(**data, _token=self.request.token)
         return obj
 
@@ -122,24 +78,8 @@ class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
     def get_query(self):
         """ Entity in collection updated by an ID """
         data = self.get_query_kwargs()
+        data = self.get_req_with_m2m(data)
         obj = self.collection.get(self.request.kwargs.get('id'), _token=self.request.token)
-        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
-        for k, v in fields.items():
-            col = import_util(v['foreign_class'])
-            entities = []
-            for ref in data[k]:
-                c = col.get(ref)
-
-                # # TODO: instantiate collection by just passsing the ref
-                # col_data = {'_ref': ref}
-                # c = col(**col_data)
-                # # print(f'\n\nCOLLECTION AND REF {c.get_collection_name()} -> {ref}\n\n')
-                # # c._ref = q.ref(q.collection(c.get_collection_name()), ref)
-                # # print(f'\n\nCOLLECTION ID: {c._id}\n\n')
-                # print(f'\n\nCOLLECTION REF ID: {c.ref}\n\n')
-                entities.append(c)
-            data[k] = entities
-
         obj._data.update(data)
         obj.save()
         return obj

@@ -82,6 +82,7 @@ class TestCustomUserM2M(APITestCase):
                           headers={
                               "Authorization": self.token})
 
+        print(f'\n\nRESPONSE: {res.json}\n\n')
         self.assertTrue(res.status_code, 200)
         self.assertIn("new blog", [
             blog.title for blog in Blog.all()])

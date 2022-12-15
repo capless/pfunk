@@ -28,6 +28,18 @@ class JSONView(HTTPView):
             headers=self.get_headers()
         )
 
+    def get_req_with_m2m(self, data):
+        """ Returns request with updated params that has the proper m2m entities """
+        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
+        for k, v in fields.items():
+            col = import_util(v['foreign_class'])
+            entities = []
+            for ref in data[k]:
+                c = col.get(ref)
+                entities.append(c)
+            data[k] = entities
+        return data
+
 
 class CreateView(UpdateMixin, JSONActionMixin, JSONView):
     """ Define a `Create` view that allows `creation` of an entity in the collection """
@@ -38,22 +50,7 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
     def get_query(self):
         """ Entity created in a collection """
         data = self.get_query_kwargs()
-        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
-        for k, v in fields.items():
-            col = import_util(v['foreign_class'])
-            entities = []
-            for ref in data[k]:
-                c = col.get(ref)
-
-                # # TODO: instantiate collection by just passsing the ref
-                # col_data = {'_ref': ref}
-                # c = col(**col_data)
-                # # print(f'\n\nCOLLECTION AND REF {c.get_collection_name()} -> {ref}\n\n')
-                # # c._ref = q.ref(q.collection(c.get_collection_name()), ref)
-                # # print(f'\n\nCOLLECTION ID: {c._id}\n\n')
-                # print(f'\n\nCOLLECTION REF ID: {c.ref}\n\n')
-                entities.append(c)
-            data[k] = entities
+        data = self.get_req_with_m2m(data)
         obj = self.collection.create(**data, _token=self.request.token)
         return obj
 
@@ -67,24 +64,8 @@ class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
     def get_query(self):
         """ Entity in collection updated by an ID """
         data = self.get_query_kwargs()
+        data = self.get_req_with_m2m(data)
         obj = self.collection.get(self.request.kwargs.get('id'), _token=self.request.token)
-        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
-        for k, v in fields.items():
-            col = import_util(v['foreign_class'])
-            entities = []
-            for ref in data[k]:
-                c = col.get(ref)
-
-                # # TODO: instantiate collection by just passsing the ref
-                # col_data = {'_ref': ref}
-                # c = col(**col_data)
-                # # print(f'\n\nCOLLECTION AND REF {c.get_collection_name()} -> {ref}\n\n')
-                # # c._ref = q.ref(q.collection(c.get_collection_name()), ref)
-                # # print(f'\n\nCOLLECTION ID: {c._id}\n\n')
-                # print(f'\n\nCOLLECTION REF ID: {c.ref}\n\n')
-                entities.append(c)
-            data[k] = entities
-
         obj._data.update(data)
         obj.save()
         return obj

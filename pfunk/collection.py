@@ -1,5 +1,5 @@
 from envs import env
-from faunadb.errors import BadRequest
+from faunadb.errors import BadRequest, Unauthorized, PermissionDenied
 from valley.contrib import Schema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
 from valley.properties import BaseProperty, CharProperty, ListProperty
@@ -423,7 +423,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             }
                         )
                     )
-                except BadRequest:
+                except (BadRequest) as err:
                     pass
 
     def call_signals(self, name):

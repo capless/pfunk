@@ -1,3 +1,4 @@
+from valley.utils import import_util
 from tokenize import group
 from envs import env
 
@@ -212,10 +213,7 @@ class GenericAuthorizationRole(Role):
             {
                 "resource": q.index(self.get_relation_index_name()),
                 "actions": {
-                    "read": True,
-                    "create": True,
-                    "update": True,
-                    "delete": True
+                    "read": True
                 }
             },
             {
@@ -397,11 +395,32 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
 class GenericUserBasedRoleM2M(GenericAuthorizationRole):
     """ Generic set of permissions for many-to-many entity to user relationship """
 
+    def get_privileges(self):
+        """ Usage of parent `get_privileges()` with addition of access to M2M collection """
+        priv_list = super().get_privileges()
+        fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
+        for k, v in fields.items():
+            foreign_col = self.collection._base_properties.get(k)
+            relation_name = foreign_col.relation_name
+            if relation_name:
+                priv_list.extend([
+                    {
+                        "resource": q.collection(relation_name),
+                        "actions": {
+                            'read': True,
+                            'create': True,
+                            'update': False,
+                            'delete': False
+                        }
+                    }
+                ])
+        return priv_list
+
     def get_name_suffix(self):
         return f'{self.collection.get_user_field().lower()}_based_crud_role'
  
     def get_relation_index_name(self):
-        """ Returns the index name of the m2m index of group and user e.g. 'users_blogs_by_blog_and_newuser' """
+        """ Returns the index name of the m2m index of an entity and user e.g. 'users_blogs_by_blog_and_newuser' """
         user_field = self.collection.get_user_field()
         if user_field:
             user_field = user_field.lower()

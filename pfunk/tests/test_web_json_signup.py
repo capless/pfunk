@@ -1,12 +1,11 @@
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections import Group
-from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.testcase import APITestCase
 
 
 class TestWebSignup(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
         super(TestWebSignup, self).setUp()

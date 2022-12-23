@@ -1,13 +1,12 @@
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections import Group
-from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.testcase import APITestCase
 from pfunk.tests import House
 
 
 class TestWebCrud(APITestCase):
-    collections = [User, Group, House]
+    collections = [User, Group, House, UserGroups]
 
     def setUp(self) -> None:
         super(TestWebCrud, self).setUp()

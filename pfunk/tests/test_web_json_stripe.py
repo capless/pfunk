@@ -3,8 +3,7 @@ from unittest import mock
 
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections import Group
-from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.contrib.auth.key import PermissionGroup
 from pfunk.contrib.ecommerce.collections import StripePackage, StripeCustomer
 from pfunk.contrib.ecommerce.views import BaseWebhookView
@@ -13,7 +12,7 @@ from pfunk.web.request import HTTPRequest
 
 
 class TestWebStripeCrud(APITestCase):
-    collections = [User, Group, StripePackage, StripeCustomer]
+    collections = [User, Group, UserGroups, StripePackage, StripeCustomer]
 
     def setUp(self) -> None:
         super(TestWebStripeCrud, self).setUp()
@@ -177,7 +176,7 @@ class TestWebStripeCrud(APITestCase):
 
 
 class TestStripeWebhook(APITestCase):
-    collections = [User, Group, StripeCustomer]
+    collections = [User, Group, UserGroups, StripeCustomer]
 
     def setUp(self) -> None:
         super(TestStripeWebhook, self).setUp()
@@ -262,7 +261,7 @@ class TestStripeWebhook(APITestCase):
 
 
 class TestStripeCheckoutView(APITestCase):
-    collections = [User, Group, StripePackage]
+    collections = [User, Group, UserGroups, StripePackage]
 
     def setUp(self) -> None:
         super(TestStripeCheckoutView, self).setUp()

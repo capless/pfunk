@@ -327,7 +327,7 @@ class GenericGroupBasedRole(GenericAuthorizationRole):
                 2. You have the create permission to perform the action (create, read, write, and delete)
         """
         current_group_field = self.collection.get_group_field().lower()
-        perm = f'{resource_type}'.lower()
+        perm = f'{self.collection.get_collection_name()}-{resource_type}'.lower()
 
         if resource_type == 'write':
             group_ref = q.select(current_group_field,

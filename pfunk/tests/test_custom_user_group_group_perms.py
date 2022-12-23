@@ -4,6 +4,7 @@ import os
 from valley.utils import import_util
 from pprint import pprint as p
 
+from pfunk.contrib.auth.key import PermissionGroup
 from pfunk.contrib.auth.collections import BaseGroup, ExtendedUser, UserGroups
 from pfunk.testcase import APITestCase
 from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField, ManyToManyField, IntegerField, BooleanField, DateTimeField
@@ -48,7 +49,7 @@ class TestCustomGroupBasedPerms(APITestCase):
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
         perms = self.user.add_permissions(
-            self.group, ['create', 'read', 'write', 'delete'])
+            self.group, [PermissionGroup(Blog, ['create', 'read', 'write', 'delete'])])
         self.token, self.exp = Newuser.api_login("test_user", "abc123")
         self.raw_token = Newuser.login("test_user", "abc123")
         self.blog = Blog.create(

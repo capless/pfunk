@@ -393,7 +393,7 @@ class ExtendedUser(BaseUser):
         index_name = 'usergroups_by_userID_and_groupID'
 
         for i in permissions:
-            perm_list.append(i)
+            perm_list.extend(i.permissions)
         if not self.user_group_class:
             raise NotImplementedError
 

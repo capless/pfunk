@@ -6,8 +6,8 @@ from pfunk.client import q
 from pfunk.resources import Function, Role
 
 # Global collections
-USER_CLASS = env('USER_COLLECTION', 'User')
-GROUP_CLASS = env('GROUP_COLLECTION', 'Group')
+# USER_CLASS = env('USER_COLLECTION', 'User')
+# GROUP_CLASS = env('GROUP_COLLECTION', 'Group')
 
 
 class AuthFunction(Function):
@@ -188,10 +188,10 @@ class GenericAuthorizationRole(Role):
         return 'usergroups_by_userID_and_groupID'
 
     def get_user_table(self):
-        return USER_CLASS
+        return self.collection.user_collection or env('USER_COLLECTION', 'User')
 
     def get_group_table(self):
-        return GROUP_CLASS
+        return self.collection.group_collection or env('GROUP_COLLECTION', 'Group')
 
     def get_name_suffix(self):
         return f'{self.collection.get_user_field().lower()}_based_crud_role'
@@ -312,12 +312,9 @@ class GenericUserBasedRole(GenericAuthorizationRole):
 
 class GenericGroupBasedRole(GenericAuthorizationRole):
     permissions_field = 'permissions'
-    user_table = USER_CLASS
-    group_table = GROUP_CLASS
-    through_user_field = USER_CLASS.lower() + 'ID'
 
     def get_name_suffix(self):
-        return f'{self.group_table.lower()}_based_crud_role'
+        return f'{self.get_group_table().lower()}_based_crud_role'
     
     def get_lambda(self, resource_type):
         """ Returns the lambda function for giving the permission to Group-based entities 
@@ -449,7 +446,7 @@ class GenericUserBasedRoleM2M(GenericAuthorizationRole):
                 q.lambda_(lambda_args,
                           q.and_(
                               q.equals(
-                                  q.select(f'{USER_CLASS.lower()}ID',
+                                  q.select(f'{self.get_user_table().lower()}ID',
                                            q.select("data",
                                                     q.get(q.match(
                                                         q.index(
@@ -479,7 +476,7 @@ class GenericUserBasedRoleM2M(GenericAuthorizationRole):
             q.lambda_(
                 lambda_args,
                 q.equals(
-                    q.select(f'{USER_CLASS.lower()}ID',
+                    q.select(f'{self.get_user_table().lower()}ID',
                         q.select("data",
                             q.get(q.match(
                                 q.index(

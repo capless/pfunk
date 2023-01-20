@@ -1,5 +1,6 @@
 from cmath import log
 import uuid
+import os
 
 from envs import env
 from faunadb.errors import BadRequest
@@ -42,7 +43,16 @@ class UserGroupByUserAndGroupIndex(Index):
     ]
 
 
-class UserGroups(Collection):
+class BaseUserGroup(Collection):
+    """ Base UserGroup Collection to subclass from when using custom User and Group """
+    collection_indexes = [UserGroupByUserAndGroupIndex]
+    permissions = ListField()
+
+    def __unicode__(self):
+        return f"{self.userID}, {self.groupID}, {self.permissions}"
+
+
+class UserGroups(BaseUserGroup):
     """ Many-to-many collection of the user-group relationship
 
         The native fauna-way of holding many-to-many relationship
@@ -63,15 +73,10 @@ class UserGroups(Collection):
         permissions (str[]):
             List of permissions, `['create', 'read', 'delete', 'write']`
     """
-    collection_indexes = [UserGroupByUserAndGroupIndex]
     userID = ReferenceField(
         env('USER_COLLECTION_DIR', 'pfunk.contrib.auth.collections.User'))
     groupID = ReferenceField(
         env('GROUP_COLLECTION_DIR', 'pfunk.contrib.auth.collections.Group'))
-    permissions = ListField()
-
-    def __unicode__(self):
-        return f"{self.userID}, {self.groupID}, {self.permissions}"
 
 
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
@@ -318,7 +323,7 @@ class ExtendedUser(BaseUser):
         Provides base methods for group-user permissions. If there are no
         supplied `groups` property, will raise `NotImplementedErrror`
     """
-    user_group_class = import_util('pfunk.contrib.auth.collections.UserGroups')
+    # user_group_class = import_util('pfunk.contrib.auth.collections.UserGroups')
 
     @classmethod
     def get_permissions(cls, ref, _token=None):

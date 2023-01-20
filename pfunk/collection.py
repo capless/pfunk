@@ -78,6 +78,12 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             'collection_name']
     """List of class variables that are not allowed a field names. """
 
+    """ Optional in-line definition user and group class """
+    user_collection = None
+    group_collection = None
+    user_collection_dir = None
+    group_collection_dir = None
+
     def __str__(self):
         try:
             return self.__unicode__() # pragma: no cover
@@ -132,7 +138,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             user will be used. This is to ensure the permissions to work properly
         """
         fields = self._base_properties.items()
-        user_class = env('USER_COLLECTION', 'User')
+        user_class = self.user_collection or env('USER_COLLECTION', 'User')
         user_field = None
         for k, v in fields:
             if user_class in v.get_graphql_type():
@@ -148,7 +154,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             
         """
         fields = self._base_properties.items()
-        group_class = env('GROUP_COLLECTION', 'Group')
+        # TODO: fix not being able to acquire self.group_collection properly and taking env default -> Group instead
+        group_class = self.group_collection or env('GROUP_COLLECTION', 'Group')
         group_field = None
         for k, v in fields:
             if group_class in v.get_graphql_type():

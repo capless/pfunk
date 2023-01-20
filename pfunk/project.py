@@ -17,7 +17,7 @@ from werkzeug.utils import cached_property
 
 from pfunk.web.request import HTTPRequest, RESTRequest, WSGIRequest
 from pfunk.web.response import HttpNotFoundResponse, JSONMethodNotAllowedResponse
-from .contrib.auth.collections import User, Group, UserGroups, BaseGroup, BaseUser, ExtendedUser
+from .contrib.auth.collections import User, Group, UserGroups, BaseGroup, BaseUser, ExtendedUser, BaseUserGroup
 from .collection import Collection
 from .fields import ForeignList
 from .template import graphql_template
@@ -193,6 +193,8 @@ class Project(Schema):
         """
 
         gql_io = BytesIO(self.render().encode())
+        print(f'\n\nPUBLISHING PROJ...\n\n')
+        print(f'\n\n{self.render()}\n\n')
 
         if self.client:
             secret = self.client.secret
@@ -224,7 +226,8 @@ class Project(Schema):
             or issubclass(col, BaseGroup)
             or issubclass(col, ExtendedUser)
             or issubclass(col, BaseUser)
-            or issubclass(col, UserGroups)):
+            or issubclass(col, UserGroups)
+            or issubclass(col, BaseUserGroup)):
                 col.publish()
                 collections.remove(col)
         for col in collections:

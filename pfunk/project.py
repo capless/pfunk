@@ -193,8 +193,6 @@ class Project(Schema):
         """
 
         gql_io = BytesIO(self.render().encode())
-        print(f'\n\nPUBLISHING PROJ...\n\n')
-        print(f'\n\n{self.render()}\n\n')
 
         if self.client:
             secret = self.client.secret

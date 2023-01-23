@@ -423,6 +423,7 @@ class Group(BaseGroup):
 
 class User(ExtendedUser):
     """ A default user that already has predefined M2M relationship with `pfunk.contrib.auth.collections.Group` """
+    user_group_class = import_util('pfunk.contrib.auth.collections.UserGroups')
     group_class = import_util('pfunk.contrib.auth.collections.Group')
     groups = ManyToManyField(
         'pfunk.contrib.auth.collections.Group', 'users_groups')

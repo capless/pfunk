@@ -154,7 +154,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
             
         """
         fields = self._base_properties.items()
-        # TODO: fix not being able to acquire self.group_collection properly and taking env default -> Group instead
         group_class = self.group_collection or env('GROUP_COLLECTION', 'Group')
         group_field = None
         for k, v in fields:

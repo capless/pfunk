@@ -4,11 +4,16 @@ import os
 from valley.utils import import_util
 from pprint import pprint as p
 
-from pfunk.contrib.auth.collections import BaseGroup, ExtendedUser, UserGroups
+from pfunk.contrib.auth.collections import BaseGroup , ExtendedUser, BaseUserGroup as ug
 from pfunk.testcase import APITestCase
-from pfunk import Collection, StringField, EnumField, Enum, ReferenceField, SlugField, ManyToManyField, IntegerField, BooleanField, DateTimeField
-from pfunk.fields import EmailField, ManyToManyField, StringField, EnumField, ListField
-from pfunk.contrib.auth.resources import GenericGroupBasedRole, GenericUserBasedRole
+from pfunk import Collection, StringField, ReferenceField, ManyToManyField
+from pfunk.fields import ManyToManyField, StringField
+from pfunk.contrib.auth.resources import GenericUserBasedRole
+
+
+class UserGroups(ug):
+    userID = ReferenceField('pfunk.tests.test_custom_user_group_users_perms.Newuser')
+    groupID = ReferenceField('pfunk.tests.test_custom_user_group_users_perms.Newgroup')
 
 
 class Newgroup(BaseGroup):
@@ -17,6 +22,7 @@ class Newgroup(BaseGroup):
 
 
 class Newuser(ExtendedUser):
+    group_collection = 'Newgroup'
     user_group_class = import_util('pfunk.tests.test_custom_user_group_users_perms.UserGroups')
     group_class = import_util('pfunk.tests.test_custom_user_group_users_perms.Newgroup')
     groups = ManyToManyField(
@@ -26,6 +32,10 @@ class Newuser(ExtendedUser):
 
 
 class Blog(Collection):
+    user_collection = 'Newuser'
+    group_collection = 'Newgroup'
+    user_collection_dir = 'pfunk.tests.test_custom_user_group_users_perms.Newuser'
+    group_collection_dir = 'pfunk.tests.test_custom_user_group_users_perms.Newgroup'
     collection_roles = [GenericUserBasedRole]
     title = StringField(required=True)
     content = StringField(required=True)

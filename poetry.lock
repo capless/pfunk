@@ -289,7 +289,7 @@ optional = false
 python-versions = ">=3.6,<4.0"
 
 [package.extras]
-cli = ["terminaltables[cli] (>=3.1.10,<4.0.0)", "Jinja2[cli] (>=3.0.3,<4.0.0)", "click[cli] (>=8.0.3,<9.0.0)"]
+cli = ["click[cli] (>=8.0.3,<9.0.0)", "Jinja2[cli] (>=3.0.3,<4.0.0)", "terminaltables[cli] (>=3.1.10,<4.0.0)"]
 
 [[package]]
 name = "executing"
@@ -781,8 +781,8 @@ nest-asyncio = "*"
 traitlets = ">=5.2.2"
 
 [package.extras]
-test = ["xmltodict", "twine (>=1.11.0)", "testpath", "setuptools (>=60.0)", "pytest-cov (>=2.6.1)", "pytest-asyncio", "pytest (>=4.1)", "pre-commit", "pip (>=18.1)", "nbconvert", "mypy", "ipywidgets", "ipython", "ipykernel", "flake8", "check-manifest", "black"]
-sphinx = ["sphinx-book-theme", "Sphinx (>=1.7)", "myst-parser", "moto", "mock", "autodoc-traits"]
+sphinx = ["autodoc-traits", "mock", "moto", "myst-parser", "Sphinx (>=1.7)", "sphinx-book-theme"]
+test = ["black", "check-manifest", "flake8", "ipykernel", "ipython (<8.0.0)", "ipywidgets (<8.0.0)", "mypy", "pip (>=18.1)", "pre-commit", "pytest (>=4.1)", "pytest-asyncio", "pytest-cov (>=2.6.1)", "setuptools (>=60.0)", "testpath", "twine (>=1.11.0)", "xmltodict"]
 
 [[package]]
 name = "nbconvert"
@@ -1399,7 +1399,7 @@ executing = "*"
 pure-eval = "*"
 
 [package.extras]
-tests = ["cython", "littleutils", "pygments", "typeguard", "pytest"]
+tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
 
 [[package]]
 name = "stripe"
@@ -1452,8 +1452,8 @@ python-versions = ">=3.7"
 webencodings = ">=0.4"
 
 [package.extras]
-test = ["flake8", "isort", "pytest"]
-doc = ["sphinx-rtd-theme", "sphinx"]
+doc = ["sphinx", "sphinx-rtd-theme"]
+test = ["pytest", "pytest-cov", "pytest-flake8", "pytest-isort", "coverage"]
 
 [[package]]
 name = "tornado"

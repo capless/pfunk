@@ -331,7 +331,7 @@ class ExtendedUser(BaseUser):
 
     def get_groups(self, _token=None):
         """ Returns the groups (collections) that the user is bound with """
-        if not self.group_class:
+        if not self.group_class or not self.user_group_class:
             raise NotImplementedError
         group_class_field = self.get_group_field()
         user_class = self.__class__.__name__.lower()

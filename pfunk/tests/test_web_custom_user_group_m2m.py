@@ -11,29 +11,34 @@ from pfunk.contrib.auth.resources import GenericUserBasedRoleM2M
 
 
 class UserGroups(ug):
-    userID = ReferenceField('pfunk.tests.test_custom_user_group_users_perms.Newuser')
-    groupID = ReferenceField('pfunk.tests.test_custom_user_group_users_perms.Newgroup')
+    userID = ReferenceField('pfunk.tests.test_web_custom_user_group_m2m.Newuser')
+    groupID = ReferenceField('pfunk.tests.test_web_custom_user_group_m2m.Newgroup')
 
 
 class Newgroup(BaseGroup):
-    users = ManyToManyField('pfunk.tests.test_custom_user_group_m2m.Newuser',
+    users = ManyToManyField('pfunk.tests.test_web_custom_user_group_m2m.Newuser',
                             relation_name='custom_users_groups')
 
 
 class Newuser(ExtendedUser):
-    user_group_class = import_util('pfunk.tests.test_custom_user_group_m2m.UserGroups')
-    group_class = import_util('pfunk.tests.test_custom_user_group_m2m.Newgroup')
+    group_collection = 'Newgroup'
+    user_group_class = import_util('pfunk.tests.test_web_custom_user_group_m2m.UserGroups')
+    group_class = import_util('pfunk.tests.test_web_custom_user_group_m2m.Newgroup')
     groups = ManyToManyField(
-        'pfunk.tests.test_custom_user_group_m2m.Newgroup', relation_name='custom_users_groups')
-    blogs = ManyToManyField('pfunk.tests.test_custom_user_group_m2m.Blog',
+        'pfunk.tests.test_web_custom_user_group_m2m.Newgroup', relation_name='custom_users_groups')
+    blogs = ManyToManyField('pfunk.tests.test_web_custom_user_group_m2m.Blog',
                             relation_name='users_blogs')
 
 
 class Blog(Collection):
+    user_collection = 'Newuser'
+    group_collection = 'Newgroup'
+    user_collection_dir = 'pfunk.tests.test_web_custom_user_group_m2m.Newuser'
+    group_collection_dir = 'pfunk.tests.test_web_custom_user_group_m2m.Newgroup'
     collection_roles = [GenericUserBasedRoleM2M]
     title = StringField(required=True)
     content = StringField(required=True)
-    users = ManyToManyField('pfunk.tests.test_custom_user_group_m2m.Newuser',
+    users = ManyToManyField('pfunk.tests.test_web_custom_user_group_m2m.Newuser',
                           relation_name='users_blogs')
 
     def __unicode__(self):
@@ -45,10 +50,6 @@ class TestCustomUserM2M(APITestCase):
     collections = [Newuser, Newgroup, UserGroups, Blog]
 
     def setUp(self) -> None:
-        os.environ['USER_COLLECTION'] = 'Newuser'
-        os.environ['GROUP_COLLECTION'] = 'Newgroup'
-        os.environ['USER_COLLECTION_DIR'] = 'pfunk.tests.test_custom_user_group_m2m.Newuser'
-        os.environ['GROUP_COLLECTION_DIR'] = 'pfunk.tests.test_custom_user_group_m2m.Newgroup'
         super().setUp()
         self.group = Newgroup.create(name='Power Users', slug='power-users')
         self.user = Newuser.create(username='test', email='tlasso@example.org', first_name='Ted',

@@ -12,34 +12,34 @@ from pfunk.contrib.auth.resources import GenericUserBasedRole
 
 
 class UserGroups(ug):
-    userID = ReferenceField('pfunk.tests.test_custom_user_group_users_perms.Newuser')
-    groupID = ReferenceField('pfunk.tests.test_custom_user_group_users_perms.Newgroup')
+    userID = ReferenceField('pfunk.tests.test_web_custom_user_group_users_perms.Newuser')
+    groupID = ReferenceField('pfunk.tests.test_web_custom_user_group_users_perms.Newgroup')
 
 
 class Newgroup(BaseGroup):
-    users = ManyToManyField('pfunk.tests.test_custom_user_group_users_perms.Newuser',
+    users = ManyToManyField('pfunk.tests.test_web_custom_user_group_users_perms.Newuser',
                             relation_name='custom_users_groups')
 
 
 class Newuser(ExtendedUser):
     group_collection = 'Newgroup'
-    user_group_class = import_util('pfunk.tests.test_custom_user_group_users_perms.UserGroups')
-    group_class = import_util('pfunk.tests.test_custom_user_group_users_perms.Newgroup')
+    user_group_class = import_util('pfunk.tests.test_web_custom_user_group_users_perms.UserGroups')
+    group_class = import_util('pfunk.tests.test_web_custom_user_group_users_perms.Newgroup')
     groups = ManyToManyField(
-        'pfunk.tests.test_custom_user_group_users_perms.Newgroup', relation_name='custom_users_groups')
-    blogs = ManyToManyField('pfunk.tests.test_custom_user_group_users_perms.Blog',
+        'pfunk.tests.test_web_custom_user_group_users_perms.Newgroup', relation_name='custom_users_groups')
+    blogs = ManyToManyField('pfunk.tests.test_web_custom_user_group_users_perms.Blog',
                             relation_name='users_blogs')
 
 
 class Blog(Collection):
     user_collection = 'Newuser'
     group_collection = 'Newgroup'
-    user_collection_dir = 'pfunk.tests.test_custom_user_group_users_perms.Newuser'
-    group_collection_dir = 'pfunk.tests.test_custom_user_group_users_perms.Newgroup'
+    user_collection_dir = 'pfunk.tests.test_web_custom_user_group_users_perms.Newuser'
+    group_collection_dir = 'pfunk.tests.test_web_custom_user_group_users_perms.Newgroup'
     collection_roles = [GenericUserBasedRole]
     title = StringField(required=True)
     content = StringField(required=True)
-    user = ReferenceField('pfunk.tests.test_custom_user_group_users_perms.Newuser',
+    user = ReferenceField('pfunk.tests.test_web_custom_user_group_users_perms.Newuser',
                           relation_name='users_blogs')
 
     def __unicode__(self):
@@ -51,10 +51,6 @@ class TestCustomUserBasedPerms(APITestCase):
     collections = [Newuser, Newgroup, UserGroups, Blog]
 
     def setUp(self) -> None:
-        os.environ['USER_COLLECTION'] = 'Newuser'
-        os.environ['GROUP_COLLECTION'] = 'Newgroup'
-        os.environ['USER_COLLECTION_DIR'] = 'pfunk.tests.test_custom_user_group_users_perms.Newuser'
-        os.environ['GROUP_COLLECTION_DIR'] = 'pfunk.tests.test_custom_user_group_users_perms.Newgroup'
         super().setUp()
         self.group = Newgroup.create(name='Power Users', slug='power-users')
         self.user = Newuser.create(username='test', email='tlasso@example.org', first_name='Ted',

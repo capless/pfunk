@@ -28,6 +28,45 @@ class JSONView(HTTPView):
             headers=self.get_headers()
         )
 
+    def _payload_docs(self):
+        """ Used in custom defining payload parameters for the view in Swagger generation. 
+        
+            Should return a dict that has the fields of a swagger parameter.
+            If there is an error in the swagger, it will not be raised.
+            Usage of `https://editor.swagger.io` to validate is recommended
+            e.g.
+            ```
+            # Defining formdata
+            {"data": [
+                    {
+                        "name":"name",
+                        "in":"formData",
+                        "description":"name of the pet",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "status",
+                        "in": "formData",
+                        "description": "status of the pet",
+                        "required":true,
+                        "type":"string"
+                    }
+                ]}
+            
+            # Defining a payload that references a model
+            {"data": [
+                {
+                    "name": "body",
+                    "in": "body",
+                    "description": "Collection object to add",
+                    "required": True,
+                    "schema": "#/definitions/Person"
+                }
+            ]}
+            ```
+        """
+        return {}
     def get_req_with_m2m(self, data):
         """ Returns request with updated params that has the proper m2m entities """
         fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')
@@ -49,11 +88,47 @@ class CreateView(UpdateMixin, JSONActionMixin, JSONView):
 
     def get_query(self):
         """ Entity created in a collection """
-        data = self.get_query_kwargs()
-        data = self.get_req_with_m2m(data)
-        obj = self.collection.create(**data, _token=self.request.token)
+        obj = self.collection.create(
+            **self.get_query_kwargs(), _token=self.request.token)
         return obj
 
+    def get_m2m_kwargs(self, obj):
+        """ Acquires the keyword-arguments for the many-to-many relationship 
+        
+        FaunaDB is only able to create a many-to-many relationship
+        by creating a collection that references both of the object. 
+        So, when creating an entity, it is needed to create an entity to
+        make them related to each other.
+
+        Args:
+            obj (dict, required):
+
+        """
+        data = self.request.get_json()
+        fields = self.collection.get_foreign_fields_by_type(
+            'pfunk.fields.ManyToManyField')
+        for k, v in fields.items():
+            current_value = data.get(k)
+            col = v.get('foreign_class')()
+            client = col().client()
+            client.query(
+                q.create(
+
+                )
+            )
+
+    def _payload_docs(self):
+        # Reference the collection by default
+        if self.collection:
+            return {"data": [
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "Collection object to add",
+                        "required": True,
+                        "schema": f"#/definitions/{self.collection.__class__.__name__}"
+                    }
+                    ]}
 
 class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
     """ Define a view to allow `Update` operations """
@@ -63,12 +138,28 @@ class UpdateView(UpdateMixin, JSONIDMixin, JSONView):
 
     def get_query(self):
         """ Entity in collection updated by an ID """
+        obj = self.collection.get(self.request.kwargs.get(
+            'id'), _token=self.request.token)
+        obj._data.update(self.get_query_kwargs())
         data = self.get_query_kwargs()
         data = self.get_req_with_m2m(data)
         obj = self.collection.get(self.request.kwargs.get('id'), _token=self.request.token)
         obj._data.update(data)
         obj.save()
         return obj
+
+    def _payload_docs(self):
+        # Reference the collection by default
+        if self.collection:
+            return {"data": [
+                    {
+                        "name": "body",
+                        "in": "body",
+                        "description": "Collection object to add",
+                        "required": True,
+                        "schema": f"#/definitions/{self.collection.__class__.__name__}"
+                    }
+                    ]}
 
 
 class DetailView(ObjectMixin, JSONIDMixin, JSONView):

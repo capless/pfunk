@@ -3,6 +3,7 @@ import os
 import re
 import swaggyp as sw
 
+from pfunk.web.views.html import HTMLView
 from pfunk.collection import Collection
 from pfunk.utils.routing import parse_rule
 
@@ -163,6 +164,9 @@ class SwaggerDoc(object):
         ```
         """
         for view in col.collection_views:
+            # We skip HTML Views
+            if issubclass(view, HTMLView):
+                continue
             route = view.url(col)
             rule = route.rule
             methods = route.methods

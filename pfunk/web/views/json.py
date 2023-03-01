@@ -28,6 +28,46 @@ class JSONView(HTTPView):
             headers=self.get_headers()
         )
 
+    def _payload_docs(self):
+        """ Used in custom defining payload parameters for the view in Swagger generation. 
+        
+            Should return a dict that has the fields of a swagger parameter.
+            If there is an error in the swagger, it will not be raised.
+            Usage of `https://editor.swagger.io` to validate is recommended
+            e.g.
+            ```
+            # Defining formdata
+            {"data": [
+                    {
+                        "name":"name",
+                        "in":"formData",
+                        "description":"name of the pet",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "name": "status",
+                        "in": "formData",
+                        "description": "status of the pet",
+                        "required":true,
+                        "type":"string"
+                    }
+                ]}
+            
+            # Defining a payload that references a model
+            {"data": [
+                {
+                    "name": "body",
+                    "in": "body",
+                    "description": "Collection object to add",
+                    "required": True,
+                    "schema": "#/definitions/Person"
+                }
+            ]}
+            ```
+        """
+        return {}
+
     def get_req_with_m2m(self, data):
         """ Returns request with updated params that has the proper m2m entities """
         fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')

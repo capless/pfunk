@@ -1,12 +1,10 @@
-import tempfile
 from types import SimpleNamespace
 from unittest import mock
 
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections import PermissionGroup
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
+from pfunk.contrib.auth.key import PermissionGroup
 from pfunk.contrib.ecommerce.collections import StripePackage, StripeCustomer
 from pfunk.contrib.ecommerce.views import BaseWebhookView
 from pfunk.testcase import APITestCase
@@ -14,7 +12,7 @@ from pfunk.web.request import HTTPRequest
 
 
 class TestWebStripeCrud(APITestCase):
-    collections = [User, Group, StripePackage, StripeCustomer]
+    collections = [User, Group, UserGroups, StripePackage, StripeCustomer]
 
     def setUp(self) -> None:
         super(TestWebStripeCrud, self).setUp()
@@ -35,7 +33,7 @@ class TestWebStripeCrud(APITestCase):
             StripePackage, ['create', 'read', 'write', 'delete'])])
 
     def test_list_package(self):
-        res = self.c.get('/stripepackage/list/', headers={
+        res = self.c.get('/json/stripepackage/list/', headers={
             "Content-Type": "application/json"
         })
         self.assertTrue(res.json['success'])
@@ -44,7 +42,7 @@ class TestWebStripeCrud(APITestCase):
             self.stripe_pkg.name)
 
     def test_get_package(self):
-        res = self.c.get(f'/stripepackage/detail/{self.stripe_pkg.ref.id()}/', headers={
+        res = self.c.get(f'/json/stripepackage/detail/{self.stripe_pkg.ref.id()}/', headers={
             "Content-Type": "application/json"
         })
         self.assertTrue(res.json['success'])
@@ -55,7 +53,7 @@ class TestWebStripeCrud(APITestCase):
     def test_create_package(self):
         self.assertNotIn("new stripe pkg", [
             pkg.name for pkg in StripePackage.all()])
-        res = self.c.post('/stripepackage/create/',
+        res = self.c.post('/json/stripepackage/create/',
                           json={
                               'stripe_id': '123',
                               'name': 'new stripe pkg',
@@ -75,7 +73,7 @@ class TestWebStripeCrud(APITestCase):
         self.assertNotIn("updated pkg", [
             pkg.name for pkg in StripePackage.all()])
         updated_name = 'updated pkg'
-        res = self.c.put(f'/stripepackage/update/{self.stripe_pkg.ref.id()}/',
+        res = self.c.put(f'/json/stripepackage/update/{self.stripe_pkg.ref.id()}/',
                          json={
                              'stripe_id': '123',
                              'name': updated_name,
@@ -93,7 +91,7 @@ class TestWebStripeCrud(APITestCase):
             updated_name)
 
     def test_delete_package(self):
-        res = self.c.delete(f'/stripepackage/delete/{self.stripe_pkg.ref.id()}/',
+        res = self.c.delete(f'/json/stripepackage/delete/{self.stripe_pkg.ref.id()}/',
                             headers={
                                 "Authorization": self.token,
                                 "Content-Type": "application/json"
@@ -109,7 +107,7 @@ class TestWebStripeCrud(APITestCase):
         stripe_id = '201'
         self.assertNotIn(stripe_id, [
             cus.stripe_id for cus in StripeCustomer.all()])
-        res = self.c.post(f'/stripecustomer/create/',
+        res = self.c.post(f'/json/stripecustomer/create/',
                           json={
                               "user": self.user.ref.id(),
                               "stripe_id": stripe_id
@@ -124,7 +122,7 @@ class TestWebStripeCrud(APITestCase):
             cus.stripe_id for cus in StripeCustomer.all()])
 
     def test_list_customers(self):
-        res = self.c.get('/stripecustomer/list/', headers={
+        res = self.c.get('/json/stripecustomer/list/', headers={
             "Authorization": self.token,
             "Content-Type": "application/json"
         })
@@ -135,7 +133,7 @@ class TestWebStripeCrud(APITestCase):
             '100')
 
     def test_get_customer(self):
-        res = self.c.get(f'/stripecustomer/detail/{self.stripe_cus.ref.id()}/', headers={
+        res = self.c.get(f'/json/stripecustomer/detail/{self.stripe_cus.ref.id()}/', headers={
             "Authorization": self.token,
             "Content-Type": "application/json"
         })
@@ -149,7 +147,7 @@ class TestWebStripeCrud(APITestCase):
         updated_stripe_id = '101'
         self.assertNotIn(updated_stripe_id, [
             cus.stripe_id for cus in StripeCustomer.all()])
-        res = self.c.put(f'/stripecustomer/update/{self.stripe_cus.ref.id()}/',
+        res = self.c.put(f'/json/stripecustomer/update/{self.stripe_cus.ref.id()}/',
                          json={
                              "stripe_id": updated_stripe_id
                          },
@@ -164,7 +162,7 @@ class TestWebStripeCrud(APITestCase):
             updated_stripe_id)
 
     def test_delete_customer(self):
-        res = self.c.delete(f'/stripecustomer/delete/{self.stripe_cus.ref.id()}/',
+        res = self.c.delete(f'/json/stripecustomer/delete/{self.stripe_cus.ref.id()}/',
                             headers={
                                 "Authorization": self.token,
                                 "Content-Type": "application/json"
@@ -178,7 +176,7 @@ class TestWebStripeCrud(APITestCase):
 
 
 class TestStripeWebhook(APITestCase):
-    collections = [User, Group, StripeCustomer]
+    collections = [User, Group, UserGroups, StripeCustomer]
 
     def setUp(self) -> None:
         super(TestStripeWebhook, self).setUp()
@@ -255,7 +253,7 @@ class TestStripeWebhook(APITestCase):
     def test_receive_post_req(self, mocked):
         with self.assertRaises(NotImplementedError):
             self.view.event = SimpleNamespace(**self.view.request.body)
-            res = self.c.post('/stripecustomer/webhook/',
+            res = self.c.post('/json/stripecustomer/webhook/',
                               json=self.stripe_req_body,
                               headers={
                                   'HTTP_STRIPE_SIGNATURE': 'sig_1113'
@@ -263,7 +261,7 @@ class TestStripeWebhook(APITestCase):
 
 
 class TestStripeCheckoutView(APITestCase):
-    collections = [User, Group, StripePackage]
+    collections = [User, Group, UserGroups, StripePackage]
 
     def setUp(self) -> None:
         super(TestStripeCheckoutView, self).setUp()
@@ -281,9 +279,10 @@ class TestStripeCheckoutView(APITestCase):
     @mock.patch('stripe.checkout', spec=True)
     def test_checkout_success_view(self, mocked):
         session_id = 'session_123'
-        res = self.c.get(f'/stripepackage/checkout-success/{session_id}/', headers={
+        res = self.c.get(f'/json/stripepackage/checkout-success/{session_id}/', headers={
             'Authorization': self.token,
             'Content-Type': 'application/json'
         })
+
         self.assertTrue(True)
         self.assertDictEqual({'success': False, 'data': 'Not Found'}, res.json)

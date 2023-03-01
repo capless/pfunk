@@ -1,13 +1,12 @@
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import APITestCase
 
 
 class TestWebLogin(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
         super(TestWebLogin, self).setUp()

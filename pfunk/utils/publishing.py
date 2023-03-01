@@ -1,3 +1,5 @@
+import logging
+
 import requests
 from faunadb import query as q
 from faunadb.errors import BadRequest
@@ -36,7 +38,6 @@ def create_or_update_role(client, payload: dict = {}):
             q.create_role(payload)
         )
     except BadRequest as err:
-
         payload_copy = payload.copy()
         role_name = payload_copy.pop("name")
 
@@ -60,13 +61,12 @@ def create_or_pass_index(client, payload):
     Returns: query
 
     """
+
     try:
         response = client.query(
             q.create_index(payload)
         )
     except BadRequest as err:
-        print('Warning: You cannot update an index please delete the index and publish it again.')
-        print(err)
         return
 
     return response

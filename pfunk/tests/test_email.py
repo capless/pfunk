@@ -4,15 +4,14 @@ from unittest import mock
 from jinja2.exceptions import TemplateNotFound
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.contrib.email.base import EmailBackend
 from pfunk.contrib.email.ses import SESBackend
 from pfunk.testcase import APITestCase
 
 
 class TestEmailBackend(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
         super(TestEmailBackend, self).setUp()
@@ -44,7 +43,7 @@ class TestEmailBackend(APITestCase):
 
 
 class TestEmailSES(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
         super(TestEmailSES, self).setUp()

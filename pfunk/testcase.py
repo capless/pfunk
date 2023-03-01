@@ -58,7 +58,7 @@ class APITestCase(CollectionTestCase):
         self.app = self.project.wsgi_app
         self.c = Client(self.app)
         os.environ.setdefault('KEY_MODULE', 'pfunk.tests.unittest_keys.KEYS')
-        Key = import_util('pfunk.contrib.auth.collections.Key')
+        Key = import_util('pfunk.contrib.auth.key.Key')
         keys = Key.create_keys()
         self.keys_path = 'pfunk/tests/unittest_keys.py'
         with open(self.keys_path, 'w+') as f:

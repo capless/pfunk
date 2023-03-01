@@ -7,7 +7,8 @@ from werkzeug.exceptions import NotFound, MethodNotAllowed
 from werkzeug.http import dump_cookie
 from werkzeug.routing import Rule
 
-from pfunk.exceptions import TokenValidationFailed, LoginFailed, Unauthorized, DocNotFound, GraphQLError
+from pfunk.exceptions import TokenValidationFailed, LoginFailed, Unauthorized, DocNotFound, GraphQLError, NotUniqueError
+from pfunk.web.forms.collections import CollectionForm
 from pfunk.web.request import Request, RESTRequest, HTTPRequest
 from pfunk.web.response import (Response, HttpNotFoundResponse, HttpForbiddenResponse, HttpBadRequestResponse,
                                 HttpMethodNotAllowedResponse, HttpUnauthorizedResponse)
@@ -88,7 +89,7 @@ class View(object):
             response = self.not_found_class().response
         except PermissionDenied:
             response = self.forbidden_class().response
-        except (BadRequest, GraphQLError) as e:
+        except (BadRequest, NotUniqueError, GraphQLError) as e:
             if isinstance(e, BadRequest):
                 payload = e._get_description()
             else:
@@ -124,7 +125,7 @@ class View(object):
             response = self.not_found_class()
         except PermissionDenied:
             response = self.forbidden_class()
-        except (BadRequest, GraphQLError) as e:
+        except (BadRequest, NotUniqueError, GraphQLError) as e:
             if isinstance(e, BadRequest):
                 payload = e._get_description()
             else:
@@ -154,10 +155,10 @@ class View(object):
             returns the decrypted token
         
         Returns:
-            token (`contrib.auth.collections.Key`, required): token of Fauna
+            token (`contrib.auth.key.Key`, required): token of Fauna
 
         """
-        from pfunk.contrib.auth.collections import Key
+        from pfunk.contrib.auth.key import Key
         enc_token = self.request.cookies.get(env('TOKEN_COOKIE_NAME', 'tk'))
 
         if not enc_token:
@@ -351,6 +352,25 @@ class ObjectMixin(object):
 
 class UpdateMixin(object):
     """ Generic PUT mixin for a fauna object """
+    form_class = None
+
+    def get_form_class(self):
+        """ Acquires or builds the form class to use for updating the object """
+        if self.form_class:
+            return self.form_class
+        return self.build_form_class()
+
+    def build_form_class(self):
+        """ Builds the form class to use for updating the object """
+
+        class Meta:
+            collection = self.collection
+
+        form_class = type(f"{self.get_collection_name()}Form", (CollectionForm,), {
+            # constructor
+
+            "Meta": Meta,
+        })
 
     def get_query_kwargs(self):
 
@@ -376,10 +396,26 @@ class ActionMixin(object):
             action of the endpoint 
     """
     action: str
+    template_name = '{collection}/{action}.html'
 
     @classmethod
     def url(cls, collection):
         return Rule(f'/{collection.get_class_name()}/{cls.action}/', endpoint=cls.as_view(collection),
+                    methods=cls.http_methods)
+
+
+class JSONActionMixin(ActionMixin):
+    """ Mixin for specifying what action should an endpoint have
+
+    Attributes:
+        action (str, required):
+            action of the endpoint
+    """
+    action: str
+
+    @classmethod
+    def url(cls, collection):
+        return Rule(f'/json/{collection.get_class_name()}/{cls.action}/', endpoint=cls.as_view(collection),
                     methods=cls.http_methods)
 
 
@@ -389,4 +425,13 @@ class IDMixin(ActionMixin):
     @classmethod
     def url(cls, collection):
         return Rule(f'/{collection.get_class_name()}/{cls.action}/<int:id>/', endpoint=cls.as_view(collection),
+                    methods=cls.http_methods)
+
+
+class JSONIDMixin(ActionMixin):
+    """ Mixin for specifying a URL that accepts an ID """
+
+    @classmethod
+    def url(cls, collection):
+        return Rule(f'/json/{collection.get_class_name()}/{cls.action}/<int:id>/', endpoint=cls.as_view(collection),
                     methods=cls.http_methods)

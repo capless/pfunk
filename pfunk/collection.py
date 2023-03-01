@@ -1,5 +1,5 @@
 from envs import env
-from faunadb.errors import BadRequest
+from faunadb.errors import BadRequest, Unauthorized, PermissionDenied
 from valley.contrib import Schema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
 from valley.properties import BaseProperty, CharProperty, ListProperty
@@ -10,11 +10,13 @@ from pfunk.client import FaunaClient
 from pfunk.web.views.json import DetailView, CreateView, UpdateView, DeleteView, ListView
 from .client import q
 from .contrib.generic import GenericCreate, GenericDelete, GenericUpdate, AllFunction
-from .exceptions import DocNotFound
+from .exceptions import DocNotFound, NotUniqueError
 from .queryset import Queryset
 from .resources import Index
 
 __all__ = ['Enum', 'Collection']
+
+from .web.views.html import HTMLCreateView, HTMLUpdateView, HTMLListView, HTMLDeleteView, HTMLDetailView
 
 
 class PFunkDeclaredVars(DeclaredVars):
@@ -32,6 +34,8 @@ class Enum(Schema):
     def __unicode__(self):
         return self.name  # pragma: no cover
 
+    def __str__(self):
+        return self.name  # pragma: no cover
 
 class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     """
@@ -54,7 +58,11 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
     use_crud_views: bool = True
     """Specifies whether to use the CRUD views."""
     crud_views: list = [CreateView, UpdateView, ListView, DeleteView, DetailView]
-    """Specifies the base events used if the `use_base_events` variable is `True`"""
+    """Specifies the crud views used if the `use_crud_views` variable is `True`"""
+    use_crud_html_views = False
+    """Specifies whether to use the CRUD HTML views."""
+    crud_html_views = [HTMLCreateView, HTMLUpdateView, HTMLListView, HTMLDeleteView, HTMLDetailView]
+    """Specifies the crud html views used if the `use_crud_html_views` variable is `True`"""
     require_auth: bool = True
     """Determines wheter to require authentication and authorization"""
     non_public_fields: list = []
@@ -69,6 +77,19 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             'use_base_events', 'base_events', 'non_public_fields', 'verbose_plural_name',
                             'collection_name']
     """List of class variables that are not allowed a field names. """
+
+    """ Optional in-line definition user and group class """
+    user_collection = None
+    group_collection = None
+    user_collection_dir = None
+    group_collection_dir = None
+
+    def __str__(self):
+        try:
+            return self.__unicode__() # pragma: no cover
+        except (AttributeError, TypeError):
+            return f"{self.__class__.__name__} object"  # pragma: no cover
+
 
     def __init__(self, _ref: object = None, _lazied: bool = False, **kwargs) -> None:
         """
@@ -92,6 +113,8 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         self.collection_functions = set(self.collection_functions)
         if self.use_crud_views:
             self.collection_views.extend(self.crud_views)
+        if self.use_crud_html_views:
+            self.collection_views.extend(self.crud_html_views)
         self.collection_views = set(self.collection_views)
 
         if self.use_crud_functions:
@@ -107,6 +130,37 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
         return {k: q.select(k, q.var("input")) for k, v in self._base_properties.items() if
                 k not in self.non_public_fields}
+    
+    def get_user_field(self) -> str:
+        """ Acquires the field where the relationship with a user was defined.
+
+            It is required to define the `USER_COLLECTION` in env var if a custom 
+            user will be used. This is to ensure the permissions to work properly
+        """
+        fields = self._base_properties.items()
+        user_class = self.user_collection or env('USER_COLLECTION', 'User')
+        user_field = None
+        for k, v in fields:
+            if user_class in v.get_graphql_type():
+                user_field = k
+                break
+        return user_field
+
+    def get_group_field(self) -> str:
+        """ Acquires the field where the relationship with a group was defined.
+
+            It is required to define the `GROUP_COLLECTION` in env var if a custom 
+            user will be used. This is to ensure the permissions to work properly
+            
+        """
+        fields = self._base_properties.items()
+        group_class = self.group_collection or env('GROUP_COLLECTION', 'Group')
+        group_field = None
+        for k, v in fields:
+            if group_class in v.get_graphql_type():
+                group_field = k
+                break
+        return group_field
 
     def get_collection_name(self) -> str:
         """
@@ -196,7 +250,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: FaunaClient
 
         """
-
         if _token:
             return FaunaClient(secret=_token)
         return FaunaClient(secret=env('FAUNA_SECRET'))
@@ -376,7 +429,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             }
                         )
                     )
-                except BadRequest:
+                except (BadRequest) as err:
                     pass
 
     def call_signals(self, name):
@@ -412,11 +465,16 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         if not self.ref:
             self.call_signals('pre_create_signals')
             data_dict, relational_data = self.get_data_dict(_credentials=_credentials)
-            resp = self.client(_token=_token).query(
-                q.create(
-                    q.collection(self.get_collection_name()),
-                    data_dict
-                ))
+            try:
+                resp = self.client(_token=_token).query(
+                    q.create(
+                        q.collection(self.get_collection_name()),
+                        data_dict
+                    ))
+            except BadRequest as e:
+                if 'instance not unique' in [i.code for i in e.errors]:
+                    raise NotUniqueError(f"{self.get_collection_name()} document is not unique.")
+
             self.ref = resp['ref']
             self.call_signals('post_create_signals')
         else:

@@ -6,7 +6,7 @@ from pfunk.tests import House
 
 
 class TestWebCrud(APITestCase):
-    collections = [User, Group, UserGroups, House]
+    collections = [User, Group, House, UserGroups]
 
     def setUp(self) -> None:
         super(TestWebCrud, self).setUp()
@@ -20,46 +20,51 @@ class TestWebCrud(APITestCase):
         self.c = Client(self.app)
 
     def test_read(self):
-        res = self.c.get(f'/house/detail/{self.house.ref.id()}/',
+        res = self.c.get(f'/json/house/detail/{self.house.ref.id()}/',
                          headers={
                              "Authorization": self.token})
-        self.assertTrue(res.status_code, 200)
+        self.assertTrue(res.json['success'])
+        self.assertEqual("test address", res.json['data']['data']['address'])
 
     def test_read_all(self):
-        res = self.c.get(f'/house/list/',
+        res = self.c.get(f'/json/house/list/',
                          headers={
                              "Authorization": self.token})
-        self.assertTrue(res.status_code, 200)
+        self.assertTrue(res.json['success'])
 
     def test_create(self):
         self.assertNotIn("the street somewhere", [
             house.address for house in House.all()])
-        res = self.c.post('/house/create/',
+        res = self.c.post('/json/house/create/',
                           json={
                               "address": "the street somewhere",
                               "user": self.user.ref.id()},
                           headers={
                               "Authorization": self.token})
 
-        self.assertTrue(res.status_code, 200)
+        self.assertTrue(res.json['success'])
+        self.assertIn("the street somewhere", [
+            house.address for house in House.all()])
 
     def test_update(self):
         self.assertNotIn("the updated street somewhere", [
             house.address for house in House.all()])
-        res = self.c.put(f'/house/update/{self.house.ref.id()}/',
+        res = self.c.put(f'/json/house/update/{self.house.ref.id()}/',
                          json={
                              "address": "the updated street somewhere",
                              "user": self.user.ref.id()},
                          headers={
                              "Authorization": self.token})
 
-        self.assertTrue(res.status_code, 200)
+        self.assertTrue(res.json['success'])
+        self.assertIn("the updated street somewhere", [
+            house.address for house in House.all()])
 
     def test_delete(self):
-        res = self.c.delete(f'/house/delete/{self.house.ref.id()}/',
+        res = self.c.delete(f'/json/house/delete/{self.house.ref.id()}/',
                             headers={
                                 "Authorization": self.token,
                                 "Content-Type": "application/json"
                             })
 
-        self.assertTrue(res.status_code, 200)
+        self.assertTrue(res.json['success'])

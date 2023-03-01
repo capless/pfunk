@@ -1,19 +1,83 @@
+from cmath import log
 import uuid
+import os
 
 from envs import env
 from faunadb.errors import BadRequest
 from valley.exceptions import ValidationException
 from valley.utils import import_util
 
+from pfunk import ReferenceField
 from pfunk.client import q
 from pfunk.collection import Collection, Enum
-from pfunk.contrib.auth.collections import Key
+from pfunk.resources import Index
+from pfunk.contrib.auth.key import Key
 from pfunk.contrib.auth.resources import LoginUser, UpdatePassword, Public, UserRole, LogoutUser
 from pfunk.contrib.auth.views import ForgotPasswordChangeView, LoginView, SignUpView, VerifyEmailView, LogoutView, \
     UpdatePasswordView, ForgotPasswordView
 from pfunk.contrib.email.base import send_email
 from pfunk.exceptions import LoginFailed, DocNotFound
 from pfunk.fields import EmailField, ManyToManyField, StringField, EnumField
+from pfunk.fields import ListField
+from pfunk.fields import SlugField
+
+
+class BaseGroup(Collection):
+    """ Group collection that the user belongs to """
+    name = StringField(required=True)
+    slug = SlugField(unique=True, required=False)
+
+    def __unicode__(self):
+        return self.name  # pragma: no cover
+
+
+class UserGroupByUserAndGroupIndex(Index):
+    name = 'usergroups_by_userID_and_groupID'
+    source = 'Usergroups'
+    terms = [
+        {'field': ['data', 'userID']},
+        {'field': ['data', 'groupID']}
+    ]
+    values = [
+        {'field': ['ref']}
+    ]
+
+
+class BaseUserGroup(Collection):
+    """ Base UserGroup Collection to subclass from when using custom User and Group """
+    collection_indexes = [UserGroupByUserAndGroupIndex]
+    permissions = ListField()
+
+    def __unicode__(self):
+        return f"{self.userID}, {self.groupID}, {self.permissions}"
+
+
+class UserGroups(BaseUserGroup):
+    """ Many-to-many collection of the user-group relationship
+
+        The native fauna-way of holding many-to-many relationship
+        is to only have the ID of the 2 object. Here in pfunk, we
+        leverage the flexibility of the collection to have another
+        field, which is `permissions`, this field holds the capablities
+        of a user, allowing us to add easier permission handling.
+        Instead of manually going to roles and adding individual
+        collections which can be painful in long term.
+
+    Attributes:
+        collection_name (str):
+            Name of the collection in Fauna
+        userID (str):
+            Fauna ref of user that is tied to the group
+        groupID (str):
+            Fauna ref of a collection that is tied with the user
+        permissions (str[]):
+            List of permissions, `['create', 'read', 'delete', 'write']`
+    """
+    userID = ReferenceField(
+        env('USER_COLLECTION_DIR', 'pfunk.contrib.auth.collections.User'))
+    groupID = ReferenceField(
+        env('GROUP_COLLECTION_DIR', 'pfunk.contrib.auth.collections.Group'))
+
 
 AccountStatus = Enum(name='AccountStatus', choices=['ACTIVE', 'INACTIVE'])
 
@@ -39,7 +103,6 @@ class BaseUser(Collection):
     collection_roles = [Public, UserRole]
     non_public_fields = ['groups']
     use_email_verification = True
-    group_class = import_util(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.group.Group'))
     # Views
     collection_views = [LoginView, SignUpView, VerifyEmailView, LogoutView, UpdatePasswordView, ForgotPasswordView,
                         ForgotPasswordChangeView]
@@ -53,7 +116,8 @@ class BaseUser(Collection):
     email = EmailField(required=True, unique=True)
     verification_key = StringField(required=False, unique=True)
     forgot_password_key = StringField(required=False, unique=True)
-    account_status = EnumField(AccountStatus, required=True, default_value="INACTIVE")
+    account_status = EnumField(
+        AccountStatus, required=True, default_value="INACTIVE")
 
     def __unicode__(self):
         return self.username  # pragma: no cover
@@ -71,7 +135,7 @@ class BaseUser(Collection):
                 q.call("login_user", {
                     "username": username, "password": password})
             )
-        except BadRequest:
+        except Exception as err:
             raise LoginFailed(
                 'The login credentials you entered are incorrect.')
 
@@ -82,7 +146,6 @@ class BaseUser(Collection):
         return c.client(_token=_token).query(
             q.call("logout_user")
         )
-
 
     def permissions(self, _token=None):
         return []
@@ -130,12 +193,14 @@ class BaseUser(Collection):
                         attached to the user
                 """
         if verify_type == 'signup':
-            user = cls.get_by('unique_User_verification_key', [verification_key])
+            user = cls.get_by('unique_User_verification_key',
+                              [verification_key])
             user.verification_key = ''
             user.account_status = 'ACTIVE'
             user.save()
         elif verify_type == 'forgot' and password:
-            user = cls.get_by('unique_User_forgot_password_key', [verification_key])
+            user = cls.get_by('unique_User_forgot_password_key', [
+                              verification_key])
             user.forgot_password_key = ''
             user.save(_credentials=password)
 
@@ -146,10 +211,12 @@ class BaseUser(Collection):
             txt_template = 'auth/verification_email.txt'
             html_template = 'auth/verification_email.html'
             verification_key = self.verification_key
+            verification_link = f'https://{env("PROJECT_DOMAIN")}/{self.get_collection_name().lower()}/verify/{verification_key}'
         elif verification_type == 'forgot':
             txt_template = 'auth/forgot_email.txt'
             html_template = 'auth/forgot_email.html'
             verification_key = self.forgot_password_key
+            verification_link = f'https://{env("PROJECT_DOMAIN")}/{self.get_collection_name().lower()}/forgot-password/{verification_key}'
         try:
             send_email(
                 txt_template=txt_template,
@@ -159,7 +226,10 @@ class BaseUser(Collection):
                 subject=f'{project_name} Email Verification',
                 first_name=self.first_name,
                 last_name=self.last_name,
-                verification_key=verification_key
+                verification_key=verification_key,
+                verification_type=verification_type,
+                verification_link=verification_link,
+                collection=self.get_collection_name().lower(),
             )
         except Exception as e:
             import logging
@@ -190,6 +260,7 @@ class BaseUser(Collection):
             data.pop('groups')
         except KeyError:
             pass
+
         cls.create(**data, _token=_token)
 
     @classmethod
@@ -217,14 +288,17 @@ class BaseUser(Collection):
                 `Wrong current password.`
         """
         if new_password != new_password_confirm:
-            raise ValidationException('new_password: Password field and password confirm field do not match.')
+            raise ValidationException(
+                'new_password: Password field and password confirm field do not match.')
         c = cls()
         try:
             return c.client(_token=_token).query(
-                q.call("update_password", {'current_password': current_password, 'new_password': new_password})
+                q.call("update_password", {
+                       'current_password': current_password, 'new_password': new_password})
             )
         except BadRequest:
-            raise ValidationException('current_password: Password update failed.')
+            raise ValidationException(
+                'current_password: Password update failed.')
 
     @classmethod
     def get_current_user(cls, _token=None):
@@ -243,11 +317,13 @@ class BaseUser(Collection):
         return self.username  # pragma: no cover
 
 
-class User(BaseUser):
-    user_group_class = import_util('pfunk.contrib.auth.collections.common.UserGroups')
-    group_class = import_util('pfunk.contrib.auth.collections.group.Group')
-    """ User that has permission capabilities. Extension of `BaseUser` """
-    groups = ManyToManyField(env('GROUP_COLLECTION', 'pfunk.contrib.auth.collections.group.Group'), 'users_groups')
+class ExtendedUser(BaseUser):
+    """ User that has permission capabilities. Extension of `BaseUser`. 
+        Subclass and define these properties
+        Provides base methods for group-user permissions. If there are no
+        supplied `groups` property, will raise `NotImplementedErrror`
+    """
+    # user_group_class = import_util('pfunk.contrib.auth.collections.UserGroups')
 
     @classmethod
     def get_permissions(cls, ref, _token=None):
@@ -255,8 +331,18 @@ class User(BaseUser):
 
     def get_groups(self, _token=None):
         """ Returns the groups (collections) that the user is bound with """
+        if not self.group_class or not self.user_group_class:
+            raise NotImplementedError
+        group_class_field = self.get_group_field()
+        user_class = self.__class__.__name__.lower()
+        group_class = self.group_class.__name__.lower()
+        relation_name = self._base_properties.get(group_class_field).relation_name
+        index_name = f'{user_class}s_{group_class}s_by_{user_class}'
+        if relation_name:
+            index_name = f'{relation_name}_by_{user_class}'
+
         return [self.group_class.get(i.id(), _token=_token) for i in self.client(_token=_token).query(
-            q.paginate(q.match('users_groups_by_user', self.ref))
+            q.paginate(q.match(index_name, self.ref))
         ).get('data')]
 
     def permissions(self, _token=None):
@@ -273,10 +359,12 @@ class User(BaseUser):
             perm_list (str[]):
                 Permissions of the user in list: `['create', 'read', 'delete', 'write']`
         """
+
+        index_name = 'usergroups_by_userID_and_groupID'
         perm_list = []
         for i in self.get_groups(_token=_token):
-            ug = self.user_group_class.get_index('users_groups_by_group_and_user', [
-                i.ref, self.ref], _token=_token)
+            ug = self.user_group_class.get_index(index_name, [
+                self.ref, i.ref], _token=_token)
             for user_group in ug:
                 p = []
                 if isinstance(user_group.permissions, list):
@@ -307,14 +395,35 @@ class User(BaseUser):
                 of the user
         """
         perm_list = []
+        index_name = 'usergroups_by_userID_and_groupID'
+
         for i in permissions:
             perm_list.extend(i.permissions)
+        if not self.user_group_class:
+            raise NotImplementedError
 
         try:
-            user_group = self.user_group_class.get_by('users_groups_by_group_and_user', terms=[group.ref, self.ref])
+            user_group = self.user_group_class.get_by(
+                index_name, terms=[self.ref, group.ref])
         except DocNotFound:
-            user_group = self.user_group_class.create(userID=self.ref, groupID=group.ref, permissions=perm_list)
+            user_group = self.user_group_class.create(
+                userID=self.ref, groupID=group.ref, permissions=perm_list, _token=_token)
         if user_group.permissions != perm_list:
             user_group.permissions = perm_list
         user_group.save()
+
         return user_group
+
+
+class Group(BaseGroup):
+    """ A default group that already has predefined M2M relationship with `pfunk.contrib.auth.collections.User` """
+    users = ManyToManyField(
+        'pfunk.contrib.auth.collections.User', 'users_groups')
+
+
+class User(ExtendedUser):
+    """ A default user that already has predefined M2M relationship with `pfunk.contrib.auth.collections.Group` """
+    user_group_class = import_util('pfunk.contrib.auth.collections.UserGroups')
+    group_class = import_util('pfunk.contrib.auth.collections.Group')
+    groups = ManyToManyField(
+        'pfunk.contrib.auth.collections.Group', 'users_groups')

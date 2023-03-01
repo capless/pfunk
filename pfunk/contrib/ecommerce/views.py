@@ -40,7 +40,7 @@ class CheckoutView(DetailView):
         a base class.
     """
 
-    def get_context_data(self, **kwargs):
+    def get_context(self, **kwargs):
         context = super().get_context_data(**kwargs)
         customer = self.collection.objects.get_or_create_customer(
             self.request.user)  # `StripeCustomer` collection
@@ -77,7 +77,7 @@ class CheckoutSuccessView(DetailView, ActionMixin):
 
     @classmethod
     def url(cls, collection):
-        return Rule(f'/{collection.get_class_name()}/{cls.action}/<string:id>/', endpoint=cls.as_view(collection),
+        return Rule(f'/json/{collection.get_class_name()}/{cls.action}/<string:id>/', endpoint=cls.as_view(collection),
                     methods=cls.http_methods)
 
     def get_query(self, *args, **kwargs):

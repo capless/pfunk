@@ -1,12 +1,11 @@
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections.group import Group
-from pfunk.contrib.auth.collections.user import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.testcase import APITestCase
 
 
 class TestWebSignup(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
         super(TestWebSignup, self).setUp()
@@ -47,4 +46,4 @@ class TestWebSignup(APITestCase):
 
         self.assertFalse(res.json['success'])
         self.assertEqual(res.status_code, 400)
-        self.assertEqual('document is not unique.', res.json['data'])
+        self.assertEqual('User document is not unique.', res.json['data'])

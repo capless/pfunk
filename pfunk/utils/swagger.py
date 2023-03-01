@@ -4,6 +4,7 @@ import json
 import swaggyp as sw
 from werkzeug.routing import Map, parse_rule
 
+from pfunk.web.views.html import HTMLView
 from pfunk.collection import Collection
 
 GRAPHQL_TO_YAML_TYPES = {
@@ -163,6 +164,9 @@ class SwaggerDoc(object):
         ```
         """
         for view in col.collection_views:
+            # We skip HTML Views
+            if issubclass(view, HTMLView):
+                continue
             route = view.url(col)
             rule = route.rule
             methods = route.methods

@@ -67,6 +67,7 @@ class JSONView(HTTPView):
             ```
         """
         return {}
+
     def get_req_with_m2m(self, data):
         """ Returns request with updated params that has the proper m2m entities """
         fields = self.collection.get_foreign_fields_by_type('pfunk.fields.ManyToManyField')

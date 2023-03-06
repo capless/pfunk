@@ -237,7 +237,8 @@ class SwaggerDoc(object):
                                 _in=field.get('in'),
                                 description=field.get('description'),
                                 required=field.get('required'),
-                                allowEmptyValue=False
+                                allowEmptyValue=False,
+                                _format=field.get('format')
                             )
                         params.append(param)
 

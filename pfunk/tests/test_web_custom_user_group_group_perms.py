@@ -9,8 +9,10 @@ from pfunk.contrib.auth.resources import GenericGroupBasedRole
 
 
 class UserGroups(ug):
-    userID = ReferenceField('pfunk.tests.test_web_custom_user_group_group_perms.Newuser')
-    groupID = ReferenceField('pfunk.tests.test_web_custom_user_group_group_perms.Newgroup')
+    userID = ReferenceField(
+        'pfunk.tests.test_web_custom_user_group_group_perms.Newuser')
+    groupID = ReferenceField(
+        'pfunk.tests.test_web_custom_user_group_group_perms.Newgroup')
 
 
 class Newgroup(BaseGroup):
@@ -35,8 +37,10 @@ class Blog(Collection):
 
 class Newuser(ExtendedUser):
     group_collection = 'Newgroup'
-    user_group_class = import_util('pfunk.tests.test_web_custom_user_group_group_perms.UserGroups')
-    group_class = import_util('pfunk.tests.test_web_custom_user_group_group_perms.Newgroup')
+    user_group_class = import_util(
+        'pfunk.tests.test_web_custom_user_group_group_perms.UserGroups')
+    group_class = import_util(
+        'pfunk.tests.test_web_custom_user_group_group_perms.Newgroup')
     groups = ManyToManyField(
         'pfunk.tests.test_web_custom_user_group_group_perms.Newgroup', relation_name='custom_users_groups')
 
@@ -89,8 +93,8 @@ class TestCustomGroupBasedPerms(APITestCase):
             house.address for house in Blog.all()])
         res = self.c.put(f'/json/blog/update/{self.blog.ref.id()}/',
                          json={
-                              "title": "updated blog",
-                              "content": "I updated my blog."},
+                             "title": "updated blog",
+                             "content": "I updated my blog."},
                          headers={
                              "Authorization": self.token})
 

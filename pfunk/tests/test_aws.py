@@ -4,8 +4,9 @@ import tempfile
 from unittest import mock
 
 from pfunk.utils.aws import ApiGateway
-from pfunk.tests import User, Group, Person, Sport
+from pfunk.tests import Person, Sport
 from pfunk.project import Project
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 
 
 class ApiGatewayTests(unittest.TestCase):

@@ -140,10 +140,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         fields = self._base_properties.items()
         user_class = self.user_collection or env('USER_COLLECTION', 'User')
         user_field = None
-        for k, v in fields:
-            if user_class in v.get_graphql_type():
-                user_field = k
-                break
+        user_fields = [k for k, v in fields if user_class in v.get_graphql_type()]
+        if user_fields:
+            user_field = user_fields[0]
         return user_field
 
     def get_group_field(self) -> str:
@@ -156,10 +155,9 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         fields = self._base_properties.items()
         group_class = self.group_collection or env('GROUP_COLLECTION', 'Group')
         group_field = None
-        for k, v in fields:
-            if group_class in v.get_graphql_type():
-                group_field = k
-                break
+        group_fields = [k for k, v in fields if group_class in v.get_graphql_type()]
+        if group_fields:
+            group_field = group_fields[0]
         return group_field
 
     def get_collection_name(self) -> str:

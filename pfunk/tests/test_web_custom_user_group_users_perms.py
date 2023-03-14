@@ -4,7 +4,7 @@ import os
 from valley.utils import import_util
 from pprint import pprint as p
 
-from pfunk.contrib.auth.collections import BaseGroup , ExtendedUser, BaseUserGroup as ug
+from pfunk.contrib.auth.collections import BaseGroup, ExtendedUser, BaseUserGroup as ug
 from pfunk.testcase import APITestCase
 from pfunk import Collection, StringField, ReferenceField, ManyToManyField
 from pfunk.fields import ManyToManyField, StringField
@@ -12,8 +12,10 @@ from pfunk.contrib.auth.resources import GenericUserBasedRole
 
 
 class UserGroups(ug):
-    userID = ReferenceField('pfunk.tests.test_web_custom_user_group_users_perms.Newuser')
-    groupID = ReferenceField('pfunk.tests.test_web_custom_user_group_users_perms.Newgroup')
+    userID = ReferenceField(
+        'pfunk.tests.test_web_custom_user_group_users_perms.Newuser')
+    groupID = ReferenceField(
+        'pfunk.tests.test_web_custom_user_group_users_perms.Newgroup')
 
 
 class Newgroup(BaseGroup):
@@ -23,8 +25,10 @@ class Newgroup(BaseGroup):
 
 class Newuser(ExtendedUser):
     group_collection = 'Newgroup'
-    user_group_class = import_util('pfunk.tests.test_web_custom_user_group_users_perms.UserGroups')
-    group_class = import_util('pfunk.tests.test_web_custom_user_group_users_perms.Newgroup')
+    user_group_class = import_util(
+        'pfunk.tests.test_web_custom_user_group_users_perms.UserGroups')
+    group_class = import_util(
+        'pfunk.tests.test_web_custom_user_group_users_perms.Newgroup')
     groups = ManyToManyField(
         'pfunk.tests.test_web_custom_user_group_users_perms.Newgroup', relation_name='custom_users_groups')
     blogs = ManyToManyField('pfunk.tests.test_web_custom_user_group_users_perms.Blog',
@@ -111,3 +115,5 @@ class TestCustomUserBasedPerms(APITestCase):
                             })
 
         self.assertTrue(res.status_code, 200)
+        self.assertNotIn("test_blog", [
+            blog.title for blog in Blog.all()])

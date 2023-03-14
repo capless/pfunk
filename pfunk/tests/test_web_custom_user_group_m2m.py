@@ -11,8 +11,10 @@ from pfunk.contrib.auth.resources import GenericUserBasedRoleM2M
 
 
 class UserGroups(ug):
-    userID = ReferenceField('pfunk.tests.test_web_custom_user_group_m2m.Newuser')
-    groupID = ReferenceField('pfunk.tests.test_web_custom_user_group_m2m.Newgroup')
+    userID = ReferenceField(
+        'pfunk.tests.test_web_custom_user_group_m2m.Newuser')
+    groupID = ReferenceField(
+        'pfunk.tests.test_web_custom_user_group_m2m.Newgroup')
 
 
 class Newgroup(BaseGroup):
@@ -22,8 +24,10 @@ class Newgroup(BaseGroup):
 
 class Newuser(ExtendedUser):
     group_collection = 'Newgroup'
-    user_group_class = import_util('pfunk.tests.test_web_custom_user_group_m2m.UserGroups')
-    group_class = import_util('pfunk.tests.test_web_custom_user_group_m2m.Newgroup')
+    user_group_class = import_util(
+        'pfunk.tests.test_web_custom_user_group_m2m.UserGroups')
+    group_class = import_util(
+        'pfunk.tests.test_web_custom_user_group_m2m.Newgroup')
     groups = ManyToManyField(
         'pfunk.tests.test_web_custom_user_group_m2m.Newgroup', relation_name='custom_users_groups')
     blogs = ManyToManyField('pfunk.tests.test_web_custom_user_group_m2m.Blog',
@@ -39,7 +43,7 @@ class Blog(Collection):
     title = StringField(required=True)
     content = StringField(required=True)
     users = ManyToManyField('pfunk.tests.test_web_custom_user_group_m2m.Newuser',
-                          relation_name='users_blogs')
+                            relation_name='users_blogs')
 
     def __unicode__(self):
         return self.title
@@ -56,12 +60,11 @@ class TestCustomUserM2M(APITestCase):
                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
                                    groups=[self.group])
         self.user2 = Newuser.create(username='test2', email='tlasso2@example.org', first_name='Juliuz',
-                                   last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
-                                   groups=[self.group])
+                                    last_name='Lasso', _credentials='abc123', account_status='ACTIVE',
+                                    groups=[self.group])
         self.blog = Blog.create(
             title='test_blog', content='test content', users=[self.user], token=self.secret)
         self.token, self.exp = Newuser.api_login("test", "abc123")
-
 
     def test_read(self):
         res = self.c.get(f'/json/blog/detail/{self.blog.ref.id()}/',
@@ -99,7 +102,7 @@ class TestCustomUserM2M(APITestCase):
                              "title": "updated blog",
                              "content": "I updated my blog.",
                              "users": [self.user.ref.id()]
-                        },
+                         },
                          headers={
                              "Authorization": self.token})
 
@@ -115,3 +118,5 @@ class TestCustomUserM2M(APITestCase):
                             })
 
         self.assertTrue(res.status_code, 200)
+        self.assertNotIn("test_blog", [
+            blog.title for blog in Blog.all()])

@@ -30,7 +30,9 @@ Includes GraphQL and generic ABAC auth workflow integrations.
     - [Save Some Data](#save-some-data)
     - [Query Your Data](#query-your-data)
     - [Delete a Record](#delete-a-record)
-        
+- [Customizing your setup](#customizing-your-setup)
+    - [Option 1: Environment Variables](#option-1-environment-variables)
+    - [Option 2: Inline Field](#option-2-inline-field)
 
 
 ### Getting Started
@@ -213,3 +215,120 @@ Let's delete the record from above.
 ```python
 product.delete()
 ```
+
+
+
+### Customizing your setup
+This section is for customizing your `user` and `group` collections to your liking. e.g.
+- Renaming your `User` and `Group` collection to something more verbose to your usage e.g. `Agent (User)` to `Firm (Group)`
+- Subclassing the `user` or `group` collection in order to have more control to what kind of auth collection you want to have
+
+
+### Custom User and Groups
+Initially, we have multiple ways of defining your custom user-group collections.
+Things to keep in mind:
+- `UserGroup` class **must** be subclassed and reference to the custom `user` and `group`
+- How the permissions work will do the same thing in custom user and group. This just gives you the ability to fully customize your own auth collections.
+
+
+
+### Option 1: Environment Variables
+This is the easiest way. Just go to your `.env` file and define:
+```
+USER_COLLECTION=Newuser    # Class name of your custom user class - case-sensitive!
+GROUP_COLLECTION=Newgroup  # Class name of your custom group class - case-sensitive!
+GROUP_COLLECTION_DIR=dir.to.Newgroup  # class dir to import your custom group 
+USER_COLLECTION_DIR=dir.to.Newuser   # class dir to import your custom user group
+```
+Then you'll end up with this in your `collections.py`
+```python
+from pfunk.contrib.auth.collections import BaseGroup, ExtendedUser, BaseUserGroup as ug
+from pfunk.contrib.auth.resources import GenericUserBasedRole
+
+
+class UserGroups(ug):
+    userID = ReferenceField('dir.to.Newuser')
+    groupID = ReferenceField('dir.to.Newgroup')
+
+
+class Newgroup(BaseGroup):
+    users = ManyToManyField('dir.to.Newuser', relation_name='custom_users_groups')
+
+
+class Newuser(ExtendedUser):
+    user_group_class = import_util('dir.to.UserGroups')
+    group_class = import_util('dir.to.Newgroup')
+    groups = ManyToManyField('dir.to.Newgroup', relation_name='custom_users_groups')
+    blogs = ManyToManyField('dir.to.Blog', relation_name='users_blogs')
+
+
+class Blog(Collection):
+    collection_roles = [GenericUserBasedRole]
+    title = StringField(required=True)
+    content = StringField(required=True)
+    user = ReferenceField('dir.to.Newuser', relation_name='users_blogs')
+
+    def __unicode__(self):
+        return self.title
+
+```
+
+
+
+### Option 2: Inline Field
+If for some reason you don't want to use the environment variables, you can define the needed fields
+directly in your `Collection`. This is what we use in PFunk's unit tests, refer to it if you 
+need more usage but essentially:
+```python
+class Blog(Collection):
+    user_collection = 'Newuser'
+    group_collection = 'Newgroup'
+    user_collection_dir = 'dir.to.Newuser'
+    group_collection_dir = 'dir.to.Newgroup'
+    ...
+```
+
+
+Generally, this is how your `collections.py` will look like in the end if you want to define
+your custom auth collections in fields.
+
+
+```python
+from pfunk.contrib.auth.collections import BaseGroup, ExtendedUser, BaseUserGroup as ug
+from pfunk.contrib.auth.resources import GenericUserBasedRole
+
+
+class UserGroups(ug):
+    userID = ReferenceField('this.file.NewUser')
+    groupID = ReferenceField('this.file.Newgroup')
+
+
+class Newgroup(BaseGroup):
+    users = ManyToManyField('this.file.Newuser', relation_name='custom_users_groups')
+
+
+class Newuser(ExtendedUser):
+    user_group_class = import_util('this.file.UserGroups')
+    group_class = import_util('this.file.Newgroup')
+    groups = ManyToManyField('this.file.Newgroup', relation_name='custom_users_groups')
+    blogs = ManyToManyField('this.file.Blog',
+                            relation_name='users_blogs')
+
+    group_collection = 'Newgroup'
+
+
+class Blog(Collection):
+    collection_roles = [GenericUserBasedRole]
+    title = StringField(required=True)
+    content = StringField(required=True)
+    user = ReferenceField('this.file.Newuser', relation_name='users_blogs')
+
+    user_collection = 'Newuser'
+    group_collection = 'Newgroup'
+    user_collection_dir = 'this.file.Newuser'
+    group_collection_dir = 'this.file.Newgroup'
+
+    def __unicode__(self):
+        return self.title
+```
+

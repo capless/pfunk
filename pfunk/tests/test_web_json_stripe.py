@@ -1,3 +1,4 @@
+import tempfile
 from types import SimpleNamespace
 from unittest import mock
 
@@ -230,13 +231,14 @@ class TestStripeWebhook(APITestCase):
 
     @mock.patch('boto3.client')
     def test_send_html_email(self, mocked):
-        # Requires to have `TEMPLATE_ROOT_DIR=/tmp` in your .env file
-        res = self.view.send_html_email(
-            subject='Test Subject',
-            from_email='unittesting@email.com',
-            to_email_list=['recipient@email.com'],
-            template_name=('email/email_template.html')
-        )
+        with tempfile.NamedTemporaryFile(suffix='.html') as tmp:
+            # Requires to have `TEMPLATE_ROOT_DIR=/tmp` in your .env file
+            res = self.view.send_html_email(
+                subject='Test Subject',
+                from_email='unittesting@email.com',
+                to_email_list=['recipient@email.com'],
+                template_name=tmp.name.split("/")[-1]
+            )
         self.assertTrue(True)  # if there are no exceptions, then it passed
 
     @mock.patch('stripe.Webhook')

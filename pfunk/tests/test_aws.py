@@ -1,4 +1,5 @@
 import os
+import json
 import unittest
 import tempfile
 from unittest import mock
@@ -27,9 +28,30 @@ class ApiGatewayTests(unittest.TestCase):
         cls.aws_client = ApiGateway()
         cls.project.add_resources([Person, Sport, Group, User])
 
+        with open(f'pfunk.json', 'x') as f:
+            json.dump({
+                'name': 'test',
+                'api_type': 'rest',
+                'description': 'test project',
+                'host': 'localhost',
+                'stages': {'dev': {
+                    'key_module': f'test.dev_keys.KEYS',
+                    'fauna_secret': 'test-key',
+                    'bucket': 'test-bucket',
+                    'default_from_email': 'test@example.org'
+                }}
+            }, f, indent=4, sort_keys=True)
         swagger = cls.project.generate_swagger()
         cls.swagger_dir = swagger['dir']
         cls.swagger_file = swagger['swagger_file']
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        os.remove("pfunk.json")
+        try:
+            os.remove('swagger.yaml')
+        except FileNotFoundError:
+            pass
 
     def test_validate_yaml(self):
         result = self.aws_client.validate_yaml(self.swagger_dir)

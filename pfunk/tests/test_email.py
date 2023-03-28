@@ -1,3 +1,4 @@
+import os
 import tempfile
 from unittest import mock
 
@@ -22,7 +23,8 @@ class TestEmailBackend(APITestCase):
         self.backend = EmailBackend()
 
     def test_get_template(self):
-        template = self.backend.get_template('email/email_template.html')
+        with tempfile.NamedTemporaryFile(suffix='.html') as tmp:
+            template = self.backend.get_template(tmp.name.split("/")[-1])
         # test jinja render if no exceptions
         template.render(unittest_value="random value")
         self.assertTrue(True)  # if there are no exceptions, then it is a pass
@@ -57,14 +59,15 @@ class TestEmailSES(APITestCase):
 
     @mock.patch('boto3.client')
     def test_send_email(self, mocked):
-        res = self.SES.send_email(
-            subject="test",
-            to_emails=["testemail@email.com"],
-            html_template='email/email_template.html',
-            from_email="testFromEmail@email.com",
-            cc_emails=["testCCemail@email.com"],
-            bcc_emails=["testBCCemail@email.com"],
-        )
+        with tempfile.NamedTemporaryFile(suffix='.html') as tmp:
+            res = self.SES.send_email(
+                subject="test",
+                to_emails=["testemail@email.com"],
+                html_template=tmp.name.split("/")[-1],
+                from_email="testFromEmail@email.com",
+                cc_emails=["testCCemail@email.com"],
+                bcc_emails=["testBCCemail@email.com"],
+            )
 
         # if there are no exceptions, then it's a passing test
         self.assertTrue(True)

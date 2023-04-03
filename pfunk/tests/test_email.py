@@ -15,6 +15,7 @@ class TestEmailBackend(APITestCase):
     collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
+        # NOTE: env var TEMPLATE_ROOT_DIR should be set to "/"
         super(TestEmailBackend, self).setUp()
         self.group = Group.create(name='Power Users', slug='power-users')
         self.user = User.create(username='test', email='tlasso@example.org', first_name='Ted',
@@ -23,8 +24,8 @@ class TestEmailBackend(APITestCase):
         self.backend = EmailBackend()
 
     def test_get_template(self):
-        with tempfile.NamedTemporaryFile(suffix='.html') as tmp:
-            template = self.backend.get_template(tmp.name.split("/")[-1])
+        template = self.backend.get_template(
+            '/code/pfunk/tests/templates/email/email_template.html')
         # test jinja render if no exceptions
         template.render(unittest_value="random value")
         self.assertTrue(True)  # if there are no exceptions, then it is a pass
@@ -59,15 +60,14 @@ class TestEmailSES(APITestCase):
 
     @mock.patch('boto3.client')
     def test_send_email(self, mocked):
-        with tempfile.NamedTemporaryFile(suffix='.html') as tmp:
-            res = self.SES.send_email(
-                subject="test",
-                to_emails=["testemail@email.com"],
-                html_template=tmp.name.split("/")[-1],
-                from_email="testFromEmail@email.com",
-                cc_emails=["testCCemail@email.com"],
-                bcc_emails=["testBCCemail@email.com"],
-            )
+        res = self.SES.send_email(
+            subject="test",
+            to_emails=["testemail@email.com"],
+            html_template='code/pfunk/tests/templates/email/email_template.html',
+            from_email="testFromEmail@email.com",
+            cc_emails=["testCCemail@email.com"],
+            bcc_emails=["testBCCemail@email.com"],
+        )
 
         # if there are no exceptions, then it's a passing test
         self.assertTrue(True)

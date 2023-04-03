@@ -34,7 +34,7 @@ coverage = "^5.5"
 pdoc = "^7.2.0"
 
 [build-system]
-requires = ["setuptools", "poetry>=0.12"]
+requires = ["poetry>=0.12"]
 
 [tool.poetry.scripts]
 pfunk = 'pfunk.cli:pfunk'

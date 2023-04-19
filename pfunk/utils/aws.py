@@ -74,7 +74,6 @@ class ApiGateway(object):
             This method was implemented due to `openapi_spec_validator` design
             that if an error happened while iterating through the YAML file
             it returns a Python error.
-
             Args:
                 spec_dict (dict, required):
                     `spec_dict` generated from `openapi_spec_validator.readers.read_from_filename`
@@ -111,7 +110,6 @@ class ApiGateway(object):
             response = self.client.import_rest_api(
                 failOnWarnings=fail_on_warnings,
                 body=yaml_file)
-
             if response:
                 write_to_config({'api': response})
                 return {

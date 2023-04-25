@@ -39,7 +39,6 @@ jobs:
           echo PROJECT_NAME=${{ secrets.PROJECT_NAME }} >> .env
           echo KEY_MODULE=${{ secrets.KEY_MODULE }}  >> .env
           cat .env
-      - run: docker-compose pull
 
       # In this step, this action saves a list of existing images,
       # the cache is created without them in the post run.
@@ -50,6 +49,7 @@ jobs:
 
       - run: docker volume create --name=pfunk-fauna-data
       - run: docker-compose build
+      - run: docker-compose pull
 
       # Runs a single command using the runners shell
       - name: Run Unit Tests

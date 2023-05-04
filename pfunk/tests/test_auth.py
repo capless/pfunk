@@ -1,15 +1,14 @@
 from faunadb.errors import PermissionDenied
 
 from pfunk.contrib.auth.key import PermissionGroup
-from pfunk.contrib.auth.collections import Group
-from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.exceptions import LoginFailed
 from pfunk.testcase import CollectionTestCase
 from pfunk.tests import Sport, Person, House
 
 
 class AuthTestCase(CollectionTestCase):
-    collections = [User, Group,
+    collections = [User, Group, UserGroups,
                    Sport, Person, House]
 
     def setUp(self) -> None:

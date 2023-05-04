@@ -55,7 +55,7 @@ class Key(object):
         now = datetime.datetime.now(tz=gmt)
         exp = now + datetime.timedelta(days=1)
         payload = {
-            'iat': now.timestamp(),
+            'iat': int(now.timestamp()),
             'exp': exp.timestamp(),
             'nbf': now.timestamp(),
             'iss': env('PROJECT_NAME', 'pfunk'),
@@ -69,7 +69,7 @@ class Key(object):
         keys = cls.import_keys()
         key = keys.get(headers.get('kid'))
         try:
-            decoded = jwt.decode(encoded, key.get('signature_key'), algorithms="HS256", verify=True,
+            decoded = jwt.decode(encoded, key.get('signature_key'), algorithms=["HS256"], verify=True,
                                  options={"require": ["iat", "exp", "nbf", 'iss', 'til']})
         except ExpiredSignatureError:
             raise Unauthorized('Unauthorized')

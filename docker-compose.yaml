@@ -10,7 +10,8 @@ services:
       - "8010"
       - "3434"
     depends_on:
-      - fauna
+      fauna:
+        condition: service_healthy
     ports:
       - 8010:8888
       - 3434:3434

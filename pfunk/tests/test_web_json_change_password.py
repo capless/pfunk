@@ -1,10 +1,9 @@
-from pfunk.contrib.auth.collections import Group
-from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.testcase import APITestCase
 
 
 class TestWebChangePassword(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
         super(TestWebChangePassword, self).setUp()

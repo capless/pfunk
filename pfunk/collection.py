@@ -1,5 +1,5 @@
 from envs import env
-from faunadb.errors import BadRequest
+from faunadb.errors import BadRequest, Unauthorized, PermissionDenied
 from valley.contrib import Schema
 from valley.declarative import DeclaredVars, DeclarativeVariablesMetaclass
 from valley.properties import BaseProperty, CharProperty, ListProperty
@@ -78,10 +78,16 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             'collection_name']
     """List of class variables that are not allowed a field names. """
 
+    """ Optional in-line definition user and group class """
+    user_collection = None
+    group_collection = None
+    user_collection_dir = None
+    group_collection_dir = None
+
     def __str__(self):
         try:
             return self.__unicode__() # pragma: no cover
-        except AttributeError:
+        except (AttributeError, TypeError):
             return f"{self.__class__.__name__} object"  # pragma: no cover
 
 
@@ -124,6 +130,35 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         """
         return {k: q.select(k, q.var("input")) for k, v in self._base_properties.items() if
                 k not in self.non_public_fields}
+    
+    def get_user_field(self) -> str:
+        """ Acquires the field where the relationship with a user was defined.
+
+            It is required to define the `USER_COLLECTION` in env var if a custom 
+            user will be used. This is to ensure the permissions to work properly
+        """
+        fields = self._base_properties.items()
+        user_class = self.user_collection or env('USER_COLLECTION', 'User')
+        user_field = None
+        user_fields = [k for k, v in fields if user_class in v.get_graphql_type()]
+        if user_fields:
+            user_field = user_fields[0]
+        return user_field
+
+    def get_group_field(self) -> str:
+        """ Acquires the field where the relationship with a group was defined.
+
+            It is required to define the `GROUP_COLLECTION` in env var if a custom 
+            user will be used. This is to ensure the permissions to work properly
+            
+        """
+        fields = self._base_properties.items()
+        group_class = self.group_collection or env('GROUP_COLLECTION', 'Group')
+        group_field = None
+        group_fields = [k for k, v in fields if group_class in v.get_graphql_type()]
+        if group_fields:
+            group_field = group_fields[0]
+        return group_field
 
     def get_collection_name(self) -> str:
         """
@@ -213,7 +248,6 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
         Returns: FaunaClient
 
         """
-
         if _token:
             return FaunaClient(secret=_token)
         return FaunaClient(secret=env('FAUNA_SECRET'))
@@ -393,7 +427,7 @@ class Collection(BaseSchema, metaclass=PFunkDeclarativeVariablesMetaclass):
                             }
                         )
                     )
-                except BadRequest:
+                except (BadRequest) as err:
                     pass
 
     def call_signals(self, name):

@@ -38,6 +38,25 @@ class LoginView(ActionMixin, JSONAuthView):
             'exp': exp
         }
 
+    def _payload_docs(self):
+        return {"data": [
+            {
+                "name": "username",
+                "in": "formData",
+                "description": "Username of the user",
+                "required": True,
+                "type": "string"
+            },
+            {
+                "name": "password",
+                "in": "formData",
+                "description": "Password of the user",
+                "required": True,
+                "type":"string",
+                "format": "password"
+            }
+        ]}
+
 
 class LogoutView(ActionMixin, JSONAuthView):
     """ Creates a logout view to enable logout via endpoint 
@@ -64,6 +83,24 @@ class SignUpView(ActionMixin, JSONAuthView):
     def get_query(self):
         return self.collection.signup(**self.get_query_kwargs())
 
+    def _payload_docs(self):
+        return {"data": [
+            {
+                "name": "username",
+                "in": "formData",
+                "description": "username of the user",
+                "required": True,
+                "type": "string"
+            },
+            {
+                "name": "password",
+                "in": "formData",
+                "description": "password of the user",
+                "required": True,
+                "type":"string",
+                "format": "password"
+            }
+        ]}
 
 class VerifyEmailView(ActionMixin, JSONAuthView):
     """ Creates a view that enables verification of a user 
@@ -97,6 +134,33 @@ class UpdatePasswordView(ActionMixin, JSONAuthView):
         self.collection.update_password(kwargs['current_password'], kwargs['new_password'],
                                         kwargs['new_password_confirm'], _token=self.request.token)
 
+    def _payload_docs(self):
+            return {"data": [
+                {
+                    "name": "current_password",
+                    "in": "formData",
+                    "description": "current password of the user",
+                    "required": True,
+                    "type": "string",
+                    "format": "password"
+                },
+                {
+                    "name": "new_password",
+                    "in": "formData",
+                    "description": "new password of the user",
+                    "required": True,
+                    "type":"string",
+                    "format": "password"
+                },
+                {
+                    "name": "new_password_confirm",
+                    "in": "formData",
+                    "description": "confirm the new password of the user by entering the same string",
+                    "required": True,
+                    "type":"string",
+                    "format": "password"
+                }
+            ]}
 
 class ForgotPasswordView(ActionMixin, JSONAuthView):
     """ Create a view to allow call of forgot password func """
@@ -106,6 +170,17 @@ class ForgotPasswordView(ActionMixin, JSONAuthView):
 
     def get_query(self):
         return self.collection.forgot_password(**self.get_query_kwargs())
+    
+    def _payload_docs(self):
+            return {"data": [
+                {
+                    "name": "email",
+                    "in": "formData",
+                    "description": "email of the user",
+                    "required": True,
+                    "type": "string"
+                }
+            ]}
 
 
 class ForgotPasswordChangeView(ActionMixin, JSONAuthView):
@@ -124,7 +199,16 @@ class ForgotPasswordChangeView(ActionMixin, JSONAuthView):
             verify_type='forgot',
             password=kwargs['password'])
 
-
+    def _payload_docs(self):
+            return {"data": [
+                {
+                    "name": "verification_key",
+                    "in": "formData",
+                    "description": "hashed key for verification of forgot password event",
+                    "required": True,
+                    "type": "string"
+                }
+            ]}
 
 class WebhookView(JSONView):
     pass

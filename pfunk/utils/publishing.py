@@ -33,13 +33,11 @@ def create_or_update_role(client, payload: dict = {}):
     Returns: query
 
     """
-
     try:
         response = client.query(
             q.create_role(payload)
         )
     except BadRequest as err:
-
         payload_copy = payload.copy()
         role_name = payload_copy.pop("name")
 

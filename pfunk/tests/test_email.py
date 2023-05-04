@@ -1,20 +1,21 @@
+import os
 import tempfile
 from unittest import mock
 
 from jinja2.exceptions import TemplateNotFound
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections import Group
-from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.contrib.email.base import EmailBackend
 from pfunk.contrib.email.ses import SESBackend
 from pfunk.testcase import APITestCase
 
 
 class TestEmailBackend(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
+        # NOTE: env var TEMPLATE_ROOT_DIR should be set to "/"
         super(TestEmailBackend, self).setUp()
         self.group = Group.create(name='Power Users', slug='power-users')
         self.user = User.create(username='test', email='tlasso@example.org', first_name='Ted',
@@ -23,7 +24,8 @@ class TestEmailBackend(APITestCase):
         self.backend = EmailBackend()
 
     def test_get_template(self):
-        template = self.backend.get_template('email/email_template.html')
+        template = self.backend.get_template(
+            '/code/pfunk/tests/templates/email/email_template.html')
         # test jinja render if no exceptions
         template.render(unittest_value="random value")
         self.assertTrue(True)  # if there are no exceptions, then it is a pass
@@ -44,7 +46,7 @@ class TestEmailBackend(APITestCase):
 
 
 class TestEmailSES(APITestCase):
-    collections = [User, Group]
+    collections = [User, Group, UserGroups]
 
     def setUp(self) -> None:
         super(TestEmailSES, self).setUp()
@@ -61,7 +63,7 @@ class TestEmailSES(APITestCase):
         res = self.SES.send_email(
             subject="test",
             to_emails=["testemail@email.com"],
-            html_template='email/email_template.html',
+            html_template='code/pfunk/tests/templates/email/email_template.html',
             from_email="testFromEmail@email.com",
             cc_emails=["testCCemail@email.com"],
             bcc_emails=["testBCCemail@email.com"],

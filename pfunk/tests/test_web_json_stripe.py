@@ -1,10 +1,10 @@
+import tempfile
 from types import SimpleNamespace
 from unittest import mock
 
 from werkzeug.test import Client
 
-from pfunk.contrib.auth.collections import Group
-from pfunk.contrib.auth.collections import User
+from pfunk.contrib.auth.collections import Group, User, UserGroups
 from pfunk.contrib.auth.key import PermissionGroup
 from pfunk.contrib.ecommerce.collections import StripePackage, StripeCustomer
 from pfunk.contrib.ecommerce.views import BaseWebhookView
@@ -13,7 +13,7 @@ from pfunk.web.request import HTTPRequest
 
 
 class TestWebStripeCrud(APITestCase):
-    collections = [User, Group, StripePackage, StripeCustomer]
+    collections = [User, Group, UserGroups, StripePackage, StripeCustomer]
 
     def setUp(self) -> None:
         super(TestWebStripeCrud, self).setUp()
@@ -177,7 +177,7 @@ class TestWebStripeCrud(APITestCase):
 
 
 class TestStripeWebhook(APITestCase):
-    collections = [User, Group, StripeCustomer]
+    collections = [User, Group, UserGroups, StripeCustomer]
 
     def setUp(self) -> None:
         super(TestStripeWebhook, self).setUp()
@@ -231,12 +231,12 @@ class TestStripeWebhook(APITestCase):
 
     @mock.patch('boto3.client')
     def test_send_html_email(self, mocked):
-        # Requires to have `TEMPLATE_ROOT_DIR=/tmp` in your .env file
+        # Requires to have `TEMPLATE_ROOT_DIR=/` in your .env file
         res = self.view.send_html_email(
             subject='Test Subject',
             from_email='unittesting@email.com',
             to_email_list=['recipient@email.com'],
-            template_name=('email/email_template.html')
+            template_name='/code/pfunk/tests/templates/email/email_template.html'
         )
         self.assertTrue(True)  # if there are no exceptions, then it passed
 
@@ -262,7 +262,7 @@ class TestStripeWebhook(APITestCase):
 
 
 class TestStripeCheckoutView(APITestCase):
-    collections = [User, Group, StripePackage]
+    collections = [User, Group, UserGroups, StripePackage]
 
     def setUp(self) -> None:
         super(TestStripeCheckoutView, self).setUp()
